@@ -108,25 +108,31 @@ còn `xsmom.ma = 30` lọc theo MA30. Tiền tố quyết định tất cả.
 
 | tham số | biến môi trường | chốt |
 |---|---|---|
-| `alloc_rsi2` | `ALLOC_RSI2` | 1,0 — **chỉ RSI(2)** |
+| `alloc_rsi2` | `ALLOC_RSI2` | 8,0 — **chỉ RSI(2)** · xem dưới |
 | `alloc_xsmom` | `ALLOC_XSMOM` | 1,0 — **chỉ động lượng** |
 
 Hệ số nhân cho 1R của riêng chiến lược đó. **0 = tắt**, và vị thế đang mở của
 nó bị đóng ở lượt kế tiếp.
+
+**Vì sao RSI(2) là 8 chứ không 1:** ở cùng 1R, RSI(2) sụt ~283 USD còn động
+lượng ~11.259 USD (1R = 100), nên chia 1R đều thì RSI(2) gần như vắng mặt.
+Cân rủi ro cho hệ số 32; chạy 8 trước vì 32 là đặt cược 32 lần vào 176 lệnh
+chưa có ngoài mẫu. Bảng đầy đủ ở `docs/money-management-r.md` § Ghép hai
+chiến lược.
 
 ### Dùng chung cả hai — 5 ô
 
 | tham số | biến môi trường | chốt | chặn gì |
 |---|---|---|---|
 | `risk_r_usd` | `RISK_R_USD` | 100 | 1R — số USD rủi ro mỗi lệnh |
-| `risk_max_open` | `RISK_MAX_OPEN` | 28 | số vị thế mở cùng lúc |
+| `risk_max_open` | `RISK_MAX_OPEN` | 33 | số vị thế mở cùng lúc |
 | `max_order_usd` | `MAX_ORDER_USD` | 200 | giá trị **một lệnh** |
 | `max_gross_usd` | `MAX_GROSS_USD` | 1.000 | **tổng** mở thêm mỗi lượt |
 | `max_orders_per_run` | `MAX_ORDERS_PER_RUN` | 40 | **số lệnh** mỗi lượt |
 
 Năm ô này **không phân biệt chiến lược** — một lệnh RSI(2) và một lệnh động
-lượng ăn chung hạn mức. Trần `risk_max_open = 28` là tổng của cả hai, không
-phải 28 mỗi bên.
+lượng ăn chung hạn mức. Trần `risk_max_open = 33` là tổng của cả hai (28 động
+lượng + 5 chỗ RSI(2)), không phải 33 mỗi bên.
 
 ### Đặt ở đâu
 
@@ -153,7 +159,8 @@ cỡ lệnh (USD) = RISK_R_USD / R
 
 `RISK_R_USD` mặc định **100** — mỗi lệnh mất đúng chừng đó khi chạm điểm thua.
 **Vốn không quyết định cỡ lệnh**, nó chỉ quyết định mở được bao nhiêu lệnh
-cùng lúc; trần đó là `RISK_MAX_OPEN` (mặc định **28** = 7 sổ × 4 vị thế).
+cùng lúc; trần đó là `RISK_MAX_OPEN` (mặc định **33** = 7 sổ × 4 vị thế + 5
+chỗ RSI(2)).
 
 Cỡ lệnh tỷ lệ **nghịch** với rủi ro một đơn vị hàng. Số thật lấy từ hệ đang
 chạy:

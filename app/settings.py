@@ -18,8 +18,10 @@ SPEC = {
     # He so nhan cho 1R cua tung chien luoc. 0 = TAT han chien luoc do (vi
     # the dang mo cua no se duoc dong o luot chay ke tiep). Khong con la "ty
     # trong von": dinh co theo R khong chia von cho ai ca.
-    "alloc_rsi2":      ("alloc", float, 0.0, 5.0, "hệ số 1R cho RSI(2) — 0 là tắt"),
-    "alloc_xsmom":     ("alloc", float, 0.0, 5.0, "hệ số 1R cho động lượng — 0 là tắt"),
+    # Tran 50 chu khong 5: can bang rui ro cho RSI(2) k* = 32 (docs/
+    # money-management-r.md § Ghep hai chien luoc), tran 5 se chan ca muc do.
+    "alloc_rsi2":      ("alloc", float, 0.0, 50.0, "hệ số 1R cho RSI(2) — 0 là tắt"),
+    "alloc_xsmom":     ("alloc", float, 0.0, 50.0, "hệ số 1R cho động lượng — 0 là tắt"),
     # --- RSI(2) ---
     "rsi2.topn":       ("rsi2", int, 1, 200, "vũ trụ top N thanh khoản"),
     "rsi2.slots":      ("rsi2", int, 1, 50, "số chỗ (N)"),

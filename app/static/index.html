@@ -114,6 +114,10 @@ section{display:none}section.on{display:block}
 .pb{padding:0 16px 15px}
 .sub{color:var(--dim);font-size:11.5px;min-width:0}
 .pos{color:var(--up)}.neg{color:var(--dn)}.mut{color:var(--dim)}
+.live{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap;
+  justify-content:flex-end}
+.live .dot{width:7px;height:7px;flex-basis:7px}
+.live b{font-family:var(--mono)}
 
 /* ============ the so lieu ============ */
 .hero{display:grid;grid-template-columns:1fr;gap:11px}
@@ -395,7 +399,8 @@ tr.dr td:nth-child(2){color:var(--dim);text-decoration:line-through}
             nào được đặt cho tới khi bấm «Chạy ngay».</div>
         </div>
         <div class="panel">
-          <div class="ph"><h3>Vị thế đang mở</h3></div>
+          <div class="ph"><h3>Vị thế đang mở</h3>
+            <span class="sub live" id="posLive"></span></div>
           <div class="tw"><table id="tpos"></table></div>
         </div>
       </div>
@@ -570,15 +575,18 @@ function render() {
     ? S.sched.next.slice(0, 16).replace('T', ' ') : S.sched.at;
 
   const eq = S.equity;
-  const last = eq.length ? eq.at(-1).value : null;
-  $('eq').innerHTML = bigUsd(last);
-  const base = eq.length ? eq[0].value : 1000;
-  const pc = last == null ? null : (last / base - 1) * 100;
-  $('eqpc').textContent = pc == null ? '—'
-    : (pc >= 0 ? '+' : '−') + pct(Math.abs(pc)) + '%';
-  $('eqpc').className = 'delta ' + (pc == null ? 'mut' : pc >= 0 ? 'pos' : 'neg');
-  $('eqsub').textContent = eq.length
-    ? `${eq.length} mốc · từ ${day(eq[0].ts)}` : 'chưa có mốc nào';
+  if (!paintAcct()) {
+    const last = eq.length ? eq.at(-1).value : null;
+    $('eq').innerHTML = bigUsd(last);
+    const base = eq.length ? eq[0].value : 1000;
+    const pc = last == null ? null : (last / base - 1) * 100;
+    $('eqpc').textContent = pc == null ? '—'
+      : (pc >= 0 ? '+' : '−') + pct(Math.abs(pc)) + '%';
+    $('eqpc').className = 'delta ' + (pc == null ? 'mut' : pc >= 0 ? 'pos' : 'neg');
+    $('eqsub').textContent = (eq.length
+      ? `sổ ghi · ${eq.length} mốc · từ ${day(eq[0].ts)}` : 'chưa có mốc nào')
+      + (ACCT && !ACCT.ok ? ` · không đọc được tài khoản: ${ACCT.why}` : '');
+  }
 
   let pk = 0, dd = 0;
   for (const e of eq) { pk = Math.max(pk, e.value); dd = Math.max(dd, 1 - e.value / pk); }
@@ -660,14 +668,21 @@ function render() {
           + ` — ứng viên không qua bị bỏ hẳn (~18%/kỳ)`
         : `<br><span class="neg">lọc MA đang TẮT</span>`);
 
+  POS = S.positions.map(p => ({...p, notl: notl(p)}));
+  FEE = S.fee_bps ?? 0;
+  let i = 0;
+  const live = k => ({html: `<span data-k="${k}" data-i="${i}">—</span>`});
   table($('tpos'), ['mã', 'chiến lược', 'sổ', 'chiều', 'cỡ USD', '1R', 'giá vào',
-    'cắt lỗ', 'mở từ'],
+    'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'mở từ'],
     S.positions, p => [p.symbol, sChip(p.strategy), p.sleeve ?? '—', sideTxt(p.side),
       {html: p.notional ? usd(p.notional)
         : `<span class="mut" title="suy ra từ tỷ trọng vốn cũ">`
           + `${usd(notl(p))}*</span>`},
       p.r_usd ? usd(p.r_usd) : '—', p.entry_px,
-      p.stop ? p.stop.toPrecision(6) : '—', day(p.entry_ts)]);
+      live('px'), live('usd'), live('pc'), live('r'),
+      p.stop ? p.stop.toPrecision(6) : '—', (i++, day(p.entry_ts))]);
+  stream(S.stream);
+  paintPnl();
 
   table($('tord'), ['lúc', 'mã', 'việc', 'bên', 'USD', 'trạng thái'],
     S.orders, o => [when(o.ts), o.symbol, aChip(o.action), o.side,
@@ -691,6 +706,106 @@ function render() {
   $('driftPill').style.display = dr.length ? '' : 'none';
   $('driftPill').textContent = dr.length;
   chart(eq);
+}
+
+/* ============ lời/lỗ sống ============ */
+/* Gia danh dau (mark) 1 giay/lan tu luong cua san — san cung tinh lai/lo
+   chua chot theo mark. Cong thuc giong mark_to_market() ben runner (tru phi
+   khu hoi FEE_BPS) de tong o day khop voi moc von ke tiep. Moi tick chi ve
+   lai cac o lai/lo, khong dung lai ca bang (hover/cuon giu nguyen).
+   Duong /ws/ cu cua fstream.binance.com van mo ket noi nhung KHONG gui gi —
+   luong thi truong phai di qua /market/ws/. Vi the "song" tinh theo tick
+   cuoi, khong theo readyState: socket mo ma cam thi van la mat gia. */
+const MARK = {};
+let POS = [], FEE = 0, WS = null, WSURL = null, wsTry = 0, wsTimer = null, TICK = 0;
+
+function stream(url) {
+  if (!url || (url === WSURL && WS)) return;
+  if (url !== WSURL) { for (const k in MARK) delete MARK[k]; TICK = 0; }
+  WSURL = url;
+  clearTimeout(wsTimer);
+  if (WS) { WS.onclose = null; WS.close(); }
+  const ws = WS = new WebSocket(url + '/market/ws/!markPrice@arr@1s');
+  ws._at = Date.now();
+  ws.onmessage = ev => {
+    for (const x of JSON.parse(ev.data)) MARK[x.s] = +x.p;
+    wsTry = 0; TICK = Date.now();
+    paintPnl();
+  };
+  ws.onclose = () => {
+    if (WS !== ws) return;
+    WS = null; paintPnl();
+    wsTimer = setTimeout(() => stream(WSURL), Math.min(30000, 1000 * 2 ** wsTry++));
+  };
+}
+
+const signed = (v, f) => (v >= 0 ? '+' : '−') + f(Math.abs(v));
+
+function pnlOf(p) {
+  const px = MARK[p.symbol];
+  if (!px || !p.entry_px) return null;
+  const bps = (px - p.entry_px) / p.entry_px * 1e4 * p.side - FEE;
+  const v = p.notl * bps / 1e4;
+  return {px, bps, usd: v, r: p.r_usd ? v / p.r_usd : null};
+}
+
+/* ============ vốn tài khoản thật ============ */
+/* Hoi san 15 giay/lan (so du vi chi doi khi khop lenh/funding), con lai/lo
+   chua chot thi tinh lai moi tick tu gia danh dau — chi khi luong gia dang
+   mo cung san voi tai khoan; khac san thi dung so san tra ve luc hoi. */
+let ACCT = null;
+
+async function loadAcct() {
+  try { ACCT = await (await fetch('/api/account')).json(); }
+  catch (e) { ACCT = {ok: false, why: e.message}; }
+  if (S && !paintAcct()) render();
+}
+
+function paintAcct() {
+  const A = ACCT;
+  if (!A || !A.ok) return false;
+  let upnl = A.upnl, live = false;
+  if (A.stream === WSURL && Date.now() - TICK < 5000
+      && A.positions.every(x => MARK[x.symbol])) {
+    upnl = A.positions.reduce((a, x) => a + x.amt * (MARK[x.symbol] - x.entry), 0);
+    live = true;
+  }
+  $('eq').innerHTML = bigUsd(A.wallet + upnl);
+  $('eqpc').textContent = signed(upnl, usd);
+  $('eqpc').className = 'delta ' + (Math.abs(upnl) < 0.005 ? 'mut' : upnl >= 0 ? 'pos' : 'neg');
+  $('eqsub').textContent = `chưa chốt · ví ${usd(A.wallet)} · khả dụng ${usd(A.avail)}`
+    + ` · ${A.positions.length} vị thế · Binance ${A.venue}`
+    + (live ? ' · trực tiếp' : ` · lúc ${when(A.ts).slice(11)}`);
+  return true;
+}
+
+function paintPnl() {
+  paintAcct();
+  const tb = $('tpos');
+  if (!tb) return;
+  const Q = POS.map(pnlOf);
+  for (const el of tb.querySelectorAll('[data-k]')) {
+    const q = Q[el.dataset.i];
+    if (!q) { el.textContent = '—'; el.className = 'mut'; continue; }
+    const cls = q.usd >= 0 ? 'pos' : 'neg';
+    switch (el.dataset.k) {
+      case 'px': el.textContent = q.px.toPrecision(6); el.className = ''; break;
+      case 'usd': el.textContent = signed(q.usd, usd); el.className = cls; break;
+      case 'pc': el.textContent = signed(q.bps / 100, v => pct(v)) + '%';
+        el.className = cls; break;
+      case 'r': el.textContent = q.r == null ? '—' : signed(q.r, v => pct(v)) + 'R';
+        el.className = q.r == null ? 'mut' : cls; break;
+    }
+  }
+  const ok = WS && Date.now() - TICK < 5000;
+  const got = Q.filter(Boolean), tot = got.reduce((a, q) => a + q.usd, 0);
+  $('posLive').innerHTML = (got.length
+      ? `tổng <b class="${tot >= 0 ? 'pos' : 'neg'}">${esc(signed(tot, usd))} USD</b>`
+        + ` · sau phí ${FEE} bps`
+        + (got.length < POS.length ? ` · ${POS.length - got.length} mã chưa có giá` : '')
+        + ' · '
+      : '')
+    + `<i class="dot ${ok ? 'ok' : 'no'}"></i>${ok ? 'trực tiếp' : 'mất kết nối giá'}`;
 }
 
 /* ================= tab cấu hình ================= */
@@ -1107,4 +1222,11 @@ let rz; addEventListener('resize', () => { clearTimeout(rz);
 renderTodo(null);
 refresh().catch(e => msg(e.message, false));
 setInterval(() => refresh().catch(() => {}), 30000);
+loadAcct();
+setInterval(loadAcct, 15000);
+/* Socket mo nhung im lang thi khong co onclose — tu cat sau 15 giay khong tick
+   de vong noi lai lam viec; dong thoi ve lai cham trang thai. */
+setInterval(() => { paintPnl();
+  if (WS && WS.readyState === 1 && Date.now() - (TICK || 0) > 15000
+      && Date.now() - (WS._at || 0) > 15000) WS.close(); }, 2000);
 </script>

@@ -16,7 +16,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from . import data, db, executor, runner, settings
 from .binance import PublicApi, Trader
-from .config import CFG
+from .config import CFG, FEE_BPS
 
 PAGE = Path(__file__).parent / "static" / "index.html"
 
@@ -139,6 +139,8 @@ def state():
                  "has_keys": CFG.has_keys(), "ready": ready, "why": why,
                  "venue": CFG.binance_env},
         "caps": settings.risk(),
+        "stream": CFG.stream(m),
+        "fee_bps": FEE_BPS,
         "alloc": settings.alloc(),
         "params": dict(zip(("rsi2", "xsmom"), settings.strat())),
         "drift": settings.drift(),
@@ -158,6 +160,57 @@ def state():
         "runs": _rows("SELECT * FROM runs ORDER BY id DESC LIMIT 20"),
         "events": _rows("SELECT * FROM events ORDER BY id DESC LIMIT 60"),
     }
+
+
+_ACCT: dict = {"at": 0.0, "v": None}
+_ACCT_LOCK = threading.Lock()
+
+
+@app.get("/api/account")
+def account():
+    """Von THAT tren san: so du vi + lai/lo chua chot + vi the dang giu.
+
+    Chi DOC, khong dat lenh, khong can cong tac chay that. Gom trong 5 giay
+    de nhieu tab cung mo khong nhan len so lan goi khoa API. Tra kem vi the
+    (so luong, gia vao) de trang tu tinh lai/lo chua chot theo gia danh dau
+    song thay vi doi lan hoi ke tiep.
+    """
+    if not CFG.has_keys():
+        return {"ok": False, "why": "chưa có khoá API"}
+    with _ACCT_LOCK:
+        if _ACCT["v"] is not None and time.time() - _ACCT["at"] < 5:
+            return _ACCT["v"]
+        t = None
+        try:
+            t = Trader()
+            a = t.account()
+            v = {"ok": True, "venue": CFG.binance_env,
+                 "stream": CFG.stream("live"),
+                 "wallet": float(a.get("totalWalletBalance", 0)),
+                 "upnl": float(a.get("totalUnrealizedProfit", 0)),
+                 "margin": float(a.get("totalMarginBalance", 0)),
+                 "avail": float(a.get("availableBalance", 0)),
+                 "positions": [
+                     {"symbol": x["symbol"], "amt": float(x["positionAmt"]),
+                      "entry": float(x["entryPrice"])}
+                     for x in a.get("positions", [])
+                     if float(x.get("positionAmt", 0) or 0)],
+                 "ts": int(time.time() * 1000)}
+        except Exception as e:
+            why = str(e)
+            ip = re.search(r"request ip: ([0-9a-fA-F.:]+)", why)
+            if "-2015" in why:
+                # Thuong gap nhat: khoa chua bat quyen Futures, hoac co danh
+                # sach IP ma chua co IP ra ngoai cua may nay.
+                why = ("Binance từ chối khoá API (-2015) — kiểm tra quyền "
+                       "Futures và danh sách IP của khoá"
+                       + (f"; IP máy này: {ip.group(1)}" if ip else ""))
+            v = {"ok": False, "why": why[:200]}
+        finally:
+            if t is not None:
+                t.close()
+        _ACCT.update(at=time.time(), v=v)
+        return v
 
 
 @app.post("/api/preview")

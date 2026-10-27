@@ -3,6 +3,11 @@
 # SQLite + WAL, mot tien trinh ghi duy nhat (lich chay nen trong chinh app)
 # nen khong can Postgres. Them dich vu thu hai chi de tach lich chay se dem
 # lai tranh chap ghi ma khong doi lai gi.
+#
+# Chot ten du an: thu muc da doi tu live/ sang trading-bot/. Khong chot thi
+# compose lay ten thu muc, tao volume moi trong (trading-bot_livedata) va
+# mat live.db dang nam trong live_livedata.
+name: live
 services:
   app:
     build: .
@@ -27,7 +32,10 @@ services:
       # ============ DUNG CHUNG CHO CA HAI CHIEN LUOC ============
       # ---- tran rui ro, ap o tang ma truoc khi gui lenh ----
       MAX_GROSS_USD: "${MAX_GROSS_USD:-500}"
-      MAX_ORDER_USD: "${MAX_ORDER_USD:-50}"
+      # 150 chu khong 50: o ALLOC_RSI2 = 8 lenh RSI(2) trung vi 40 USD nhung
+      # p99 106, lon nhat 141 (stop gan → R nho → co lenh lon). O 50, 1% lenh
+      # dong luong (lon nhat 80 USD) cung da bi chan.
+      MAX_ORDER_USD: "${MAX_ORDER_USD:-150}"
       MAX_ORDERS_PER_RUN: "${MAX_ORDERS_PER_RUN:-40}"
       # ---- ky quy: app tu dua moi ma ve CHEO + don bay nay truoc khi vao lenh ----
       # Ma ket isolated (dang co vi the) duoc nap them toi khi don bay thuc <= muc nay.
@@ -43,11 +51,16 @@ services:
       #              phoi nhiem trung vi 354 USD, dinh 896 USD = 1,79x don bay
       #   Ha xuong 1R = 1 thi het don bay nhung 24,5% lenh bi san tu choi.
       RISK_R_USD: "${RISK_R_USD:-2}"
-      # 7 so lech ngay x (2 mua + 2 ban) = 28
-      RISK_MAX_OPEN: "${RISK_MAX_OPEN:-28}"
+      # 7 so lech ngay x (2 mua + 2 ban) = 28, cong 5 cho cua RSI(2) = 33.
+      # Tran nay DUNG CHUNG: de 28 thi dong luong day so la RSI(2) het cho.
+      RISK_MAX_OPEN: "${RISK_MAX_OPEN:-33}"
       # ---- bat/tat tung chien luoc: he so nhan cho 1R, 0 = TAT ----
       # Tat thi vi the dang mo cua chien luoc do bi DONG o luot ke tiep.
-      ALLOC_RSI2: "${ALLOC_RSI2:-1.0}"        # chi RSI(2)
+      # RSI(2) = 8: o cung 1R, RSI(2) sut ~283 USD con dong luong ~11.259 USD
+      # (1R = 100) nen chia deu thi RSI(2) gan nhu vang mat. Can bang rui ro
+      # cho k* = 32; chay 8 truoc vi 32 la dat cuoc 32 lan vao 176 lenh chua
+      # co ngoai mau. Xem docs/money-management-r.md § Ghep hai chien luoc.
+      ALLOC_RSI2: "${ALLOC_RSI2:-8.0}"        # chi RSI(2)
       ALLOC_XSMOM: "${ALLOC_XSMOM:-1.0}"      # chi dong luong cat ngang
       START_EQUITY_USD: "${START_EQUITY_USD:-500}"
       # chay hang ngay luc 00:05 UTC, ngay sau khi nen 1D dong

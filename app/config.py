@@ -37,17 +37,18 @@ class Config:
 
     # --- tran rui ro, ap TRUOC khi gui bat ky lenh nao ---
     max_gross_usd: float = _f("MAX_GROSS_USD", 500)
-    max_order_usd: float = _f("MAX_ORDER_USD", 50)
+    max_order_usd: float = _f("MAX_ORDER_USD", 150)
     max_orders_per_run: int = _i("MAX_ORDERS_PER_RUN", 40)
 
     # --- don vi rui ro (docs/money-management-r.md) ---
     # 1R = so USD mat khi cham diem cat lo. Co lenh = r_usd / rfrac, nen no
     # KHONG phu thuoc von: von chi quyet dinh mo duoc bao nhieu lenh cung luc.
     risk_r_usd: float = _f("RISK_R_USD", 2)
-    risk_max_open: int = _i("RISK_MAX_OPEN", 28)
+    risk_max_open: int = _i("RISK_MAX_OPEN", 33)       # 28 dong luong + 5 RSI(2)
 
     # He so nhan cho 1R, khong phai ty trong von. 0 = tat chien luoc.
-    alloc_rsi2: float = _f("ALLOC_RSI2", 1.0)
+    # RSI(2) = 8 — xem docs/money-management-r.md § Ghep hai chien luoc.
+    alloc_rsi2: float = _f("ALLOC_RSI2", 8.0)
     alloc_xsmom: float = _f("ALLOC_XSMOM", 1.0)
     start_equity: float = _f("START_EQUITY_USD", 500)
 
@@ -71,6 +72,16 @@ class Config:
         # Du lieu nen/funding luon lay tu endpoint THAT: testnet khong co du
         # lich su de tinh MA20/ATR14/dong luong 30 ngay.
         return "https://fapi.binance.com"
+
+    def stream(self, mode: str) -> str:
+        """Luong gia danh dau (mark) cho lai/lo song tren bang vi the.
+
+        Vi the chay that tren testnet khop o gia testnet — doc gia that thi
+        lai/lo lech dung bang chenh lech hai san. So giay vao o gia that nen
+        doc luong that."""
+        return ("wss://fstream.binancefuture.com"
+                if mode == "live" and self.binance_env == "testnet"
+                else "wss://fstream.binance.com")
 
     def has_keys(self) -> bool:
         return bool(self.api_key and self.api_secret)
