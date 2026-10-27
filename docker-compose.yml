@@ -56,12 +56,17 @@ services:
       RISK_MAX_OPEN: "${RISK_MAX_OPEN:-33}"
       # ---- bat/tat tung chien luoc: he so nhan cho 1R, 0 = TAT ----
       # Tat thi vi the dang mo cua chien luoc do bi DONG o luot ke tiep.
-      # RSI(2) = 8: o cung 1R, RSI(2) sut ~283 USD con dong luong ~11.259 USD
-      # (1R = 100) nen chia deu thi RSI(2) gan nhu vang mat. Can bang rui ro
-      # cho k* = 32; chay 8 truoc vi 32 la dat cuoc 32 lan vao 176 lenh chua
-      # co ngoai mau. Xem docs/money-management-r.md § Ghep hai chien luoc.
+      # RSI(2) = 8: o cung 1R, RSI(2) gan nhu vang mat khoi danh muc. Do bang
+      # tab «Tinh lich su» (1R = 100, khong tran): 1 → 8 lai +12%, sut khong
+      # doi; tu ~16 tro len sut bat dau tang. Xem docs/money-management-r.md
+      # § Ghep hai chien luoc, muc SUA — so 32 cu dem trung lenh RSI(2).
       ALLOC_RSI2: "${ALLOC_RSI2:-8.0}"        # chi RSI(2)
       ALLOC_XSMOM: "${ALLOC_XSMOM:-1.0}"      # chi dong luong cat ngang
+      # ---- RSI(2) mua them: so lop toi da moi ma (1 = khong mua them, 1..5) ----
+      # Dang giu ma ma RSI(2) lai < 10 thi mo them mot lop, moi lop 1R va mot
+      # cho rieng. Bang chung yeu (26 lenh lop 2, chua ngoai mau) — xem
+      # docs/rsi2-connors.md § Mua them. Muon tat: dat 1.
+      RSI2_LAYERS: "${RSI2_LAYERS:-3}"
       START_EQUITY_USD: "${START_EQUITY_USD:-500}"
       # chay hang ngay luc 00:05 UTC, ngay sau khi nen 1D dong
       RUN_AT_UTC: "${RUN_AT_UTC:-00:05}"
@@ -70,6 +75,7 @@ services:
       # KHONG dat qua bien moi truong. Chung duoc chot trong app/config.py
       # (RSI2 = 9 o, XSMOM = 8 o) va sua luc chay qua tab «Cau hinh»:
       #   RSI(2)     : rsi2.topn slots rsi_in rsi_out ma atr atr_k cap min_bars
+      #                (rieng rsi2.layers co ca bien RSI2_LAYERS o tren)
       #   Dong luong : xsmom.topn lookback frac legs sleeves hold min_bars ma
       # Ly do: hai bo nay duoc chon kem ke toan da phep thu (49 o cat ngang,
       # nguong Sidak 0,00105). Doi chung la ket qua that khong con duoc bao

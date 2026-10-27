@@ -1,6 +1,6 @@
-# RSI(2) Connors — phương pháp v3 (đã chốt)
+# RSI(2) Connors — phương pháp v3.1 (đã chốt)
 
-**Ngày chốt v3:** 26/10/2026 (v2: 25/10/2026) · **Dữ liệu:** nến 1D (UTC) của Binance USDⓈ-M
+**Ngày chốt v3:** 26/10/2026 (v2: 25/10/2026) · **v3.1 sửa số:** 27/10/2026 · **Dữ liệu:** nến 1D (UTC) của Binance USDⓈ-M
 futures, **toàn bộ 900 mã USDT perp từng tồn tại** kể cả đã huỷ niêm yết,
 2020-09 → 2026-10-25. Funding thật từ `/fapi/v1/fundingRate`. Phí 10 bps
 khứ hồi mỗi lệnh.
@@ -11,7 +11,84 @@ stop. v2 đổi ba thứ: **vũ trụ có kiểm chứng**, **bộ lọc thanh k
 sang [đơn vị R](money-management-r.md), thêm hai trần bắt buộc, loại tài sản
 neo giá khỏi vũ trụ, và **sửa ba bảng sai** do luật đếm chỗ cũ.
 
+**v3.1 không đổi luật — nó sửa một lỗi đếm làm mọi con số v3 phóng đại.**
+
 ---
+
+## v3.1 — một mã, một lệnh (27/10/2026)
+
+`rsi2_universe.trades()` xét từng ngày độc lập, nên hai ngày RSI(2) < 10
+liên tiếp sinh **hai lệnh chồng lên cùng một mã** — mã đang có lệnh vẫn được
+mở thêm. Bot thật không làm thế: `rsi2_signals()` loại mã đang giữ. Lỗi
+được tìm ra khi tab «Tính lịch sử» của app (mô phỏng đúng cơ chế bot) cho
+lãi RSI(2) thấp hơn nghiên cứu ~35%.
+
+Ở top 10: **33/176 lệnh (19%) là lệnh chồng**. Sửa bằng
+`rsi2_universe.one_per_symbol()`, gọi **sau** khi lọc hạng thanh khoản; đặt
+`RSI2_OVERLAP=1` thì mọi script dựng lại đúng số cũ (đã kiểm khớp bảng top N
+từng ô). Cùng một quy trình, cùng hạt giống bootstrap:
+
+| top 10 | v3 (có chồng) | **v3.1** |
+|---|---|---|
+| lệnh / năm | 176 / 32 | **143 / 26** |
+| bps TB · thắng | +301,5 · 73,9% | **+255,4 · 70,6%** |
+| KTC95 bps (khối 30 ngày) | [+104 ; +460] | **[+68 ; +433]** |
+| train / test | +308 / +267 | **+261 / +225** |
+| vốn N=5 · sụt | 2,64× · 18,9% | **2,02× · 16,7%** |
+| CAGR/sụt | 1,03 | **0,82** |
+| R TB · R tổng | +0,081 · +13,9 | **+0,072 · +10,3** |
+| năm 2022 | +2,1% (phẳng) | **−3,1% (lỗ)** |
+
+**Điều còn đứng:** KTC95 vẫn loại 0, train/test vẫn ổn định, lợi thế mỗi lệnh
+vẫn cỡ +250 bps. **Điều đổi:** chiến lược yếu hơn ~15% mỗi lệnh, có một năm
+lỗ, và lý lẽ "top 10 thắng CAGR/sụt" không còn — xem § Vì sao top 10.
+
+Các mục **đã dựng lại** theo v3.1: Bộ tham số, Kết quả từng năm, bảng top N.
+Các mục **còn mang số v3** (có chồng, chưa dựng lại): Hai cách diễn đạt khác,
+Thiên lệch sống sót, Một cơ chế giải thích, Những gì đã thử, và số +137,5R
+toàn vũ trụ. Chiều của các kết luận ở đó không đổi theo phép thử nhanh, nhưng
+độ lớn thì có.
+
+Script: `scripts/rsi2_v31.py` dựng mọi bảng v3.1 trong tài liệu này (chạy với
+`RSI2_OVERLAP=1` ra lại bảng v3). `rsi2_topn_recheck.py`, `rsi2_risk_unit.py`
+và `fixed_r_usd.py` cũng đã gọi `one_per_symbol`.
+
+## Mua thêm — bật trong bot 27/10/2026 (lựa chọn vận hành)
+
+Luật thêm: đang giữ một mã mà RSI(2) **lại** < 10 và close > MA20 thì mở
+thêm một lớp, tối đa `rsi2.layers` lớp mỗi mã (**mặc định 2** — mua thêm một
+lần). Mỗi lớp có stop, cỡ 1R và chỗ riêng (vẫn tính vào 5 chỗ); mọi lớp thoát
+khi RSI(2) > 70.
+
+Đây chính là phần v3 đã vô tình đo, nay làm có chủ ý. Lợi suất theo lớp, top
+10, khi không giới hạn lớp:
+
+```
+lớp 1   143 lệnh   +255 bps   thắng 71%
+lớp 2    26 lệnh   +399 bps   thắng 85%
+lớp 3     5 lệnh   +848 bps   thắng 100%
+lớp 4     2 lệnh   +963 bps   thắng 100%
+```
+
+Đo bằng engine của app (mô phỏng đúng cơ chế bot), RSI(2) riêng, 1R = 100:
+
+| `rsi2.layers` | lệnh (mua thêm) | lãi USD | thắng | R TB | sụt USD | 2022 |
+|---|---|---|---|---|---|---|
+| 1 | 156 (0) | 946 | 69% | +0,061 | 243 | −93 |
+| **2** | 179 (25) | **1.249** | 72% | +0,070 | **297** | **−22** |
+| 3 | 183 (30) | 1.340 | 73% | +0,073 | 297 | −22 |
+| 5 | 184 (31) | 1.367 | 73% | +0,074 | 297 | −22 |
+
+Cấu hình thật (500 USD, 1R = 2, RSI(2) × 8): vốn cuối **1.653 → 1.702 USD**,
+CAGR 24,0% → 24,7%, sụt 24,6% → 24,0%.
+
+**Mức bằng chứng — ghi rõ để sau này không hiểu nhầm.** Đây là **lựa chọn
+vận hành**, không phải kết luận thống kê: 26 lệnh lớp 2, nhìn thấy **sau**
+khi đã xem số, chưa có quan sát ngoài mẫu nào. Cái giá có thật: sụt của
+riêng RSI(2) tăng 22% (243 → 297), và mỗi lớp là thêm 1R vào **đúng mã đang
+giảm mạnh nhất** — một token sập thật sẽ lỗ gấp đôi. Chọn 2 lớp chứ không 4
+vì lớp 3–4 chỉ có 7 lệnh mà rủi ro tập trung nhân lên. Đặt `rsi2.layers = 1`
+trong tab Cấu hình để tắt.
 
 ## Bộ tham số
 
@@ -21,6 +98,7 @@ vũ trụ : top 10 mã theo trung vị giá trị giao dịch USD 30 ngày,
 vào    : RSI(2) < 10  VÀ  close > MA20   → khớp ở open nến 1D kế tiếp
 thoát  : nến đầu tiên có RSI(2) > 70     → khớp ở close nến đó
 stop   : max(giá_vào − 6×ATR(14),  giá_vào × 0,60)
+lớp    : tối đa 2 lớp mỗi mã — mua thêm khi tín hiệu lặp lại lúc đang giữ
 phí    : 10 bps/lệnh khứ hồi + funding thực tế
 cỡ lệnh: risk% × vốn ÷ R,  R = (giá_vào − stop) / giá_vào
          trần cỡ một lệnh 25% vốn · tổng rủi ro đang mở ≤ 5 × risk%
@@ -31,28 +109,27 @@ Chỉ long. RSI(2) theo Connors, MA là SMA, mỗi mã cần **205 nến lịch 
 khi được vào lệnh. **Lưu ý ATR:** repo này tính ATR = SMA của True Range,
 không phải RMA của Wilder.
 
-**176 lệnh (171 nhận được chỗ) · 31 lệnh/năm · bps TB +301,5 · thắng 73,9%**
-**cắt lỗ 0,0% · KTC95 bootstrap khối 30 ngày: [+109,5 ; +473,8]**
-**R trung bình +0,081 · R tổng +13,9**
+**143 lệnh (143 nhận được chỗ) · 26 lệnh/năm · bps TB +255,4 · thắng 70,6%**
+**cắt lỗ 0,0% · KTC95 bootstrap khối 30 ngày: [+68 ; +433]**
+**R trung bình +0,072 · R tổng +10,3** *(v3 có chồng: 176 lệnh · +301,5 · +0,081)*
 
 Vặn mức rủi ro thì lợi nhuận và sụt đi lên cùng nhịp — tỷ lệ gần như bất
 biến, nên **risk% là lựa chọn của người vận hành, không phải tham số khớp
 dữ liệu**:
 
-| risk%/lệnh | Vốn (5,5 năm) | Sụt tối đa | CAGR/sụt |
-|---|---|---|---|
-| 1% | 1,15× | 2,6% | 0,99 |
-| 3% | 1,50× | 7,7% | 1,01 |
-| 5% | 1,94× | 12,7% | 1,01 |
-| **7%** | **2,46×** | **17,8%** | **1,00** |
-| 10% | 3,24× | 25,3% | 0,95 |
+| risk%/lệnh | Vốn (5,5 năm) | Sụt tối đa | CAGR/sụt | *v3 (có chồng)* |
+|---|---|---|---|---|
+| 1% | 1,11× | 2,2% | 0,86 | *1,15× · 2,6%* |
+| 3% | 1,35× | 6,6% | 0,87 | *1,50× · 7,7%* |
+| 5% | 1,64× | 10,8% | 0,87 | *1,94× · 12,7%* |
+| **7%** | **1,94×** | **15,0%** | **0,85** | *2,46× · 17,8%* |
+| 10% | 2,35× | 21,1% | 0,80 | *3,24× · 25,3%* |
 
-Mức **7%** tái tạo đúng mức sụt của cách chia 1/N cũ (17,8% so với 18,9%),
-dùng làm mốc đối chiếu. Ở 10% tỷ lệ bắt đầu tụt — đó là trần đòn bẩy.
+Mức **7%** cho sụt gần mức của cách chia 1/N (15,0% so với 16,7%), dùng làm
+mốc đối chiếu. Ở 10% tỷ lệ bắt đầu tụt — đó là trần đòn bẩy.
 
-**Số của v2 để đối chiếu** (chia đều 1/5 vốn mỗi lệnh, luật chỗ đã sửa):
-**2,64× · sụt 18,9%**. Con số **2,76× / 14,1%** từng ghi ở đây là **sai** —
-xem § Ba bảng đã sửa.
+**Chia đều 1/5 vốn mỗi lệnh để đối chiếu: 2,02× · sụt 16,7%** (v3: 2,64× ·
+18,9%; con số 2,76× / 14,1% của v2 thì sai từ trước — xem § Ba bảng đã sửa).
 
 ## Kết quả từng năm
 
@@ -61,26 +138,24 @@ vốn nên lãi/lỗ rơi vào đúng ngày phát sinh, không dồn hết vào 
 
 | Năm | Lệnh nhận | bps TB | Thắng | Vốn năm | Sụt trong năm | Luỹ kế |
 |---|---|---|---|---|---|---|
-| 2021 | 27 | +468,9 | 70,4% | 1,244× | **18,9%** | 1,24× |
-| 2022 | 30 | **−1,2** | 63,3% | 1,021× | 16,7% | 1,27× |
-| 2023 | 24 | +375,9 | 75,0% | 1,175× | 6,9% | 1,49× |
-| 2024 | 35 | +179,0 | 68,6% | 1,141× | 14,8% | 1,70× |
-| 2025 | 25 | +599,9 | 88,0% | 1,339× | 9,5% | 2,28× |
-| 2026¹ | 30 | +243,6 | 80,0% | 1,156× | 5,2% | **2,64×** |
+| 2021 | 21 | +407,9 | 61,9% | 1,164× | 14,5% | 1,16× |
+| 2022 | 26 | **−76,0** | 61,5% | **0,969×** | **16,7%** | 1,13× |
+| 2023 | 20 | +201,7 | 70,0% | 1,065× | 6,9% | 1,20× |
+| 2024 | 32 | +282,5 | 71,9% | 1,208× | 9,9% | 1,45× |
+| 2025 | 20 | +557,8 | 85,0% | 1,242× | 9,5% | 1,80× |
+| 2026¹ | 24 | +237,8 | 75,0% | 1,120× | 3,8% | **2,02×** |
 
-¹ tới 11/10/2026. Dữ liệu chạy 2021-04-19 → 2026-10-11, tức **5,53 năm** chạm
-vào sáu năm lịch — 2021 và 2026 đều là năm cụt.
+¹ Dữ liệu chạy từ 2021-04 tới tháng 10/2026, tức **5,53 năm** chạm vào sáu
+năm lịch — 2021 và 2026 đều là năm cụt.
 
-**Không năm nào âm, nhưng 2022 chỉ đứng yên.** Bps trung bình mỗi lệnh năm đó
-là **−1,2**, tức âm; năm vẫn ra +2,1% vì đường vốn theo ngày tính phần lãi
-của các lệnh mở cuối 2021 vào 2022. Đo theo lệnh đóng trong năm thì 2022 là
-**−36 bps ≈ −0,07%**. Dương hay âm tuỳ quy ước — bản chất là phẳng. Chiến
-lược sống qua mùa gấu 2022 bằng cách **không làm gì**.
+**2022 là năm lỗ: −76 bps mỗi lệnh, vốn năm −3,1%.** Bản v3 ghi "không năm
+nào âm, 2022 chỉ đứng yên" — câu đó dựa trên lệnh chồng và **sai**. Chiến
+lược không sống qua mùa gấu bằng cách đứng ngoài hoàn toàn; nó vẫn mua các
+nhịp quá bán trong xu hướng giảm và thua.
 
-Và «không năm nào âm» nói ít hơn vẻ ngoài: sáu quan sát năm, hai cái cụt,
-trên mẫu 5,53 năm **chưa có kiểm định ngoài mẫu sạch**. Thứ đáng nhìn hơn nằm
-trong năm — **mỗi năm đều có một đợt sụt hai chữ số hoặc gần thế**, sâu nhất
-là 18,9%.
+Sáu quan sát năm, hai cái cụt, trên mẫu 5,53 năm **chưa có kiểm định ngoài
+mẫu sạch**. **Mỗi năm đều có một đợt sụt hai chữ số hoặc gần thế**, sâu nhất
+là 16,7%.
 
 **Stop không bắn phát nào trong cả sáu năm.** Giờ đã biết lý do: **79% số lệnh
 (2.323/2.936 trên toàn vũ trụ) có stop nằm đúng ở trần 40%**, nghĩa là với đa
@@ -96,47 +171,44 @@ thanh khoản chứ không cố định.
 Thanh khoản = trung vị giá trị giao dịch USD **30 ngày tính đến nến tín hiệu**,
 xếp hạng chéo giữa mọi mã niêm yết ngày hôm đó. Hoàn toàn nhân quả.
 
+Bảng v3.1 (một mã một lệnh). Bootstrap khối 30 ngày, hạt giống 101.
+
 | top N | Lệnh | Nhận | bps TB | train | test | Vốn N=5 | Sụt | KTC95 |
 |---|---|---|---|---|---|---|---|---|
-| **10** | 176 | 171 | **+301,5** | +308 | +267 | **2,64×** | **18,9%** | **[+110, +474]** |
-| 20 | 303 | 266 | +299,1 | +325 | +192 | 3,35× | 28,9% | [+85, +493] |
-| 30 | 428 | 340 | +247,1 | +243 | +267 | 3,31× | 37,9% | [+54, +434] |
-| 40 | 550 | 389 | +257,4 | +237 | +345 | 2,77× | 48,4% | [+32, +428] |
-| 50 | 696 | 456 | +206,3 | +215 | +171 | 3,49× | 41,1% | [+11, +381] |
-| 75 | 962 | 546 | +166,2 | +199 | +32 | 3,34× | 41,9% | **[−37, +359]** |
-| 100 | 1.237 | 630 | +191,3 | +205 | +141 | 5,40× | 40,9% | [+0, +361] |
-| tất cả (498 mã) | 2.936 | 858 | +176,8 | +179 | +185 | **8,30×** | 56,0% | **[−2, +342]** |
+| **10** | 143 | 143 | +255,4 | +261 | +225 | 2,02× | **16,7%** | **[+68, +433]** |
+| 20 | 244 | 233 | +268,7 | +311 | **+52** | 2,78× | 25,7% | [+64, +480] |
+| 30 | 338 | 301 | +217,5 | +227 | +174 | 3,03× | 28,4% | [+21, +385] |
+| 40 | 434 | 345 | +234,7 | +230 | +257 | 2,67× | 39,9% | [+50, +407] |
+| 50 | 543 | 403 | +179,1 | +209 | +35 | 2,29× | 36,5% | [+8, +353] |
+| 75 | 763 | 492 | +148,8 | +186 | −26 | 2,69× | 41,0% | **[−42, +339]** |
+| 100 | 983 | 568 | +178,1 | +202 | +74 | 4,22× | 37,7% | [−9, +344] |
+| tất cả (498 mã) | 2.302 | 797 | +174,3 | +202 | +105 | **13,02×** | 51,6% | **[−6, +331]** |
 
-Cột **«nhận»** là số lệnh thật sự tìm được chỗ. Nó giải thích vì sao vũ trụ
-rộng không nhân vốn lên được: với vũ trụ đầy đủ, **71% số lệnh bị bỏ** vì hết
-chỗ. Số chỗ mới là thứ chặn trên, không phải số ứng viên.
+Cột **«nhận»** là số lệnh thật sự tìm được chỗ. Với vũ trụ đầy đủ **65% số
+lệnh bị bỏ** vì hết chỗ — số chỗ mới là thứ chặn trên, không phải số ứng viên.
 
-**Top 10 không cho vốn cao nhất** — vũ trụ đầy đủ cho 8,30×, gấp 3,1 lần. Lý
-do chọn top 10 là **đánh đổi rủi ro**, không phải lợi nhuận tuyệt đối:
+| top N | Vốn | CAGR | Sụt | CAGR/sụt | *v3 (có chồng)* |
+|---|---|---|---|---|---|
+| **10** | 2,02× | ~13,7% | **16,7%** | 0,82 | *2,64× · 18,9% · 1,02* |
+| 100 | 4,22× | ~29,8% | 37,7% | 0,79 | *5,40× · 40,9% · 0,87* |
+| tất cả | **13,02×** | ~58,8% | 51,6% | **1,14** | *8,30× · 56,0% · 0,83* |
 
-| top N | Vốn | CAGR | Sụt | CAGR/sụt |
-|---|---|---|---|---|
-| **10** | 2,64× | 19,2% | **18,9%** | **1,02** |
-| 100 | 5,40× | 35,7% | 40,9% | 0,87 |
-| tất cả | **8,30×** | **46,6%** | 56,0% | 0,83 |
+**Lý lẽ v3 cho top 10 không còn nguyên vẹn.** v3 nói top 10 thắng ở bps, ở
+CAGR/sụt và là mức duy nhất có KTC loại 0. Sau khi bỏ lệnh chồng:
 
-Top 10 thắng ở **bps mỗi lệnh** (+301,5 so với +176,8), ở **R mỗi lệnh**
-(+0,081 so với +0,047), ở **sụt thấp nhất**, ở **CAGR/sụt**, và là mức duy
-nhất có KTC95 không chạm 0. Ở cùng mức sụt 18%, top 10 cho 2,46× còn vũ trụ
-đầy đủ chỉ khoảng 2,1×.
+- **bps:** top 20 nhỉnh hơn (+268,7 so với +255,4) — không phân biệt được.
+- **CAGR/sụt:** vũ trụ đầy đủ **cao hơn** (1,14 so với 0,82) — lệnh chồng
+  từng đè lên nó nặng nhất, vì vũ trụ rộng có nhiều chuỗi quá bán nhiều ngày.
+- **KTC loại 0:** top 10 đến top 50 đều loại 0; top 75 trở lên chạm 0.
 
-Lợi thế trên vũ trụ rộng **có thật** — tổng +137,5R so với +13,9R. Cái làm nó
-không dùng được là chất lượng mỗi lệnh giảm 42%, cộng với việc các lệnh dồn
-cục vào cùng một nhịp thị trường nên lỗ chồng lên nhau.
+Thứ **còn đứng**: top 10 có **sụt thấp nhất** (16,7% so với 25,7% của top 20
+và 51,6% của toàn vũ trụ), **train/test ổn định nhất** (+261/+225, trong khi
+top 20 rơi từ +311 xuống +52), và stop không bao giờ bắn. Giữ top 10 vì sụt
+và độ ổn định — **không** vì CAGR/sụt.
 
-Lợi thế giảm đều, nhưng **sụt vốn xấu đi nhanh hơn nhiều**: 14% ở top 10 lên
-43–49% ngay ở top 30–40. Biên dưới KTC95 tụt từ +110 xuống +11 ở top 50 và
-âm từ top 75.
-
-Top 10 và top 20 **không phân biệt được về bps** (+301,5 so với +299,1, KTC
-chồng lên nhau gần hết). Chọn top 10 vì ba thứ khác: biên dưới KTC cao hơn,
-stop không bao giờ bắn, và sụt vốn bằng một nửa ở mọi cỡ lệnh. Cân bằng rủi
-ro rồi thì top 10 ở N=3 (4,39× / 23%) nhỉnh hơn top 20 ở N=5 (4,26× / 24%).
+Câu hỏi "có nên mở rộng vũ trụ không" giờ đáng hỏi lại, nhưng trả lời bằng
+cách đổi tham số trên chính mẫu này là thêm một ô vào lưới tìm kiếm. Muốn hỏi
+thì tách mẫu giữ lại hoặc dùng dữ liệu chạy thật.
 
 Hai cách diễn đạt khác đều kém hơn:
 
@@ -344,6 +416,7 @@ Ba script còn giữ luật cũ và **chưa được dùng lại**: `rsi2_best.p
 
 | Tệp | Nội dung |
 |---|---|
+| `scripts/rsi2_v31.py` | **v3.1** — mọi bảng sau khi bỏ lệnh chồng; `RSI2_OVERLAP=1` ra lại v3 |
 | `scripts/rsi2_risk_unit.py` | **v3** — định cỡ theo R, quét mức rủi ro |
 | `scripts/rsi2_topn_recheck.py` | **v3** — dựng lại bảng top N, đối chiếu luật chỗ cũ |
 | `scripts/rsi2_all_nocap.py` | **v3** — toàn vũ trụ không chặn vốn, hồ sơ đòn bẩy |

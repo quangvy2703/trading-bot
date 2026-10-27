@@ -301,6 +301,45 @@ tr.dr td:nth-child(2){color:var(--dim);text-decoration:line-through}
 .md .tw{margin:0 0 15px;max-height:none}
 @media (max-width:680px){.md{padding:4px 13px 18px}}
 
+/* ============ tab tinh lich su ============ */
+.btform{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.fset{border:1px solid var(--edge);border-radius:14px;padding:10px 12px 11px;
+  background:rgba(255,255,255,.45);min-width:0}
+.fset h4{margin:0 0 6px;font-size:10.5px;color:var(--dim);font-weight:650;
+  letter-spacing:.4px;text-transform:uppercase}
+.fld{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:8px;
+  align-items:center;padding:3px 0;font-size:12px;color:var(--ink2)}
+.fld .u{color:var(--dim);font-size:10.5px;margin-left:4px}
+.fld input{background:#fff;color:var(--ink);border:1px solid var(--rim);
+  border-radius:9px;padding:6px 9px;font:inherit;font-family:var(--mono);
+  font-size:12px;width:100%;min-width:0;text-align:right;
+  box-shadow:inset 0 1px 2px rgba(42,35,64,.04)}
+.fld input:hover{border-color:var(--acc2)}
+.fld input.chg{border-color:var(--acc);color:var(--acc);
+  box-shadow:0 0 0 3px rgba(109,91,208,.12)}
+.fld input[type=checkbox]{width:18px;height:18px;justify-self:end;box-shadow:none;
+  accent-color:var(--acc)}
+.presets{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.presets button{min-height:28px;padding:0 10px;font-size:11.5px}
+details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:12px;
+  padding:10px 0 2px}
+.btkpi{display:grid;gap:11px;grid-template-columns:repeat(2,1fr)}
+@media (min-width:880px){.btkpi{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:1260px){.btkpi{grid-template-columns:repeat(6,1fr)}}
+.btchart{display:block;width:100%;height:clamp(190px,22vw,270px);padding:0 6px}
+.btchart.dd{height:clamp(100px,10vw,130px)}
+.btchart .hit{cursor:crosshair}
+.legend{display:inline-flex;gap:14px;flex-wrap:wrap;color:var(--ink2)}
+.legend i,.tip i{display:inline-block;width:14px;height:2px;border-radius:1px;
+  vertical-align:middle;margin-right:6px}
+.tip{position:absolute;top:6px;pointer-events:none;background:rgba(255,255,255,.96);
+  border:1px solid var(--edge);border-radius:11px;padding:7px 11px;font-size:11px;
+  box-shadow:var(--sh);display:none;z-index:5;white-space:nowrap;color:var(--dim)}
+.tip b{font-family:var(--mono);color:var(--ink);font-weight:650}
+.tip .d{color:var(--ink2);font-weight:600;margin-bottom:3px}
+#btRes{display:none}#btRes.on{display:block}
+#btRes.stale{opacity:.5;transition:opacity .2s}
+
 /* ============ ket qua thu API ============ */
 #testout{margin-top:10px;display:none;border:1px solid var(--edge);
   border-radius:12px;overflow:hidden}
@@ -352,6 +391,7 @@ tr.dr td:nth-child(2){color:var(--dim);text-decoration:line-through}
   <nav class="tabs">
     <button data-tab="dash" class="on">Bảng điều khiển</button>
     <button data-tab="cfg">Cấu hình<span class="pill" id="driftPill" style="display:none"></span></button>
+    <button data-tab="bt">Tính lịch sử</button>
     <button data-tab="doc">Phương pháp</button>
     <button data-tab="log">Nhật ký</button>
   </nav>
@@ -472,6 +512,78 @@ tr.dr td:nth-child(2){color:var(--dim);text-decoration:line-through}
       </div>
     </div>
     <div class="cfgwrap" id="cfgGroups"></div>
+  </section>
+
+  <section id="t-bt">
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph"><h3>Thiết lập</h3>
+        <span class="sub">mặc định = cấu hình đang chạy · chỉ tính, <b>không đổi
+          cấu hình, không đặt lệnh</b></span></div>
+      <div class="pb">
+        <div class="btform" id="btForm"></div>
+        <details class="more">
+          <summary>Tham số chiến lược — RSI(2) · động lượng</summary>
+          <div class="btform" id="btStrat" style="margin-top:8px"></div>
+        </details>
+        <div class="row" style="margin-top:12px">
+          <button class="warn" id="btnBt">Tính</button>
+          <button id="btnBtReset">Lấy lại cấu hình đang chạy</button>
+          <span class="sub" id="btStatus"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="btRes">
+      <div class="btkpi" id="btKpi"></div>
+      <div class="panel" style="margin-top:12px">
+        <div class="ph"><h3>Lãi luỹ kế</h3>
+          <span class="sub legend" id="btLeg"></span></div>
+        <div style="position:relative">
+          <svg id="btCv" class="btchart" role="img" aria-label="Lãi luỹ kế theo ngày"></svg>
+          <div class="tip" id="btTip"></div></div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="ph"><h3>Sụt khỏi đỉnh</h3>
+          <span class="sub">% so với đỉnh vốn, đánh giá lại theo ngày</span></div>
+        <div style="position:relative">
+          <svg id="btDd" class="btchart dd" role="img" aria-label="Sụt khỏi đỉnh vốn"></svg>
+          <div class="tip" id="btTip2"></div></div>
+      </div>
+      <div class="cols">
+        <div class="colA">
+          <div class="panel"><div class="ph"><h3>Theo chiến lược</h3></div>
+            <div class="tw"><table id="btPer"></table></div></div>
+          <div class="panel"><div class="ph"><h3>Theo năm</h3>
+            <span class="sub">lãi theo đường vốn đánh giá lại theo ngày</span></div>
+            <div class="tw"><table id="btYr"></table></div></div>
+        </div>
+        <div class="colB">
+          <div class="panel"><div class="ph"><h3>Lệnh bị chặn</h3>
+            <span class="sub" id="btBlkSub"></span></div>
+            <div class="tw"><table id="btBlk"></table></div></div>
+          <div class="panel"><div class="ph"><h3>Mô phỏng theo cách bot chạy</h3></div>
+            <div class="pb sub">
+              Tín hiệu chốt trên nến 1D đã đóng, khớp ở <b>open hôm sau</b>.
+              RSI(2) chạm stop hay vượt ngưỡng thoát thì đóng ở open hôm sau —
+              bot không đặt lệnh dừng trên sàn. Vị thế động lượng trùng sổ, mã,
+              chiều thì giữ nguyên, không mua bán lại. Trần áp đúng thứ tự của
+              app, cộng hai chặn của sàn: lệnh tối thiểu và ký quỹ (phơi nhiễm
+              ÷ đòn bẩy ≤ vốn). Funding thật tính từng ngày. Lãi/lỗ cộng theo
+              USD với 1R cố định — vốn chỉ quyết định mở được bao nhiêu lệnh.
+              <br><br>Mã đủ <b>min_bars</b> nến <b>tính đến ngày đó</b> mới
+              vào vũ trụ, nên không nhìn trước. Số khác bảng trong docs ở hai
+              chỗ: khớp thoát hôm sau, và không có lệnh RSI(2) chồng lên một mã
+              đang mở.</div></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="ph"><h3>Lệnh</h3>
+          <span class="docpick" id="btPick"></span>
+          <button id="btnCsv" style="min-height:30px;font-size:12px">Tải CSV</button></div>
+        <div class="tw" style="max-height:430px"><table id="btTr"></table></div>
+        <div class="pb sub" id="btTrSub"></div>
+      </div>
+    </div>
   </section>
 
   <section id="t-doc">
@@ -1096,6 +1208,305 @@ async function initDocs() {
     + 'vào container</p>';
 }
 
+/* ================= tab tính lịch sử ================= */
+/* Mau duong: tim = RSI(2), xanh = dong luong — trung chip cua hai chien luoc.
+   Cam = tong. Bo ba da qua scripts/validate_palette.js (che do sang). */
+const COL = {tot: '#C2701C', rsi2: '#6D5BD0', xsmom: '#2E8FB8'};
+const SNAME = {tot: 'Tổng', rsi2: 'RSI(2)', xsmom: 'Động lượng'};
+const BTFORM = [
+  ['Vốn & rủi ro', [['start_equity', 'vốn ban đầu', 'USD'], ['risk_r_usd', '1R', 'USD'],
+    ['leverage', 'đòn bẩy', '×'], ['fee_bps', 'phí khứ hồi', 'bps'],
+    ['min_notional', 'lệnh tối thiểu của sàn', 'USD']]],
+  ['Phân bổ', [['alloc_rsi2', 'hệ số 1R · RSI(2)', '×'],
+    ['alloc_xsmom', 'hệ số 1R · động lượng', '×']]],
+  ['Trần rủi ro', [['risk_max_open', 'lệnh mở cùng lúc', ''],
+    ['max_order_usd', 'trần một lệnh', 'USD'],
+    ['max_gross_usd', 'trần mở thêm mỗi lượt', 'USD'],
+    ['max_orders_per_run', 'lệnh mỗi lượt', ''],
+    ['one_way', 'sàn một chiều (như chạy thật)', '']]]];
+let BT = null, BTV = {}, BTR = null, BTF = 'all';
+const n0 = v => v == null ? '—' : Math.round(v).toLocaleString('vi-VN');
+const sgn0 = v => v == null ? '—' : (v >= 0 ? '+' : '−') + n0(Math.abs(v));
+const pc1 = v => v == null ? '—' : (v >= 0 ? '+' : '−') + pct(Math.abs(v) * 100, 1) + '%';
+const cls = v => v == null ? '' : v >= 0 ? 'pos' : 'neg';
+
+function fld(k, label, unit, box) {
+  const d = BT.defaults[k];
+  const row = document.createElement('label');
+  row.className = 'fld';
+  const sp = document.createElement('span');
+  sp.textContent = label;
+  if (unit) { const u = document.createElement('span'); u.className = 'u';
+    u.textContent = unit; sp.appendChild(u); }
+  const inp = document.createElement('input');
+  inp.dataset.k = k;
+  if (k === 'one_way') { inp.type = 'checkbox'; inp.checked = BTV[k] !== false; }
+  else if (k === 'start' || k === 'end') { inp.type = 'date'; inp.value = BTV[k] || ''; }
+  else { inp.type = 'text'; inp.inputMode = 'decimal'; inp.value = BTV[k]; }
+  const mark = () => {
+    const v = inp.type === 'checkbox' ? inp.checked : inp.value.trim();
+    BTV[k] = v;
+    inp.classList.toggle('chg', String(v) !== String(d ?? ''));
+  };
+  inp.oninput = inp.onchange = mark;
+  mark();
+  row.append(sp, inp);
+  box.appendChild(row);
+}
+
+function buildBtForm() {
+  const f = $('btForm'); f.textContent = '';
+  for (const [title, rows] of BTFORM) {
+    const fs = document.createElement('div'); fs.className = 'fset';
+    fs.innerHTML = `<h4>${title}</h4>`;
+    for (const [k, l, u] of rows) fld(k, l, u, fs);
+    f.appendChild(fs);
+  }
+  const fs = document.createElement('div'); fs.className = 'fset';
+  fs.innerHTML = '<h4>Thời gian</h4>';
+  fld('start', 'từ ngày', '', fs); fld('end', 'đến ngày', '', fs);
+  const pr = document.createElement('div'); pr.className = 'presets';
+  const last = BT.last ? new Date(BT.last) : new Date();
+  const back = y => { const d = new Date(last); d.setUTCFullYear(d.getUTCFullYear() - y);
+    return d.toISOString().slice(0, 10); };
+  for (const [t, a] of [['toàn bộ', ''], ['3 năm', back(3)], ['1 năm', back(1)],
+                        ['từ 2024-07', '2024-07-01']]) {
+    const b = document.createElement('button'); b.textContent = t;
+    b.onclick = () => { BTV.start = a; BTV.end = ''; buildBtForm(); };
+    pr.appendChild(b);
+  }
+  fs.appendChild(pr);
+  f.appendChild(fs);
+
+  const s = $('btStrat'); s.textContent = '';
+  for (const [g, title] of [['rsi2', 'RSI(2)'], ['xsmom', 'Động lượng']]) {
+    const box = document.createElement('div'); box.className = 'fset';
+    box.innerHTML = `<h4>${title}</h4>`;
+    for (const k of Object.keys(BT.spec).filter(k => BT.spec[k].group === g))
+      fld(k, BT.spec[k].desc, '', box);
+    s.appendChild(box);
+  }
+}
+
+async function initBt() {
+  BT = await (await fetch('/api/backtest')).json();
+  BT.last = S?.data?.last_bar;
+  BTV = {...BT.defaults, start: '', end: ''};
+  buildBtForm();
+}
+
+function btBody() {
+  const out = {};
+  for (const [k, v] of Object.entries(BTV)) {
+    if (k === 'one_way') out[k] = !!v;
+    else if (k === 'start' || k === 'end') { if (v) out[k] = v; }
+    else if (v !== '' && v != null) out[k] = typeof v === 'string' ? v.replace(',', '.') : v;
+  }
+  return out;
+}
+
+async function runBt() {
+  const b = $('btnBt'); b.disabled = true;
+  $('btStatus').textContent = 'đang tính…';
+  $('btRes').classList.add('stale');
+  try {
+    BTR = await call('/api/backtest', btBody());
+    renderBt();
+    $('btStatus').textContent = `xong trong ${pct(BTR.secs, 1)} giây · `
+      + `${BTR.data.symbols} mã · ${day(BTR.range[0])} → ${day(BTR.range[1])}`;
+  } catch (e) { $('btStatus').textContent = ''; msg(e.message, false); }
+  finally { b.disabled = false; $('btRes').classList.remove('stale'); }
+}
+
+function kpiTile(lbl, val, sub, c = '') {
+  return `<div class="tile"><div class="lbl">${lbl}</div>`
+    + `<div class="val ${c}">${val}</div><div class="sub">${sub}</div></div>`;
+}
+
+function renderBt() {
+  const r = BTR, s = r.summary;
+  $('btRes').classList.add('on');
+  $('btKpi').innerHTML =
+    kpiTile('Vốn cuối', n0(s.end) + ' <span class="mut" style="font-size:.6em">USD</span>',
+      `${pc1(s.ret)} · CAGR ${pc1(s.cagr)}/năm`)
+    + kpiTile('Lãi', sgn0(s.pnl) + ' <span class="mut" style="font-size:.6em">USD</span>',
+      `RSI(2) ${sgn0(r.per.rsi2.pnl)} · ĐL ${sgn0(r.per.xsmom.pnl)}`, cls(s.pnl))
+    + kpiTile('Sụt tối đa', '−' + pct(s.dd_pc * 100, 1) + '%',
+      `${n0(s.dd_usd)} USD khỏi đỉnh`, s.dd_pc > 0.3 ? 'neg' : '')
+    + kpiTile('Âm dài nhất', `${s.under} <span class="mut" style="font-size:.6em">ngày</span>`,
+      `trên ${pct(s.years, 1)} năm`)
+    + kpiTile('Lệnh', n0(s.trades),
+      s.blocked ? `<span class="neg">${n0(s.blocked)} bị chặn</span>` : 'không lệnh nào bị chặn')
+    + kpiTile('Ký quỹ đỉnh', pct(s.peak_margin * 100, 0) + '% vốn',
+      `phơi nhiễm đỉnh ${n0(s.peak_gross)} USD · TB ${pct(s.avg_open, 1)} vị thế`,
+      s.peak_margin > 0.8 ? 'neg' : '');
+  if (r.dead) msg('Tài khoản về 0 trong khoảng này — mô phỏng dừng ở ngày cuối của đường vốn.', false);
+
+  $('btLeg').innerHTML = ['tot', 'rsi2', 'xsmom'].map(k =>
+    `<span><i style="background:${COL[k]}"></i>${SNAME[k]}</span>`).join('');
+  btCharts();
+
+  const P = r.per;
+  table($('btPer'), ['chiến lược', 'lệnh', 'thắng', 'R TB', 'lãi USD', 'funding',
+    'giữ TB', 'sụt USD', 'âm dài nhất', 'bị chặn', 'đang mở'],
+    ['rsi2', 'xsmom'].filter(k => P[k].trades || P[k].blocked), k => {
+      const x = P[k];
+      return [sChip(k), n0(x.trades), x.win == null ? '—' : pct(x.win * 100, 1) + '%',
+        x.avg_r == null ? '—' : (x.avg_r >= 0 ? '+' : '−') + pct(Math.abs(x.avg_r), 3),
+        {html: `<span class="${cls(x.pnl)}">${sgn0(x.pnl)}</span>`},
+        {html: `<span title="dương = trả, âm = nhận">${sgn0(x.fund)}</span>`},
+        x.hold == null ? '—' : pct(x.hold, 1) + ' ngày', n0(x.dd_usd),
+        x.under + ' ngày', n0(x.blocked), x.open];
+    });
+  table($('btYr'), ['năm', 'lãi USD', '% vốn đầu năm', 'RSI(2)', 'động lượng', 'sụt trong năm'],
+    r.years, y => [y.y + (y.days < 330 ? ' ·' : ''),
+      {html: `<span class="${cls(y.pnl)}">${sgn0(y.pnl)}</span>`}, pc1(y.ret),
+      sgn0(y.rsi2), sgn0(y.xsmom), '−' + pct(y.dd * 100, 1) + '%']);
+  $('btBlkSub').textContent = s.blocked
+    ? `${n0(s.blocked)} lệnh không vào được` : '';
+  table($('btBlk'), ['chiến lược', 'lý do', 'số lệnh'], r.blocked,
+    b => [sChip(b.s), {html: `<span style="font-family:var(--ui)">${esc(b.why)}</span>`},
+      n0(b.n)]);
+
+  $('btPick').textContent = '';
+  for (const [k, t] of [['all', 'tất cả'], ['rsi2', 'RSI(2)'], ['xsmom', 'động lượng']]) {
+    const b = document.createElement('button'); b.textContent = t;
+    b.classList.toggle('on', BTF === k);
+    b.onclick = () => { BTF = k; renderBt(); };
+    $('btPick').appendChild(b);
+  }
+  const tr = r.trades.filter(t => BTF === 'all' || t.s === BTF);
+  const px = v => Number(v).toPrecision(6).replace(/\.?0+$/, '').replace('.', ',');
+  table($('btTr'), ['mã', 'chiến lược', 'chiều', 'vào', 'ra', 'giá vào', 'giá ra',
+    'cỡ USD', 'lãi USD', 'R', 'lý do ra'], tr.slice(0, 300), t => [
+    t.sym, sChip(t.s), sideTxt(t.side), day(t.a), day(t.z), px(t.pin), px(t.pout),
+    usd(t.usd), {html: `<span class="${cls(t.pnl)}">${usd(t.pnl)}</span>`},
+    t.r ? (t.pnl >= 0 ? '+' : '−') + pct(Math.abs(t.pnl / t.r), 2) : '—',
+    {html: `<span class="mut" style="font-family:var(--ui)">${esc(t.why)}</span>`}]);
+  $('btTrSub').textContent = tr.length > 300
+    ? `hiện 300 lệnh mới nhất trên ${n0(tr.length)} — «Tải CSV» để lấy đủ` : '';
+}
+
+/* Mot khung ve chung cho hai bieu do: truc thoi gian, mot truc y, duong
+   chuan 0, nhan dau/cuoi, crosshair + tooltip liet ke MOI chuoi tai diem do. */
+function lineChart(svg, tip, ts, series, o) {
+  svg.textContent = '';
+  const w = svg.clientWidth || 900, h = svg.clientHeight || 220;
+  const P = 12, R = o.right ?? 92, B = 17;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const all = series.flatMap(s => s.v);
+  const lo = Math.min(0, ...all), hi = Math.max(0, ...all);
+  const n = ts.length;
+  const X = i => P + i / Math.max(1, n - 1) * (w - P - R);
+  const Y = v => P + (hi - v) / (hi - lo || 1) * (h - P - B);
+  svg.appendChild(mk('line', {x1: P, x2: w - R, y1: Y(0), y2: Y(0),
+    stroke: 'rgba(42,35,64,.18)', 'stroke-dasharray': '3 4'}));
+  /* moc nam: vach mo + nhan nho, de doc duoc "nam nao" ma khong can chi chuot */
+  let py = null;
+  ts.forEach((t, i) => {
+    const y = new Date(t).getUTCFullYear();
+    if (py !== null && y !== py) {
+      svg.appendChild(mk('line', {x1: X(i), x2: X(i), y1: P, y2: h - B,
+        stroke: 'rgba(42,35,64,.06)'}));
+      const tx = mk('text', {x: X(i) + 3, y: h - 4, fill: '#857FA0', 'font-size': 9.5});
+      tx.textContent = y; svg.appendChild(tx);
+    }
+    py = y;
+  });
+  for (const s of series) {
+    if (s.area) svg.appendChild(mk('polygon', {fill: s.c, 'fill-opacity': .16,
+      points: `${X(0)},${Y(0)} ` + s.v.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`)
+        .join(' ') + ` ${X(n - 1)},${Y(0)}`}));
+    svg.appendChild(mk('polyline', {fill: 'none', stroke: s.c, 'stroke-width': s.wd || 2,
+      'stroke-linejoin': 'round',
+      points: s.v.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}));
+  }
+  /* Nhan truc nam TRONG khung ben trai, tren vach mo — mep phai danh cho
+     nhan ten chuoi. Bo nhan sat nhau duoi 14px de khong de chu. */
+  const tk = [];
+  for (const q of o.ticks(lo, hi))
+    if (tk.every(z => Math.abs(Y(z) - Y(q)) >= 14)) tk.push(q);
+  for (const q of tk) {
+    if (q !== 0) svg.appendChild(mk('line', {x1: P, x2: w - R, y1: Y(q), y2: Y(q),
+      stroke: 'rgba(42,35,64,.06)'}));
+    const t = mk('text', {x: P + 3, y: Y(q) + (Y(q) - P < 12 ? 11 : -4),
+      fill: '#6F6986', 'font-size': 9.5});
+    t.textContent = o.fmt(q); svg.appendChild(t);
+  }
+  /* nhan truc tiep o dau mut phai — day nhau ra neu chong */
+  if (o.label) {
+    const ends = series.map(s => ({s, y: Y(s.v.at(-1))})).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++)
+      ends[i].y = Math.max(ends[i].y, ends[i - 1].y + 12);
+    for (const e of ends) {
+      const t = mk('text', {x: w - R + 6, y: e.y + 3.5, fill: '#2A2340',
+        'font-size': 10, 'font-weight': 600});
+      t.textContent = e.s.name; svg.appendChild(t);
+    }
+  }
+  const cl = mk('line', {y1: P, y2: h - B, stroke: '#6F6986', 'stroke-width': 1, opacity: 0});
+  svg.appendChild(cl);
+  const dots = series.map(s => { const c = mk('circle', {r: 4, fill: s.c, stroke: '#fff',
+    'stroke-width': 2, opacity: 0}); svg.appendChild(c); return c; });
+  const hit = mk('rect', {x: 0, y: 0, width: w, height: h, fill: 'transparent', class: 'hit'});
+  svg.appendChild(hit);
+  hit.onpointermove = ev => {
+    const b = svg.getBoundingClientRect();
+    const x = (ev.clientX - b.left) / b.width * w;
+    const i = Math.max(0, Math.min(n - 1, Math.round((x - P) / (w - P - R) * (n - 1))));
+    cl.setAttribute('x1', X(i)); cl.setAttribute('x2', X(i)); cl.setAttribute('opacity', .6);
+    series.forEach((s, k) => { dots[k].setAttribute('cx', X(i));
+      dots[k].setAttribute('cy', Y(s.v[i])); dots[k].setAttribute('opacity', 1); });
+    tip.textContent = '';
+    const d = document.createElement('div'); d.className = 'd'; d.textContent = day(ts[i]);
+    tip.appendChild(d);
+    for (const s of series) {
+      const row = document.createElement('div');
+      const key = document.createElement('i'); key.style.background = s.c;
+      const v = document.createElement('b'); v.textContent = o.fmt(s.v[i]);
+      row.append(key, v, document.createTextNode(' ' + s.name));
+      tip.appendChild(row);
+    }
+    tip.style.display = 'block';
+    const px = X(i) / w * b.width;
+    tip.style.left = (px > b.width / 2 ? px - tip.offsetWidth - 14 : px + 14) + 'px';
+  };
+  hit.onpointerleave = () => { cl.setAttribute('opacity', 0);
+    dots.forEach(c => c.setAttribute('opacity', 0)); tip.style.display = 'none'; };
+}
+
+function btCharts() {
+  if (!BTR || !$('t-bt').classList.contains('on')) return;
+  const cv = BTR.curve, e0 = BTR.summary.start;
+  const ts = cv.map(c => c[0]);
+  const ser = [{name: SNAME.tot, c: COL.tot, v: cv.map(c => c[1] - e0), wd: 2.2},
+               {name: SNAME.rsi2, c: COL.rsi2, v: cv.map(c => c[2])},
+               {name: SNAME.xsmom, c: COL.xsmom, v: cv.map(c => c[3])}];
+  lineChart($('btCv'), $('btTip'), ts, ser, {label: true,
+    fmt: v => sgn0(v), ticks: (lo, hi) => [hi, 0, lo].filter((q, i, a) =>
+      a.indexOf(q) === i)});
+  let pk = e0;
+  const dd = cv.map(c => { pk = Math.max(pk, c[1]); return pk > 0 ? -(1 - c[1] / pk) * 100 : 0; });
+  lineChart($('btDd'), $('btTip2'), ts, [{name: 'sụt', c: COL.tot, v: dd, area: true}],
+    {right: 14, fmt: v => (v < 0 ? '−' : '') + pct(Math.abs(v), 1) + '%',
+     ticks: (lo) => [0, lo]});
+}
+
+$('btnBt').onclick = () => runBt();
+$('btnBtReset').onclick = () => { BTV = {...BT.defaults, start: '', end: ''}; buildBtForm(); };
+$('btnCsv').onclick = () => {
+  if (!BTR) return;
+  const tr = BTR.trades.filter(t => BTF === 'all' || t.s === BTF);
+  const head = 'chien_luoc,so,ma,chieu,vao,ra,gia_vao,gia_ra,co_usd,r_usd,lai_usd,funding_usd,ly_do\n';
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const body = tr.map(t => [t.s, t.sl ?? '', t.sym, t.side, day(t.a), day(t.z), t.pin, t.pout,
+    t.usd, t.r, t.pnl, t.fund, q(t.why)].join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([head + body], {type: 'text/csv'}));
+  a.download = `tinh-lich-su-${BTF}-${day(Date.now())}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+};
+
 function renderTodo(p) {
   PREV = p;
   $('todoWhen').textContent = p ? `nến ${day(p.day)} · vốn ${usd(p.equity)} USD` : '';
@@ -1144,6 +1555,8 @@ for (const b of document.querySelectorAll('nav.tabs button')) {
     $('t-' + b.dataset.tab).classList.add('on');
     if (b.dataset.tab === 'cfg') loadCfg().catch(e => msg(e.message, false));
     if (b.dataset.tab === 'doc' && !DOCS) initDocs().catch(e => msg(e.message, false));
+    if (b.dataset.tab === 'bt') { if (!BT) initBt().catch(e => msg(e.message, false));
+      else btCharts(); }
     if (b.dataset.tab === 'dash' && S) chart(S.equity);
   };
 }
@@ -1218,7 +1631,7 @@ $('btnDisarm').onclick = async () => {
 setInterval(() => { $('clock').textContent = new Date().toISOString().slice(0, 19)
   .replace('T', ' '); }, 1000);
 let rz; addEventListener('resize', () => { clearTimeout(rz);
-  rz = setTimeout(() => S && chart(S.equity), 140); });
+  rz = setTimeout(() => { S && chart(S.equity); btCharts(); }, 140); });
 renderTodo(null);
 refresh().catch(e => msg(e.message, false));
 setInterval(() => refresh().catch(() => {}), 30000);

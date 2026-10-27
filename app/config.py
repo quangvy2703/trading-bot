@@ -93,6 +93,12 @@ CFG = Config()
 RSI2 = {
     "topn": 10, "slots": 5, "rsi_in": 10.0, "rsi_out": 70.0,
     "ma": 20, "atr": 14, "atr_k": 6.0, "cap": 0.40, "min_bars": 205,
+    # So lop toi da moi ma: 1 = khong mua them, 2 = mua them mot lan khi
+    # RSI(2) van < nguong trong luc dang giu. Bat 27/10/2026 theo yeu cau van
+    # hanh. Bang chung YEU: 26 lenh lop 2 (+399 bps, thang 85%), nhin thay sau
+    # khi da xem so, chua kiem ngoai mau. Moi lop la them 1R tren CUNG mot ma.
+    # Xem docs/rsi2-connors.md § Mua them. Dat qua RSI2_LAYERS trong compose.
+    "layers": _i("RSI2_LAYERS", 2),
 }
 XSMOM = {
     "topn": 20, "lookback": 30, "frac": 0.10, "sleeves": 7, "hold": 7,

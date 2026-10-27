@@ -32,6 +32,7 @@ SPEC = {
     "rsi2.atr_k":      ("rsi2", float, 0.5, 20.0, "bội ATR cho cắt lỗ"),
     "rsi2.cap":        ("rsi2", float, 0.05, 0.95, "trần cắt lỗ (tỷ lệ)"),
     "rsi2.min_bars":   ("rsi2", int, 30, 1000, "số nến lịch sử tối thiểu"),
+    "rsi2.layers":     ("rsi2", int, 1, 5, "số lớp mỗi mã — 1 là không mua thêm"),
     # --- dong luong cat ngang ---
     "xsmom.topn":      ("xsmom", int, 5, 500, "vũ trụ top N thanh khoản"),
     "xsmom.lookback":  ("xsmom", int, 5, 365, "chân trời chấm điểm (ngày)"),

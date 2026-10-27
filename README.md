@@ -114,11 +114,28 @@ còn `xsmom.ma = 30` lọc theo MA30. Tiền tố quyết định tất cả.
 Hệ số nhân cho 1R của riêng chiến lược đó. **0 = tắt**, và vị thế đang mở của
 nó bị đóng ở lượt kế tiếp.
 
-**Vì sao RSI(2) là 8 chứ không 1:** ở cùng 1R, RSI(2) sụt ~283 USD còn động
-lượng ~11.259 USD (1R = 100), nên chia 1R đều thì RSI(2) gần như vắng mặt.
-Cân rủi ro cho hệ số 32; chạy 8 trước vì 32 là đặt cược 32 lần vào 176 lệnh
-chưa có ngoài mẫu. Bảng đầy đủ ở `docs/money-management-r.md` § Ghép hai
-chiến lược.
+**Vì sao RSI(2) là 8 chứ không 1:** ở cùng 1R, RSI(2) gần như vắng mặt khỏi
+danh mục. Đo bằng tab «Tính lịch sử» (1R = 100, không trần): 1 → 8 lãi +12%,
+sụt không đổi; từ khoảng 16 trở lên sụt bắt đầu tăng. Bảng đầy đủ ở
+`docs/money-management-r.md` § Ghép hai chiến lược.
+
+### Mua thêm RSI(2) — `RSI2_LAYERS` / `rsi2.layers`
+
+Đang giữ một mã mà tín hiệu RSI(2) lặp lại thì mở thêm một lớp, tối đa
+`RSI2_LAYERS` lớp (đặt trong `docker-compose.yml`, mặc định **2**; tab Cấu
+hình ghi đè được qua `rsi2.layers`). Mỗi lớp là một vị thế riêng — cột «sổ»
+của RSI(2) là số thứ tự lớp (trống = lớp gốc) — có stop và 1R riêng, cùng
+thoát khi RSI(2) > 70. Bằng chứng yếu (26 lệnh, chưa ngoài mẫu); đặt 1 để
+tắt. Chi tiết ở `docs/rsi2-connors.md` § Mua thêm.
+
+### Tab «Tính lịch sử»
+
+Tính lại toàn bộ lịch sử trong kho nến với bộ tham số tuỳ chọn — vốn, 1R,
+đòn bẩy, hệ số từng chiến lược, các trần, khoảng ngày, tham số chiến lược.
+Mặc định là cấu hình đang chạy. **Chỉ tính**: không lưu cấu hình, không đặt
+lệnh. Mô phỏng đúng cơ chế bot (khớp ở open hôm sau, trần theo thứ tự của
+app, lệnh tối thiểu và ký quỹ của sàn, funding thật) — code ở
+`app/backtest.py`, API `GET/POST /api/backtest`.
 
 ### Dùng chung cả hai — 5 ô
 

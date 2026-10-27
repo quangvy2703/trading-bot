@@ -211,6 +211,11 @@ def execute(run_id: int, actions: list, equity: float, prices: dict,
             notional = float(a.get("notional")
                              or equity * abs(a.get("weight") or 0))
             qty = (notional / px) if px else 0.0
+            # DONG phai tra dung khoi luong da mua, khong quy lai tu co USD theo
+            # gia hien tai: gia tang thi ban thieu va de lai phan du tren san,
+            # gia giam thi ban lo sang phan cua lop / so khac cung ma.
+            if a["action"] == "CLOSE" and a.get("qty"):
+                qty = float(a["qty"])
             status, resp = "paper", ""
             if trader is not None:
                 f = filt.get(a["symbol"], {})

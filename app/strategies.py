@@ -58,8 +58,11 @@ def _idx(d: dict, day: int) -> int | None:
 
 
 # ------------------------------------------------------------------ RSI(2)
-def rsi2_signals(P: dict, rank: dict, day: int, open_syms: set) -> list:
+def rsi2_signals(P: dict, rank: dict, day: int, held: dict) -> list:
     """Cac ma DU DIEU KIEN vao lenh hom nay, xep theo RSI tang dan.
+
+    `held` = so lop dang giu moi ma. Ma da du `layers` lop thi bo qua; ma dang
+    giu it hon thi tin hieu hom nay la mot lop MUA THEM.
 
     Chua ap gioi han cho — book.py quyet dinh lay bao nhieu, vi so cho con
     lai phu thuoc vi the dang mo.
@@ -67,7 +70,7 @@ def rsi2_signals(P: dict, rank: dict, day: int, open_syms: set) -> list:
     R, _ = settings.strat()
     out = []
     for sym, d in P.items():
-        if sym in open_syms or rank.get(sym, 10**9) > R["topn"]:
+        if held.get(sym, 0) >= R.get("layers", 1) or rank.get(sym, 10**9) > R["topn"]:
             continue
         # KHONG duoc doi hoi ton tai nen j+1. Backtest khop o open nen ke
         # tiep nen no can nen do trong du lieu; chay that thi nen ke tiep

@@ -299,6 +299,49 @@ luôn ôm 28 vị thế.
 
 Script: `scripts/combo_rsi2_xsmom.py`.
 
+### SỬA cùng ngày — RSI(2) bị đếm trùng, số ở trên phóng đại
+
+Tab «Tính lịch sử» của app (mô phỏng đúng cơ chế bot) lật ra một lỗi trong
+`rsi2_universe.trades()`: vòng lặp **không bỏ qua tín hiệu khi mã đang có
+lệnh mở**, nên hai ngày RSI(2) < 10 liên tiếp sinh hai lệnh chồng lên cùng
+một mã. Bot thật thì không (`open_syms` loại mã đang giữ).
+
+```
+top 10, 1R = 100   tổng 176 lệnh · chồng lấn trên cùng mã 33 (19%)
+                   lãi 1.468 USD → bỏ chồng lấn 1.030 USD   (−30%)
+```
+
+Đo lại bằng engine của app (khớp thoát ở open hôm sau, không lệnh trùng,
+động lượng giữ vị thế trùng không mua bán lại), 1R = 100, không trần:
+
+| `ALLOC_RSI2` | lãi USD | sụt USD | lãi/sụt | âm dài nhất | 2022 |
+|---|---|---|---|---|---|
+| 0 | 53.291 | 10.943 | 4,87 | 360 ngày | −1.490 |
+| 1 | 54.181 | 10.935 | 4,95 | 360 | −1.581 |
+| **8** | **60.663** | **10.882** | **5,57** | 361 | −2.219 |
+| 16 | 68.071 | 10.931 | 6,23 | 363 | −2.948 |
+| 39 (k* mới) | 89.369 | **13.601** | 6,57 | 369 | −5.045 |
+
+```
+tương quan lãi/lỗ tuần   < 2024-07 +0,109 · ≥ 2024-07 +0,244
+k* = σ(ĐL) / σ(RSI2) trên nửa trước = 39,2
+```
+
+**Ba kết luận ở trên phải rút lại:**
+
+1. **"RSI(2) gánh năm 2022" — sai.** Không đếm trùng thì RSI(2) **lỗ** năm
+   2022 (−91 USD ở 1R = 100), nên tăng hệ số làm 2022 tệ hơn, không tốt hơn.
+   2026 thì vẫn đúng: RSI(2) lãi khi động lượng chững.
+2. **"Sụt không tăng ở hệ số 32" — sai.** Ở k* = 39 sụt lên 13.601 (+24%).
+3. **"Đợt âm rút từ 260 xuống 142 ngày" — sai.** Đợt âm gần như đứng yên.
+
+**Điều còn đứng:** hai chiến lược vẫn gần như độc lập, và đến hệ số 16 sụt
+**không đổi** trong khi lãi tăng (+12% ở ×8, +26% ở ×16). Hệ số **8 đang
+chạy vẫn hợp lý**; lý lẽ cho 32 thì không còn.
+
+Bảng `rsi2-connors.md` (176 lệnh, +301,5 bps/lệnh) cũng chứa 33 lệnh trùng
+này — **chưa dựng lại**.
+
 ## Tệp
 
 | | |

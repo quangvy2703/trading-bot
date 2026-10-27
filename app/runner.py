@@ -73,11 +73,18 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
     exits = ({id(p): why for p, why in ST.rsi2_exits(P, day, cur_r)}
              if r_rsi2 > 0 else {})
     keep = [p for p in cur_r if id(p) not in exits]
+    # Lop cua RSI(2) di trong cot `sleeve`: None = lop goc (giu tuong thich
+    # voi vi the mo truoc khi co mua them), 1, 2... = lop mua them. Nho the
+    # khoa (chien luoc, so, ma, chieu) cua plan() tach duoc tung lop.
+    layers: dict = {}
     for p in keep:
-        target.append({"strategy": "rsi2", "sleeve": None, "symbol": p["symbol"],
-                       "side": 1, "stop": p["stop"], **keep_of(p)})
+        target.append({"strategy": "rsi2", "sleeve": p.get("sleeve"),
+                       "symbol": p["symbol"], "side": 1, "stop": p["stop"],
+                       **keep_of(p)})
+        layers.setdefault(p["symbol"], set()).add(p.get("sleeve") or 0)
     free = (R["slots"] - len(keep)) if r_rsi2 > 0 else 0
-    sig = (ST.rsi2_signals(P, rank, day, {p["symbol"] for p in keep})
+    sig = (ST.rsi2_signals(P, rank, day,
+                           {k: len(v) for k, v in layers.items()})
            if r_rsi2 > 0 else [])
     for s in sig[:max(0, free)]:
         stop = ST.rsi2_stop(s["close"], s["atr"])
@@ -85,11 +92,16 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
         rf = (s["close"] - stop) / s["close"] if s["close"] > 0 else 0.0
         if rf <= 0:
             continue
-        target.append({"strategy": "rsi2", "sleeve": None, "symbol": s["symbol"],
+        # chi so lop TRONG nho nhat: lop goc co the da cat lo rieng truoc
+        used = layers.get(s["symbol"], set())
+        k = next(i for i in range(len(used) + 1) if i not in used)
+        target.append({"strategy": "rsi2", "sleeve": k or None,
+                       "symbol": s["symbol"],
                        "side": 1, "stop": stop, "r_usd": r_rsi2,
                        "notional": r_rsi2 / rf,
                        "why": f"RSI(2)={s['rsi']:.1f} · hạng TK #{s['rank']}"
-                              f" · R {rf*100:.1f}%"})
+                              f" · R {rf*100:.1f}%"
+                              + (f" · MUA THÊM lớp {k + 1}" if used else "")})
     if r_rsi2 > 0:
         note["rsi2"] = {
             "giữ": len(keep), "thoát": len(exits), "tín hiệu": len(sig),

@@ -14,7 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import data, db, executor, runner, settings
+from . import backtest, data, db, executor, runner, settings
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -277,6 +277,28 @@ def set_config(body: dict = Body(...)):
     except ValueError as e:
         raise HTTPException(400, str(e))
     return get_config()
+
+
+@app.get("/api/backtest")
+def backtest_meta():
+    """Gia tri mac dinh cho tab tinh lich su = cau hinh dang chay."""
+    return {"defaults": backtest.defaults(),
+            "spec": {k: {"group": g, "type": t.__name__, "min": lo, "max": hi,
+                         "desc": d}
+                     for k, (g, t, lo, hi, d) in settings.SPEC.items()},
+            "extra": {k: {"type": t.__name__, "min": lo, "max": hi, "desc": d}
+                      for k, (t, lo, hi, d) in backtest.EXTRA.items()}}
+
+
+@app.post("/api/backtest")
+def backtest_run(body: dict = Body(default={})):
+    """Tinh lai lich su voi bo tham so tuy chon. Khong doi cau hinh, khong dat lenh."""
+    try:
+        return backtest.run(body)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
 
 
 @app.post("/api/testapi")
