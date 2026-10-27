@@ -39,6 +39,11 @@ services:
       # ---- ky quy: app tu dua moi ma ve CHEO + don bay nay truoc khi vao lenh ----
       # Ma ket isolated (dang co vi the) duoc nap them toi khi don bay thuc <= muc nay.
       LEVERAGE: "${LEVERAGE:-5}"
+      # Tran TONG phoi nhiem, tinh ca vi the dang mo: boi so von (2 = 2x von).
+      MAX_GROSS_X: "${MAX_GROSS_X:-2}"
+      # Dung an toan dat THAT tren san (STOP_MARKET): RSI(2) o muc cat lo,
+      # dong luong o SAFETY_R x R tu gia vao (3R ~ 3 sigma qua 7 ngay giu).
+      SAFETY_R: "${SAFETY_R:-3}"
       # ---- don vi rui ro: 1R = so USD mat khi cham diem cat lo ----
       # Co lenh = RISK_R_USD / R, nen no KHONG phu thuoc von. Von chi quyet
       # dinh mo duoc bao nhieu lenh cung luc (RISK_MAX_OPEN).
