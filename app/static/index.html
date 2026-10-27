@@ -780,21 +780,10 @@ function render() {
           + ` — ứng viên không qua bị bỏ hẳn (~18%/kỳ)`
         : `<br><span class="neg">lọc MA đang TẮT</span>`);
 
-  POS = S.positions.map(p => ({...p, notl: notl(p)}));
   FEE = S.fee_bps ?? 0;
-  let i = 0;
-  const live = k => ({html: `<span data-k="${k}" data-i="${i}">—</span>`});
-  table($('tpos'), ['mã', 'chiến lược', 'sổ', 'chiều', 'cỡ USD', '1R', 'giá vào',
-    'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'mở từ'],
-    S.positions, p => [p.symbol, sChip(p.strategy), p.sleeve ?? '—', sideTxt(p.side),
-      {html: p.notional ? usd(p.notional)
-        : `<span class="mut" title="suy ra từ tỷ trọng vốn cũ">`
-          + `${usd(notl(p))}*</span>`},
-      p.r_usd ? usd(p.r_usd) : '—', p.entry_px,
-      live('px'), live('usd'), live('pc'), live('r'),
-      p.stop ? p.stop.toPrecision(6) : '—', (i++, day(p.entry_ts))]);
+  POSKEY = null;
+  drawPos();
   stream(S.stream);
-  paintPnl();
 
   table($('tord'), ['lúc', 'mã', 'việc', 'bên', 'USD', 'trạng thái'],
     S.orders, o => [when(o.ts), o.symbol, aChip(o.action), o.side,
@@ -853,10 +842,68 @@ function stream(url) {
 
 const signed = (v, f) => (v >= 0 ? '+' : '−') + f(Math.abs(v));
 
+/* ============ bảng vị thế ============ */
+/* Chay that thi vi the lay tu SAN (/api/account): san la su that, so noi bo
+   chi gan nhan chien luoc / so / 1R / cat lo. Hai ben lech nhau thi hien ro
+   thay vi giau di: «ngoài sổ» = san co ma so khong biet (app se khong bao
+   gio dong no), «không có trên sàn» = so tuong con mo nhung san da het. */
+let POSKEY = null;
+
+function drawPos() {
+  if (!S) return;
+  const A = S.mode === 'live' && ACCT && ACCT.ok ? ACCT : null;
+  const key = JSON.stringify([S.positions.map(p => p.id), A && A.positions]);
+  if (key === POSKEY) return;
+  POSKEY = key;
+  const eqNow = S.equity.length ? S.equity.at(-1).value : 0;
+  const notl = p => p.notional || (p.weight || 0) * eqNow;
+  let rows;
+  if (!A) {
+    rows = S.positions.map(p => ({...p, notl: notl(p), book: [p]}));
+  } else {
+    const used = new Set();
+    rows = A.positions.map(x => {
+      const side = Math.sign(x.amt);
+      const book = S.positions.filter(p => p.symbol === x.symbol && p.side === side);
+      book.forEach(p => used.add(p));
+      return {symbol: x.symbol, side, entry_px: x.entry, ex: true, book,
+        notl: Math.abs(x.amt) * x.entry,
+        r_usd: book.reduce((a, p) => a + (p.r_usd || 0), 0) || null,
+        stop: book.find(p => p.stop)?.stop,
+        entry_ts: book.length ? Math.min(...book.map(p => p.entry_ts)) : null};
+    });
+    for (const p of S.positions)
+      if (!used.has(p)) rows.push({...p, notl: notl(p), book: [p], gone: true});
+  }
+  POS = rows;
+  let i = 0;
+  const live = k => ({html: `<span data-k="${k}" data-i="${i}">—</span>`});
+  table($('tpos'), ['mã', 'chiến lược', 'sổ', 'chiều', 'cỡ USD', '1R', 'giá vào',
+    'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'mở từ'],
+    rows, r => [r.symbol,
+      r.book.length
+        ? {html: [...new Set(r.book.map(p => p.strategy))]
+            .map(s => sChip(s).html).join(' ')}
+        : {html: '<span class="neg" title="sàn có, sổ không biết — app sẽ không '
+            + 'tự đóng vị thế này">ngoài sổ</span>'},
+      r.book.map(p => p.sleeve ?? '—').join(', ') || '—', sideTxt(r.side),
+      {html: (r.ex || r.notional ? usd(r.notl)
+        : `<span class="mut" title="suy ra từ tỷ trọng vốn cũ">${usd(r.notl)}*</span>`)
+        + (r.gone ? ' <span class="neg" title="sổ ghi đang mở nhưng sàn không '
+            + 'có">không có trên sàn</span>' : '')},
+      r.r_usd ? usd(r.r_usd) : '—', +r.entry_px.toPrecision(10),
+      live('px'), live('usd'), live('pc'), live('r'),
+      r.stop ? r.stop.toPrecision(6) : '—',
+      (i++, r.entry_ts ? day(r.entry_ts) : '—')]);
+  paintPnl();
+}
+
 function pnlOf(p) {
   const px = MARK[p.symbol];
   if (!px || !p.entry_px) return null;
-  const bps = (px - p.entry_px) / p.entry_px * 1e4 * p.side - FEE;
+  /* Dong lay tu san: gia vao la gia khop that, lai/lo khop dung so san
+     hien — khong tru phi uoc tinh nua (phi da tru vao vi luc khop). */
+  const bps = (px - p.entry_px) / p.entry_px * 1e4 * p.side - (p.ex ? 0 : FEE);
   const v = p.notl * bps / 1e4;
   return {px, bps, usd: v, r: p.r_usd ? v / p.r_usd : null};
 }
@@ -871,6 +918,7 @@ async function loadAcct() {
   try { ACCT = await (await fetch('/api/account')).json(); }
   catch (e) { ACCT = {ok: false, why: e.message}; }
   if (S && !paintAcct()) render();
+  else drawPos();
 }
 
 function paintAcct() {
@@ -913,7 +961,7 @@ function paintPnl() {
   const got = Q.filter(Boolean), tot = got.reduce((a, q) => a + q.usd, 0);
   $('posLive').innerHTML = (got.length
       ? `tổng <b class="${tot >= 0 ? 'pos' : 'neg'}">${esc(signed(tot, usd))} USD</b>`
-        + ` · sau phí ${FEE} bps`
+        + (POS.some(p => p.ex) ? ' · theo sàn' : ` · sau phí ${FEE} bps`)
         + (got.length < POS.length ? ` · ${POS.length - got.length} mã chưa có giá` : '')
         + ' · '
       : '')

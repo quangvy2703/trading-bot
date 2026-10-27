@@ -4,9 +4,8 @@
 # nen khong can Postgres. Them dich vu thu hai chi de tach lich chay se dem
 # lai tranh chap ghi ma khong doi lai gi.
 #
-# Chot ten du an: thu muc da doi tu live/ sang trading-bot/. Khong chot thi
-# compose lay ten thu muc, tao volume moi trong (trading-bot_livedata) va
-# mat live.db dang nam trong live_livedata.
+# Chot ten du an: thu muc da doi tu live/ sang trading-bot/. Ten volume duoc
+# ghim rieng o cuoi tep (live2_livedata) nen doi ten du an khong lam mat so.
 name: live
 services:
   app:
@@ -94,3 +93,8 @@ services:
 
 volumes:
   livedata:
+    # Ghim TEN THAT cua volume, khong de compose ghep tu ten du an. So lenh
+    # that (vi the dang mo tren san) nam trong live2_livedata; doi `name:` o
+    # tren hay doi ten thu muc ma khong ghim thi app tro sang mot volume rong,
+    # quen het vi the dang mo va co the mo trung lenh.
+    name: live2_livedata
