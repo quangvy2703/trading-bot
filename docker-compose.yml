@@ -1,0 +1,77 @@
+# Toan bo he thong chay trong Docker. Mot dich vu, mot o dia.
+#
+# SQLite + WAL, mot tien trinh ghi duy nhat (lich chay nen trong chinh app)
+# nen khong can Postgres. Them dich vu thu hai chi de tach lich chay se dem
+# lai tranh chap ghi ma khong doi lai gi.
+services:
+  app:
+    build: .
+    image: crypto-live:latest
+    container_name: crypto-live
+    restart: unless-stopped
+    # CHI lang nghe tren loopback cua may that. Trang nay khong co dang nhap
+    # va dieu khien duoc tien that -- khong bao gio mo ra ngoai.
+    ports:
+      - "127.0.0.1:8777:8000"
+    environment:
+      DB_PATH: /data/live.db
+      # ---- cong tac chay that, lop khoa thu nhat ----
+      # De 0 thi bo dat lenh BI VO HIEU HOA O TANG MA, nut bam trong UI cung
+      # khong bat duoc. Phai doi thanh 1 VA bat cong tac trong UI moi dat lenh.
+      LIVE_TRADING_ENABLED: "1"
+      BINANCE_API_KEY: "${BINANCE_API_KEY:?dat BINANCE_API_KEY trong .env}"
+      BINANCE_API_SECRET: "${BINANCE_API_SECRET:?dat BINANCE_API_SECRET trong .env}"
+ 
+      # testnet | live  -- doi sang live la doi ca endpoint lan tien that
+      BINANCE_ENV: "${BINANCE_ENV:-live}"
+      # ============ DUNG CHUNG CHO CA HAI CHIEN LUOC ============
+      # ---- tran rui ro, ap o tang ma truoc khi gui lenh ----
+      MAX_GROSS_USD: "${MAX_GROSS_USD:-500}"
+      MAX_ORDER_USD: "${MAX_ORDER_USD:-50}"
+      MAX_ORDERS_PER_RUN: "${MAX_ORDERS_PER_RUN:-40}"
+      # ---- ky quy: app tu dua moi ma ve CHEO + don bay nay truoc khi vao lenh ----
+      # Ma ket isolated (dang co vi the) duoc nap them toi khi don bay thuc <= muc nay.
+      LEVERAGE: "${LEVERAGE:-5}"
+      # ---- don vi rui ro: 1R = so USD mat khi cham diem cat lo ----
+      # Co lenh = RISK_R_USD / R, nen no KHONG phu thuoc von. Von chi quyet
+      # dinh mo duoc bao nhieu lenh cung luc (RISK_MAX_OPEN).
+      # Quy tac: phoi nhiem ~300x 1R, nen co von V thi 1R ~ V/300.
+      #
+      # Bo so duoi day dat cho TAI KHOAN TEST 500 USD:
+      #   1R = 2  -> co lenh trung vi 13,9 USD, nho nhat 1,48 USD
+      #              5,7% vi the roi duoi muc toi thieu 5 USD cua san
+      #              phoi nhiem trung vi 354 USD, dinh 896 USD = 1,79x don bay
+      #   Ha xuong 1R = 1 thi het don bay nhung 24,5% lenh bi san tu choi.
+      RISK_R_USD: "${RISK_R_USD:-2}"
+      # 7 so lech ngay x (2 mua + 2 ban) = 28
+      RISK_MAX_OPEN: "${RISK_MAX_OPEN:-28}"
+      # ---- bat/tat tung chien luoc: he so nhan cho 1R, 0 = TAT ----
+      # Tat thi vi the dang mo cua chien luoc do bi DONG o luot ke tiep.
+      ALLOC_RSI2: "${ALLOC_RSI2:-1.0}"        # chi RSI(2)
+      ALLOC_XSMOM: "${ALLOC_XSMOM:-1.0}"      # chi dong luong cat ngang
+      START_EQUITY_USD: "${START_EQUITY_USD:-500}"
+      # chay hang ngay luc 00:05 UTC, ngay sau khi nen 1D dong
+      RUN_AT_UTC: "${RUN_AT_UTC:-00:05}"
+      #
+      # ============ THAM SO RIENG TUNG CHIEN LUOC ============
+      # KHONG dat qua bien moi truong. Chung duoc chot trong app/config.py
+      # (RSI2 = 9 o, XSMOM = 8 o) va sua luc chay qua tab «Cau hinh»:
+      #   RSI(2)     : rsi2.topn slots rsi_in rsi_out ma atr atr_k cap min_bars
+      #   Dong luong : xsmom.topn lookback frac legs sleeves hold min_bars ma
+      # Ly do: hai bo nay duoc chon kem ke toan da phep thu (49 o cat ngang,
+      # nguong Sidak 0,00105). Doi chung la ket qua that khong con duoc bao
+      # chung boi nghien cuu, nen phai di qua UI — noi co bang canh bao lech
+      # va ghi nhat ky — chu khong lang le qua bien moi truong.
+    volumes:
+      - livedata:/data
+      # Mo cache nghien cuu CHI DOC de gieo mam lan dau cho nhanh.
+      # Bo dong nay thi lan chay dau se tu tai tu Binance (lau hon nhieu).
+      - ../reports/.cache/uni1d:/seed:ro
+      # Hai ban dac ta da chot, hien o tab «Phương pháp». Chi doc.
+      - ../docs:/docs:ro
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+volumes:
+  livedata:
