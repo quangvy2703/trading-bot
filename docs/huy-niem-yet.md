@@ -318,8 +318,9 @@ thông báo chỉ có từ 2022-02, nên trước mốc đó luật không có t
   trôi xuống (bán khống TB +292 bps), nên đây là ứng viên thêm vào nếu muốn
   chặn rộng hơn.
 - **Đóng sớm vị thế đang giữ** khi tin ra: chưa đo.
-- **Sổ giấy đã chạy từ 29/10/2026** (`trading-bot/app/news.py`, tab «Nhật ký»
-  → «Sổ giấy theo tin»). Nó chỉ ghi, không đặt lệnh: đo độ trễ nhận tin của
+- **Sổ giấy đã chạy từ 29/10/2026** (`trading-bot/app/news.py`, tab «Tin &
+  cờ» → «Sổ giấy theo tin»). Cùng tab có bảng mọi mã bị gắn cờ (gỡ spot, gỡ
+  perp, thẻ Monitoring), cho biết mã nào đang bị chặn mua. Nó chỉ ghi, không đặt lệnh: đo độ trễ nhận tin của
   mọi thông báo, và ghi lệnh bán khống giả cho tin gỡ spot (lời 15% thì dời
   stop về hoà vốn) và thẻ Monitoring (giữ 24 giờ).
   - WebSocket thông báo cần một **khoá API riêng chỉ quyền đọc**
