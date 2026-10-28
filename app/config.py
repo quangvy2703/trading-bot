@@ -24,6 +24,9 @@ class Config:
     db_path: str = os.environ.get("DB_PATH", "/data/live.db")
     seed_dir: str = os.environ.get("SEED_DIR", "/seed")
     seed1h_dir: str = os.environ.get("SEED1H_DIR", "/seed1h")
+    # Thong bao Binance da tai san (scripts/delist_fetch.py): 161.json, 49.json,
+    # bodies.json. Gieo mot lan thay vi doc ~250 trang API (bi chan 429).
+    seed_ann_dir: str = os.environ.get("SEED_ANN_DIR", "/seedann")
     run_at_utc: str = os.environ.get("RUN_AT_UTC", "00:05")
 
     # --- cong tac chay that, LOP KHOA THU NHAT (tang ma) ---

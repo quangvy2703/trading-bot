@@ -220,6 +220,13 @@ tr:hover td:first-child{background:#F3F0FB}
 .c-close{background:var(--dnsoft);color:var(--dnink)}
 .c-rsi2{background:var(--accsoft);color:#5342B8}
 .c-xsmom{background:var(--infosoft);color:#215876}
+.c-ban{background:var(--dnsoft);color:var(--dnink)}
+.c-tag{background:#FBEFD9;color:#7A4A06}
+.c-gone{background:rgba(42,35,64,.08);color:var(--ink2)}
+#tflag td{white-space:nowrap}
+#tflag td:last-child{white-space:normal;min-width:260px;font-family:var(--ui)}
+#tflag a{color:var(--acc);text-decoration:none}
+#tflag a:hover{text-decoration:underline}
 #tev td:last-child{font-family:var(--ui);color:var(--ink2)}
 
 /* ============ bieu do ============ */
@@ -391,6 +398,8 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
   <nav class="tabs">
     <button data-tab="dash" class="on">Bảng điều khiển</button>
     <button data-tab="cfg">Cấu hình<span class="pill" id="driftPill" style="display:none"></span></button>
+    <button data-tab="flag">Mã gắn cờ<span class="pill" id="flagPill" style="display:none"></span></button>
+    <button data-tab="news">Đánh theo tin</button>
     <button data-tab="bt">Tính lịch sử</button>
     <button data-tab="doc">Phương pháp</button>
     <button data-tab="log">Nhật ký</button>
@@ -518,14 +527,51 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
         </div>
         <div class="sub" style="margin-top:9px">
           Hai bộ tham số này được chốt trong <b>docs/rsi2-connors.md</b> và
-          <b>docs/xsmom-volnorm.md</b>, chọn kèm kế toán đa phép thử (36 ô cắt
-          ngang, ngưỡng Šidák 0,00135). Đổi một con số là kết quả thật
+          <b>docs/xsmom-volnorm.md</b>, chọn kèm kế toán đa phép thử (§ Bội
+          số phép thử trong hai tài liệu). Đổi một con số là kết quả thật
           <b>không còn được bảo chứng bởi nghiên cứu</b>. Mọi thay đổi đều ghi
           vào nhật ký.
         </div>
       </div>
     </div>
     <div class="cfgwrap" id="cfgGroups"></div>
+  </section>
+
+  <section id="t-flag">
+    <div class="panel">
+      <div class="ph"><h3>Mã bị gắn cờ</h3>
+        <span class="docpick" id="flagPick"></span></div>
+      <div class="pb">
+        <p class="sub" id="flagSub" style="margin:0 0 10px">—</p>
+        <div class="tw" style="max-height:560px"><table id="tflag"></table></div>
+        <p class="sub" style="margin:10px 0 0">
+          <b>Gỡ spot</b> / <b>gỡ perp</b>: tin «Binance Will Delist …» / «Binance Futures
+          Will Delist …» — mã bị <b>chặn mua</b> trong <span id="flagBan">90</span> ngày
+          (RSI(2) không mở, động lượng không mở chân mua; vị thế đang giữ không bị đóng).
+          <b>Thẻ Monitoring</b>: Binance cảnh báo mã có rủi ro bị gỡ (~80% mã từng bị
+          gắn thẻ về sau bị gỡ khỏi spot) — <b>chỉ hiện</b>, chưa chặn mua.
+          Nguồn: thông báo của Binance, mục «Delisting» và «Latest Binance News».
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-news">
+    <div class="panel" style="margin-bottom:12px"><div class="pb" style="padding-top:14px">
+      <p class="sub" style="margin:0">
+        Hai cách đánh theo tin đã đạt luật nghiên cứu (docs/huy-niem-yet.md), hiện chạy
+        <b>sổ giấy</b> — chỉ ghi, không đặt lệnh:
+        <b>tin gỡ spot</b> — bán khống perp ngay khi nhận tin, lời 15% thì dời stop về giá vào,
+        giữ tối đa 24 giờ (chỉ dùng được nếu nhận tin trong ~1–2 giây);
+        <b>thẻ Monitoring</b> — bán khống perp, không stop, giữ 24 giờ (độ trễ không quan trọng).
+        Độ trễ nhận tin ở dưới là con số quyết định có nên chạy thật hay không.
+      </p></div></div>
+    <div class="panel"><div class="ph"><h3>Sổ giấy theo tin</h3>
+      <span class="sub">chỉ ghi, không đặt lệnh — docs/huy-niem-yet.md</span></div>
+      <p class="mut" id="newsSt" style="margin:0 0 10px">—</p>
+      <div class="tw" style="max-height:330px"><table id="tnp"></table></div>
+      <h4 style="margin:14px 0 6px">Tin nhận được gần đây</h4>
+      <div class="tw" style="max-height:330px"><table id="tnews"></table></div></div>
   </section>
 
   <section id="t-bt">
@@ -634,12 +680,6 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
     </div>
     <div class="panel" style="margin-top:12px"><div class="ph"><h3>Các lượt chạy</h3></div>
       <div class="tw"><table id="trun"></table></div></div>
-    <div class="panel" style="margin-top:12px"><div class="ph"><h3>Sổ giấy theo tin</h3>
-      <span class="sub">chỉ ghi, không đặt lệnh — docs/huy-niem-yet.md</span></div>
-      <p class="mut" id="newsSt" style="margin:0 0 10px">—</p>
-      <div class="tw" style="max-height:330px"><table id="tnp"></table></div>
-      <h4 style="margin:14px 0 6px">Tin nhận được gần đây</h4>
-      <div class="tw" style="max-height:330px"><table id="tnews"></table></div></div>
   </section>
 </div>
 </div>
@@ -1753,6 +1793,47 @@ async function refresh() {
   S = await (await fetch('/api/state')).json();
   render();
   try { renderNews(await (await fetch('/api/news')).json()); } catch (e) {}
+  try { FLAGS = await (await fetch('/api/flags')).json(); renderFlags(); } catch (e) {}
+}
+
+let FLAGS = null, FLAGF = 'all';
+const FKIND = {S: 'gỡ spot', F: 'gỡ perp', M: 'gắn thẻ Monitoring', 'M−': 'bỏ thẻ Monitoring'};
+function flagState(x) {
+  if (x.ban_until) return {html: '<span class="chip c-ban">CHẶN MUA</span>'};
+  if (x.tag_on) return {html: '<span class="chip c-tag">THẺ MONITORING</span>'};
+  if (x.S || x.F) return {html: '<span class="chip c-gone">ĐÃ CÓ TIN GỠ</span>'};
+  return {html: '<span class="chip c-gone">ĐÃ BỎ THẺ</span>'};
+}
+function renderFlags() {
+  if (!FLAGS) return;
+  const R = FLAGS.rows || [];
+  const nBan = R.filter(x => x.ban_until).length, nTag = R.filter(x => x.tag_on).length;
+  $('flagPill').style.display = nBan ? '' : 'none';
+  $('flagPill').textContent = nBan;
+  $('flagBan').textContent = FLAGS.ban_days;
+  const held = R.filter(x => x.held && (x.ban_until || x.tag_on)).map(x => x.symbol);
+  $('flagSub').innerHTML = `<b>${nBan}</b> mã đang bị chặn mua · <b>${nTag}</b> mã đang có thẻ Monitoring`
+    + ` · ${R.length} mã từng bị gắn cờ`
+    + (held.length ? ` · <span class="neg">đang giữ: ${held.map(esc).join(', ')}</span>` : '');
+  $('flagPick').textContent = '';
+  for (const [k, t] of [['all', 'tất cả'], ['now', 'đang có cờ'], ['ban', 'chặn mua'], ['tag', 'thẻ Monitoring'], ['gone', 'đã có tin gỡ']]) {
+    const b = document.createElement('button'); b.textContent = t;
+    b.classList.toggle('on', FLAGF === k);
+    b.onclick = () => { FLAGF = k; renderFlags(); };
+    $('flagPick').appendChild(b);
+  }
+  const keep = x => FLAGF === 'all' ? true : FLAGF === 'ban' ? !!x.ban_until
+    : FLAGF === 'tag' ? x.tag_on : FLAGF === 'gone' ? !!(x.S || x.F) : (x.ban_until || x.tag_on);
+  table($('tflag'), ['mã', 'trạng thái', 'thẻ Monitoring', 'gỡ spot', 'gỡ perp',
+    'chặn mua tới', 'perp', 'đang giữ', 'thông báo'], R.filter(keep), x => [
+      x.symbol, flagState(x),
+      x.tag_add ? day(x.tag_add) + (x.tag_remove && x.tag_remove > x.tag_add ? ' → bỏ ' + day(x.tag_remove) : '') : '—',
+      x.S ? day(x.S) : '—', x.F ? day(x.F) : '—',
+      x.ban_until ? day(x.ban_until) : '—',
+      x.perp ? 'còn' : {html: '<span class="mut">không</span>'},
+      x.held ? {html: '<span class="neg">có</span>'} : '—',
+      {html: x.links.map(l => `${day(l.ts)} ${FKIND[l.kind] || l.kind}: `
+        + (l.url ? `<a href="${l.url}" target="_blank" rel="noopener">${esc(l.title)}</a>` : esc(l.title))).join('<br>')}]);
 }
 
 const KIND = {S: 'gỡ spot', F: 'gỡ perp', M: 'thẻ Monitoring'};
@@ -1787,6 +1868,7 @@ for (const b of document.querySelectorAll('nav.tabs button')) {
     b.classList.add('on');
     $('t-' + b.dataset.tab).classList.add('on');
     if (b.dataset.tab === 'cfg') loadCfg().catch(e => msg(e.message, false));
+    if (b.dataset.tab === 'flag') renderFlags();
     if (b.dataset.tab === 'doc' && !DOCS) initDocs().catch(e => msg(e.message, false));
     if (b.dataset.tab === 'bt') { if (!BT) initBt().catch(e => msg(e.message, false));
       else btCharts(); }

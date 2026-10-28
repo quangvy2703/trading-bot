@@ -40,8 +40,7 @@ from .config import CFG
 WS = "wss://api.binance.com/sapi/wss"
 TOPIC = "com_announcement_en"
 G_ARM, HOLD, COST = 0.15, DAY, 40.0
-M_RE = re.compile(r"(?i)monitoring tag to (?:include\s+)?(.+?)"
-                  r"(?:,?\s+(?:and\s+)?remove\b|\s+on\s+\d{4}-|$)")
+M_RE = DL.MON_ADD
 _OFF = [0.0]                         # dong ho Binance − dong ho may (ms)
 _LOCK: list = [None]                 # asyncio.Lock, tao trong vong lap dang chay
 
@@ -78,6 +77,10 @@ async def _book(cx: httpx.AsyncClient, sym: str | None = None):
 async def handle(cx, catalog: int, title: str, body: str, t_pub: int, t_recv: float, src: str):
     key = hashlib.sha1(f"{title.strip()}|{int(t_pub) // 1000}".encode()).hexdigest()
     ev = classify(title, body)
+    try:
+        DL.store_monitor(title, int(t_pub))          # them / bo the — cho tab «Tin & cờ»
+    except Exception:
+        pass
     async with _LOCK[0]:
         with db.tx() as c:
             n = c.execute("INSERT OR IGNORE INTO news(key, catalog, title, t_pub, t_recv, src, kinds)"

@@ -62,6 +62,59 @@ def parse(title: str) -> list[tuple[str, str]]:
     return []
 
 
+# The Monitoring (muc 49, tu 2023-10): canh bao truoc khi go. ~80% ma bi gan
+# the ve sau bi go khoi spot. Them va bo the thuong nam chung mot bai:
+#   "Binance Will Extend the Monitoring Tag to Include X & Y, Remove the
+#    Monitoring Tag for Z, and Remove the Seed Tag for ... on 2026-03-06"
+MON_ADD = re.compile(r"(?i)monitoring tag to (?:include\s+)?(.+?)"
+                     r"(?:,?\s+(?:and\s+)?remove\b|\s+on\s+\d{4}-|$)")
+MON_DEL = re.compile(r"(?i)remove the monitoring tag (?:for|from)\s+(.+?)"
+                     r"(?:,?\s+(?:and\s+)?(?:the\s+)?(?:remove|extend|add|seed)\b|\s+on\s+\d{4}-|$)")
+MON_START = 1688169600000                 # 2023-07-01: the ra doi 26/07/2023
+
+
+def _bases(s: str) -> list[str]:
+    s = re.sub(r"\(.*?\)", " ", s)
+    return [x for x in re.findall(r"\b[0-9A-Z]{1,15}\b", s) if x not in STOP]
+
+
+def parse_monitor(title: str) -> list[tuple[str, str]]:
+    """[("add"|"remove", base)] tu tieu de bai muc 49."""
+    out = []
+    m = MON_ADD.search(title)
+    if m and "seed tag" not in m.group(1).lower():
+        out += [("add", b) for b in _bases(m.group(1))]
+    for m in MON_DEL.finditer(title):
+        out += [("remove", b) for b in _bases(m.group(1))]
+    return out
+
+
+def store_monitor(title: str, ts: int, code: str | None = None) -> int:
+    rows = [(b + "USDT", int(ts), act, title, code) for act, b in parse_monitor(title)]
+    if rows:
+        with db.tx() as cx:
+            cx.executemany("INSERT INTO monitor(symbol, ts, action, title, code) VALUES(?,?,?,?,?)"
+                           " ON CONFLICT(symbol, ts, action) DO UPDATE SET"
+                           " code = COALESCE(monitor.code, excluded.code)", rows)
+    return len(rows)
+
+
+def refresh_monitor(pages: int = 2) -> int:
+    """Doc muc 49 tu moi nhat lui ve 2023-07 (hoac `pages` trang)."""
+    import httpx
+    n = 0
+    with httpx.Client(headers=UA, timeout=20) as cx:
+        for p in range(1, pages + 1):
+            c = _get(cx, URL, type=1, catalogId=49, pageNo=p, pageSize=20).json()["data"]["catalogs"][0]
+            a = c["articles"]
+            for x in a:
+                n += store_monitor(x["title"], int(x["releaseDate"]), x["code"])
+            if not a or int(a[-1]["releaseDate"]) < MON_START or p * 20 >= int(c.get("total") or 0):
+                break
+            time.sleep(1.5)
+    return n
+
+
 def _get(cx, url: str, **params):
     """API nay tra 429 khi doc dồn: nghi 10 / 30 / 60 giay roi thu lai."""
     for wait in (10, 30, 60, None):
@@ -89,16 +142,20 @@ def refresh(pages: int = 2) -> int:
                     d = _get(cx, DETAIL, articleCode=x["code"])
                     ev = [("F", b) for b in perp_syms(d.json()["data"].get("body") or "")]
                 for kind, base in ev:
-                    rows.append((base + "USDT", kind, int(x["releaseDate"]), x["title"]))
+                    rows.append((base + "USDT", kind, int(x["releaseDate"]), x["title"], x["code"]))
             if not a or p * 20 >= int(c.get("total") or 0):
                 break
             time.sleep(1.5)                 # API nay chan 429 rat nhanh
     if rows:
         with db.tx() as cx2:
             # Giu thong bao DAU TIEN cua moi (ma, loai) — trang moi nhat doc truoc
-            cx2.executemany("INSERT INTO delist(symbol, kind, ts, title) VALUES(?,?,?,?)"
-                            " ON CONFLICT(symbol, kind) DO UPDATE SET ts = excluded.ts,"
-                            " title = excluded.title WHERE excluded.ts < delist.ts", rows)
+            cx2.executemany(
+                "INSERT INTO delist(symbol, kind, ts, title, code) VALUES(?,?,?,?,?)"
+                " ON CONFLICT(symbol, kind) DO UPDATE SET"
+                " title = CASE WHEN excluded.ts < delist.ts THEN excluded.title ELSE delist.title END,"
+                " code = CASE WHEN excluded.ts < delist.ts OR delist.code IS NULL"
+                "        THEN excluded.code ELSE delist.code END,"
+                " ts = MIN(delist.ts, excluded.ts)", rows)
     return len(rows)
 
 
@@ -121,3 +178,80 @@ def banned(N: dict, t_run: int, days: int) -> dict:
     lo = t_run - days * DAY
     return {s: max(x for x in v if lo < x <= t_run) for s, v in N.items()
             if any(lo < x <= t_run for x in v)}
+
+
+ANN = "https://www.binance.com/en/support/announcement/detail/"
+
+
+def flags(ban_days: int, t_now: int) -> list[dict]:
+    """Moi ma tung co co: tin go spot / go perp / the Monitoring, va trang thai."""
+    cx = db.connect()
+    try:
+        D = [dict(r) for r in cx.execute("SELECT * FROM delist")]
+        Mo = [dict(r) for r in cx.execute("SELECT * FROM monitor ORDER BY ts")]
+        last = dict(cx.execute("SELECT symbol, MAX(ts) FROM bars GROUP BY symbol").fetchall())
+        held = {r[0] for r in cx.execute("SELECT DISTINCT symbol FROM positions WHERE open=1")}
+    finally:
+        cx.close()
+    out: dict = {}
+
+    def row(s):
+        return out.setdefault(s, {"symbol": s, "S": None, "F": None, "tag_add": None,
+                                  "tag_remove": None, "links": []})
+    for r in D:
+        x = row(r["symbol"])
+        x[r["kind"]] = r["ts"]
+        x["links"].append({"kind": r["kind"], "ts": r["ts"], "title": r["title"],
+                           "url": ANN + r["code"] if r.get("code") else None})
+    for r in Mo:
+        x = row(r["symbol"])
+        if r["action"] == "add":
+            x["tag_add"] = r["ts"]
+        else:
+            x["tag_remove"] = r["ts"]
+        x["links"].append({"kind": "M" if r["action"] == "add" else "M−", "ts": r["ts"],
+                           "title": r["title"], "url": ANN + r["code"] if r.get("code") else None})
+    lo = t_now - ban_days * DAY
+    for x in out.values():
+        gone = max(x["S"] or 0, x["F"] or 0)
+        x["tag_on"] = bool(x["tag_add"] and (x["tag_remove"] or 0) < x["tag_add"]
+                           and (x["S"] or 0) < x["tag_add"])
+        x["ban_until"] = (gone + ban_days * DAY) if ban_days > 0 and gone > lo else None
+        lb = last.get(x["symbol"])
+        x["perp"] = bool(lb and lb >= t_now - 3 * DAY)
+        x["held"] = x["symbol"] in held
+        x["last_ts"] = max(l["ts"] for l in x["links"])
+        x["links"].sort(key=lambda l: l["ts"])
+    return sorted(out.values(), key=lambda x: -x["last_ts"])
+
+
+def seed_from_cache(path: str) -> tuple[int, int]:
+    """Gieo bang delist + monitor tu file da tai san. Tra (so dong go, so dong the)."""
+    import json
+    from pathlib import Path
+    d = Path(path)
+    if not d.is_dir():
+        return 0, 0
+    bodies = json.loads((d / "bodies.json").read_text()) if (d / "bodies.json").exists() else {}
+    rows, nm = [], 0
+    for cat in (161, 49):
+        f = d / f"{cat}.json"
+        if not f.exists():
+            continue
+        for x in json.loads(f.read_text()):
+            ev = parse(x["title"])
+            if ev == [("F*", "")]:
+                ev = [("F", b) for b in perp_syms(bodies.get(x["code"], ""))]
+            rows += [(b + "USDT", k, int(x["ts"]), x["title"], x["code"]) for k, b in ev]
+            if cat == 49 and x["ts"] >= MON_START:
+                nm += store_monitor(x["title"], int(x["ts"]), x["code"])
+    if rows:
+        with db.tx() as cx:
+            cx.executemany(
+                "INSERT INTO delist(symbol, kind, ts, title, code) VALUES(?,?,?,?,?)"
+                " ON CONFLICT(symbol, kind) DO UPDATE SET"
+                " title = CASE WHEN excluded.ts < delist.ts THEN excluded.title ELSE delist.title END,"
+                " code = CASE WHEN excluded.ts < delist.ts OR delist.code IS NULL"
+                "        THEN excluded.code ELSE delist.code END,"
+                " ts = MIN(delist.ts, excluded.ts)", rows)
+    return len(rows), nm

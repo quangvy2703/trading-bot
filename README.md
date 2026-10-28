@@ -243,7 +243,7 @@ Có hai nguồn tin; nguồn nào đến trước thì được tính:
 Khoá giao dịch hiện tại bị sàn từ chối ở WebSocket này (`-2015`). Dùng khoá
 riêng chỉ đọc cũng an toàn hơn. Tạo khoá trên Binance, chỉ bật «Enable
 Reading», điền vào `.env` rồi `docker compose up -d`. Kết quả hiện ở tab
-«Nhật ký» → «Sổ giấy theo tin».
+«Tin & cờ» → «Sổ giấy theo tin».
 
 ### Tab «Tính lịch sử»
 
@@ -430,9 +430,29 @@ không chỗ nào làm cả trang cuộn ngang:
 Chuyển động chỉ còn một chỗ (đèn đỏ nhấp nháy khi đang chạy thật) và nó tắt
 khi máy bật `prefers-reduced-motion`.
 
-## Năm tab
+## Sáu tab
 
 **Tính lịch sử** — xem § Tab «Tính lịch sử» ở trên.
+
+**Tin & cờ** — mọi mã từng bị Binance gắn cờ, đọc từ thông báo:
+- **gỡ spot** («Binance Will Delist …») và **gỡ perp** («Binance Futures Will
+  Delist …»): mã bị **chặn mua** trong `DELIST_BAN_DAYS` ngày;
+- **thẻ Monitoring** («… Extend the Monitoring Tag to Include …», và cả lượt bỏ
+  thẻ): chỉ hiện, chưa chặn mua. Khoảng 80% mã từng bị gắn thẻ về sau bị gỡ
+  khỏi spot.
+
+Mỗi dòng ghi:
+- trạng thái: chặn mua / đang có thẻ / đã có tin gỡ / đã bỏ thẻ;
+- các ngày gắn cờ;
+- ngày hết chặn;
+- perp còn giao dịch hay không, bot có đang giữ mã đó không;
+- đường dẫn tới từng bài thông báo.
+
+Bộ lọc: đang có cờ / chặn mua / thẻ Monitoring / tất cả. Huy hiệu đỏ trên tên
+tab là số mã đang bị chặn mua. Lần khởi động đầu bot đọc lịch sử mục «Delisting»
+(từ 2022-02) và mục «Latest Binance News» (lùi về 2023-07, khoảng 100 trang).
+Sau đó mỗi lượt chạy đọc 2 trang mới nhất, còn sổ giấy theo tin cập nhật ngay
+khi có bài mới. Bên dưới là mục **Sổ giấy theo tin**.
 
 **Bảng điều khiển** — vốn, sụt, vị thế, lượt chạy, ba đèn khoá, việc cần làm,
 đường vốn, bảng vị thế.

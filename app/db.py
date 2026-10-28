@@ -39,6 +39,12 @@ CREATE TABLE IF NOT EXISTS news_paper(
   exit_px REAL, why TEXT, bps REAL, usd REAL, open INTEGER DEFAULT 1,
   UNIQUE(news_key, symbol, kind));
 
+-- The Monitoring cua Binance (muc tin 49): moi lan them / bo the. Chi hien
+-- tren tab «Tin & cờ», khong chan lenh.
+CREATE TABLE IF NOT EXISTS monitor(
+  symbol TEXT, ts INTEGER, action TEXT, title TEXT, code TEXT,
+  PRIMARY KEY(symbol, ts, action)) WITHOUT ROWID;
+
 -- Thong bao huy niem yet cua Binance (app/delist.py): chan lenh MUA moi.
 CREATE TABLE IF NOT EXISTS delist(
   symbol TEXT, kind TEXT, ts INTEGER, title TEXT,
@@ -88,7 +94,8 @@ def _migrate(cx) -> None:
     for tbl, col, typ in (("positions", "notional", "REAL"),
                           ("positions", "r_usd", "REAL"),
                           ("runs", "n_open", "INTEGER"),
-                          ("runs", "gross", "REAL")):
+                          ("runs", "gross", "REAL"),
+                          ("delist", "code", "TEXT")):
         cols = {r[1] for r in cx.execute(f"PRAGMA table_info({tbl})")}
         if col not in cols:
             cx.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {typ}")

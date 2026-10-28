@@ -56,17 +56,22 @@ def _start() -> None:
             except Exception as e:
                 db.log("warn", f"gieo mầm nến 1H lỗi: {e}")
         threading.Thread(target=_seed1h, daemon=True, name="seed1h").start()
-    if not db.kv_get("delist_full"):
-        # Lan dau doc het muc «Delisting» (~23 trang, tu 2022-02) cho tab
-        # «Tinh lich su»; sau do moi luot chay doc 2 trang moi nhat.
-        def _delist():
-            try:
-                n = delist.refresh(40)
-                db.kv_set("delist_full", {"rows": n, "ts": int(time.time() * 1000)})
-                db.log("info", f"nạp {n} thông báo huỷ niêm yết")
-            except Exception as e:
-                db.log("warn", f"nạp thông báo huỷ niêm yết lỗi: {e}")
-        threading.Thread(target=_delist, daemon=True, name="delist").start()
+    # Thong bao huy niem yet + the Monitoring: gieo mot lan tu file da tai san
+    # (mount /seedann), roi doc vai trang API moi nhat de bat kip phan con
+    # thieu. Doc lai ca lich su qua API (~250 trang) bi Binance chan 429.
+    def _ann():
+        try:
+            if not db.kv_get("ann_seeded"):
+                n, m = delist.seed_from_cache(CFG.seed_ann_dir)
+                if n or m:
+                    db.kv_set("ann_seeded", {"delist": n, "monitor": m, "ts": int(time.time() * 1000)})
+                    db.log("info", f"gieo mầm {n} thông báo huỷ niêm yết, {m} lượt thêm / bỏ thẻ Monitoring")
+            n = delist.refresh(3)
+            m = delist.refresh_monitor(5)
+            db.log("info", f"cập nhật thông báo: {n} dòng huỷ niêm yết, {m} dòng thẻ Monitoring")
+        except Exception as e:
+            db.log("warn", f"nạp thông báo huỷ niêm yết / thẻ Monitoring lỗi: {e}")
+    threading.Thread(target=_ann, daemon=True, name="ann").start()
     if CFG.news_paper:
         threading.Thread(target=news.run, daemon=True, name="news").start()
     if executor.live_ready()[0]:
@@ -144,6 +149,13 @@ def doc_one(key: str):
     return {"key": key, "title": title, "file": p.name,
             "mtime": int(p.stat().st_mtime * 1000),
             "text": p.read_text(encoding="utf-8")}
+
+
+@app.get("/api/flags")
+def flags():
+    """Ma bi gan co: tin go spot / go perp / the Monitoring — tab «Tin & cờ»."""
+    return {"ban_days": settings.risk()["ban_days"], "now": int(time.time() * 1000),
+            "rows": delist.flags(settings.risk()["ban_days"], int(time.time() * 1000))}
 
 
 @app.get("/api/news")

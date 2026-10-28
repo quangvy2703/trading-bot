@@ -405,8 +405,9 @@ def _run_once(force: bool = False) -> dict:
         # Loi mang khong chan luot chay: danh sach cu van con trong kho.
         try:
             DL.refresh(2)
+            DL.refresh_monitor(2)
         except Exception as e:
-            db.log("warn", f"cập nhật thông báo huỷ niêm yết lỗi: {e}")
+            db.log("warn", f"cập nhật thông báo huỷ niêm yết / thẻ Monitoring lỗi: {e}")
 
         prices = api.prices()
         eq = equity_now()

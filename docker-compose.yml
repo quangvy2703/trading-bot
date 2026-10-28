@@ -130,6 +130,9 @@ services:
       # Nen 1H (top 10 tung co) cho tab «Tinh lich su» mo phong stop HVN. Chi
       # doc, chi gieo mot lan; sau do bot tu cap nhat top 20 moi luot chay.
       - ../reports/.cache/uni_tf/1h:/seed1h:ro
+      # Thong bao Binance da tai san (161.json, 49.json, bodies.json) cho tab
+      # «Mã gắn cờ» va luat chan mua. Chi doc, chi gieo mot lan.
+      - ../reports/.cache/announce:/seedann:ro
       # Cac tai lieu da chot, hien o tab «Phương pháp». Chi doc.
       - ../docs:/docs:ro
     logging:
