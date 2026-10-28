@@ -175,6 +175,27 @@ class Trader:
         return self._call("POST", "/fapi/v1/positionMargin", symbol=symbol,
                           amount=f"{amount:.2f}", type=1)
 
+    # --- lenh dieu kien: tu 12/2025 san bat buoc di qua Algo Order API ---
+    # /fapi/v1/order voi STOP_MARKET tra -4120.
+    def stop_close(self, symbol: str, side: str, trigger: str,
+                   cid: str) -> dict:
+        """STOP_MARKET closePosition: cham gia danh dau thi dong HET vi the
+        cua ma (sang mot chieu chi co mot vi the rong moi ma)."""
+        return self._call("POST", "/fapi/v1/algoOrder", algoType="CONDITIONAL",
+                          symbol=symbol, side=side, type="STOP_MARKET",
+                          triggerPrice=trigger, closePosition="true",
+                          workingType="MARK_PRICE", clientAlgoId=cid)
+
+    def open_algo_orders(self) -> list:
+        r = self._call("GET", "/fapi/v1/openAlgoOrders")
+        return r if isinstance(r, list) else r.get("orders", [])
+
+    def algo_order(self, algo_id) -> dict:
+        return self._call("GET", "/fapi/v1/algoOrder", algoId=algo_id)
+
+    def cancel_algo(self, algo_id) -> dict:
+        return self._call("DELETE", "/fapi/v1/algoOrder", algoId=algo_id)
+
     def market_order(self, symbol: str, side: str, qty: float,
                      reduce_only: bool = False) -> dict:
         p = {"symbol": symbol, "side": side, "type": "MARKET",

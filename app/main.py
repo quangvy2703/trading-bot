@@ -56,7 +56,8 @@ def _start() -> None:
                 db.log("warn", f"gieo mầm nến 1H lỗi: {e}")
         threading.Thread(target=_seed1h, daemon=True, name="seed1h").start()
     if executor.live_ready()[0]:
-        # Vi the isolated thieu ky quy khong doi duoc toi luot chay ke tiep.
+        # Vi the isolated thieu ky quy, hay thieu dung an toan tren san, khong
+        # doi duoc toi luot chay ke tiep.
         def _margin():
             t = None
             try:
@@ -67,6 +68,7 @@ def _start() -> None:
             finally:
                 if t is not None:
                     t.close()
+            runner.safety_now()
         threading.Thread(target=_margin, daemon=True, name="margin").start()
     hh, _, mm = CFG.run_at_utc.partition(":")
     sched.add_job(_job, CronTrigger(hour=int(hh), minute=int(mm or 0)),
@@ -158,6 +160,7 @@ def state():
         "sched": {"at": CFG.run_at_utc,
                   "next": nxt.next_run_time.isoformat() if nxt and nxt.next_run_time else None},
         "last_run": db.kv_get("last_run"),
+        "safety": db.kv_get("safety", {}) or {},
         "equity": _rows("SELECT ts, value FROM equity WHERE mode=? ORDER BY ts", m),
         "positions": _rows(
             "SELECT * FROM positions WHERE open=1 AND mode=? "
@@ -239,7 +242,8 @@ def preview():
         target, note = runner.build_target(P, rank, day, cur)
         actions = executor.plan(target, cur)
         allowed, blocked = executor.apply_caps(
-            actions, runner.equity_now(), api.prices(), len(cur))
+            actions, runner.equity_now(), api.prices(), len(cur),
+            sum(float(p.get("notional") or 0.0) for p in cur))
         return {"day": day, "note": note, "target": target,
                 "actions": allowed, "blocked": blocked,
                 "equity": runner.equity_now()}

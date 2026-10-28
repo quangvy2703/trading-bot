@@ -74,6 +74,18 @@ class Config:
     limit_wait_s: float = _f("LIMIT_WAIT_S", 20)
     limit_fallback: bool = os.environ.get("LIMIT_FALLBACK", "1") == "1"
 
+    # --- tran TONG phoi nhiem, tinh CA vi the dang mo (boi so von) ---
+    # MAX_GROSS_USD chi chan phan mo them trong MOT luot; qua nhieu luot tong
+    # co the don toi max_open x max_order (~9x von). Dong luong dinh ~1,8x.
+    max_gross_x: float = _f("MAX_GROSS_X", 2.0)
+
+    # --- dung an toan TREN SAN (STOP_MARKET closePosition) ---
+    # Cat lo mem chi duoc kiem 00:05 moi ngay va chi khi luot chay dien ra.
+    # Lenh tren san chan duoi tham hoa ca khi may ngu. RSI(2) dat dung muc
+    # cat lo; dong luong (khong co cat lo trong nghien cuu) dat xa SAFETY_R
+    # lan R de khong cham vao hanh vi da backtest.
+    safety_r: float = _f("SAFETY_R", 3.0)
+
     @property
     def rest(self) -> str:
         return ("https://testnet.binancefuture.com"

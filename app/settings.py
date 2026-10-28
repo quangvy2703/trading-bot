@@ -49,6 +49,7 @@ SPEC = {
     "xsmom.ma":        ("xsmom", int, 0, 400, "lọc xu hướng theo MA — 0 là tắt"),
     # --- tran rui ro ---
     "max_gross_usd":   ("risk", float, 0.0, 1e9, "trần tổng mở thêm mỗi lượt"),
+    "max_gross_x":     ("risk", float, 0.1, 20.0, "trần TỔNG phơi nhiễm (bội số vốn)"),
     "max_order_usd":   ("risk", float, 0.0, 1e9, "trần giá trị một lệnh"),
     "max_orders_per_run": ("risk", int, 1, 500, "trần số lệnh mỗi lượt"),
     # --- don vi rui ro: 1R la so USD mat khi cham diem cat lo ---
@@ -60,7 +61,8 @@ SPEC = {
 def locked() -> dict:
     """Bo DA CHOT theo docs — moc so sanh, khong bao gio doi tu UI."""
     d = {"alloc_rsi2": CFG.alloc_rsi2, "alloc_xsmom": CFG.alloc_xsmom,
-         "max_gross_usd": CFG.max_gross_usd, "max_order_usd": CFG.max_order_usd,
+         "max_gross_usd": CFG.max_gross_usd, "max_gross_x": CFG.max_gross_x,
+         "max_order_usd": CFG.max_order_usd,
          "max_orders_per_run": CFG.max_orders_per_run,
          "risk_r_usd": CFG.risk_r_usd, "risk_max_open": CFG.risk_max_open}
     for k, v in LOCK_RSI2.items():
@@ -96,7 +98,8 @@ def strat() -> tuple[dict, dict]:
 
 def risk() -> dict:
     e = effective()
-    return {"gross": e["max_gross_usd"], "order": e["max_order_usd"],
+    return {"gross": e["max_gross_usd"], "gross_x": e["max_gross_x"],
+            "order": e["max_order_usd"],
             "orders": int(e["max_orders_per_run"]),
             "r_usd": e["risk_r_usd"], "max_open": int(e["risk_max_open"])}
 

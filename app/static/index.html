@@ -428,6 +428,13 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
       <svg id="cv" role="img" aria-label="Đường vốn tài khoản"></svg>
     </div>
 
+    <!-- Rieng mot hang, full ngang: 14 cot khong vua cot trai cua luoi. -->
+    <div class="panel" style="margin-top:12px">
+      <div class="ph"><h3>Vị thế đang mở</h3>
+        <span class="sub live" id="posLive"></span></div>
+      <div class="tw"><table id="tpos"></table></div>
+    </div>
+
     <div class="cols">
       <div class="colA">
         <div class="panel">
@@ -437,11 +444,6 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
           <div class="pb sub" id="todoNote">
             Bấm «Xem trước» để tính sổ mục tiêu cho nến vừa đóng. Không có lệnh
             nào được đặt cho tới khi bấm «Chạy ngay».</div>
-        </div>
-        <div class="panel">
-          <div class="ph"><h3>Vị thế đang mở</h3>
-            <span class="sub live" id="posLive"></span></div>
-          <div class="tw"><table id="tpos"></table></div>
         </div>
       </div>
 
@@ -528,6 +530,9 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
         <div class="row" style="margin-top:12px">
           <button class="warn" id="btnBt">Tính</button>
           <button id="btnBtReset">Lấy lại cấu hình đang chạy</button>
+          <button class="danger" id="btnBtApply"
+            title="ghi các tham số chiến lược và trần rủi ro trên form vào cấu hình chạy thật">
+            Dùng cấu hình này cho chạy thật</button>
           <span class="sub" id="btStatus"></span>
         </div>
       </div>
@@ -758,7 +763,8 @@ function render() {
       + `7 sổ cần (~${usd(needGross)})`);
   $('caps').innerHTML = `<b>1R = ${usd(S.caps.r_usd)} USD</b> mỗi lệnh · `
     + `tối đa <b>${S.caps.max_open}</b> lệnh mở cùng lúc`
-    + `<br>trần: tổng <b>${usd(S.caps.gross)}</b> USD · mỗi lệnh `
+    + `<br>trần: tổng phơi nhiễm <b>${S.caps.gross_x}× vốn</b> · mở thêm mỗi lượt `
+    + `<b>${usd(S.caps.gross)}</b> USD · mỗi lệnh `
     + `<b>${usd(S.caps.order)}</b> USD · <b>${S.caps.orders}</b> lệnh/lượt`
     + (warn.length ? `<br><span class="neg">⚠ ${warn.join(' · ')} → lệnh sẽ `
        + `bị chặn. Hạ <b>1R</b> hoặc nâng trần.</span>` : '');
@@ -781,21 +787,10 @@ function render() {
           + ` — ứng viên không qua bị bỏ hẳn (~18%/kỳ)`
         : `<br><span class="neg">lọc MA đang TẮT</span>`);
 
-  POS = S.positions.map(p => ({...p, notl: notl(p)}));
   FEE = S.fee_bps ?? 0;
-  let i = 0;
-  const live = k => ({html: `<span data-k="${k}" data-i="${i}">—</span>`});
-  table($('tpos'), ['mã', 'chiến lược', 'sổ', 'chiều', 'cỡ USD', '1R', 'giá vào',
-    'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'mở từ'],
-    S.positions, p => [p.symbol, sChip(p.strategy), p.sleeve ?? '—', sideTxt(p.side),
-      {html: p.notional ? usd(p.notional)
-        : `<span class="mut" title="suy ra từ tỷ trọng vốn cũ">`
-          + `${usd(notl(p))}*</span>`},
-      p.r_usd ? usd(p.r_usd) : '—', p.entry_px,
-      live('px'), live('usd'), live('pc'), live('r'),
-      p.stop ? p.stop.toPrecision(6) : '—', (i++, day(p.entry_ts))]);
+  POSKEY = null;
+  drawPos();
   stream(S.stream);
-  paintPnl();
 
   table($('tord'), ['lúc', 'mã', 'việc', 'bên', 'USD', 'trạng thái'],
     S.orders, o => [when(o.ts), o.symbol, aChip(o.action), o.side,
@@ -854,10 +849,74 @@ function stream(url) {
 
 const signed = (v, f) => (v >= 0 ? '+' : '−') + f(Math.abs(v));
 
+/* ============ bảng vị thế ============ */
+/* Chay that thi vi the lay tu SAN (/api/account): san la su that, so noi bo
+   chi gan nhan chien luoc / so / 1R / cat lo. Hai ben lech nhau thi hien ro
+   thay vi giau di: «ngoài sổ» = san co ma so khong biet (app se khong bao
+   gio dong no), «không có trên sàn» = so tuong con mo nhung san da het. */
+let POSKEY = null;
+
+function drawPos() {
+  if (!S) return;
+  const A = S.mode === 'live' && ACCT && ACCT.ok ? ACCT : null;
+  const SF = S.safety || {};
+  const key = JSON.stringify([S.positions.map(p => p.id), A && A.positions, SF]);
+  if (key === POSKEY) return;
+  POSKEY = key;
+  const eqNow = S.equity.length ? S.equity.at(-1).value : 0;
+  const notl = p => p.notional || (p.weight || 0) * eqNow;
+  let rows;
+  if (!A) {
+    rows = S.positions.map(p => ({...p, notl: notl(p), book: [p]}));
+  } else {
+    const used = new Set();
+    rows = A.positions.map(x => {
+      const side = Math.sign(x.amt);
+      const book = S.positions.filter(p => p.symbol === x.symbol && p.side === side);
+      book.forEach(p => used.add(p));
+      return {symbol: x.symbol, side, entry_px: x.entry, ex: true, book,
+        notl: Math.abs(x.amt) * x.entry,
+        r_usd: book.reduce((a, p) => a + (p.r_usd || 0), 0) || null,
+        stop: book.find(p => p.stop)?.stop,
+        entry_ts: book.length ? Math.min(...book.map(p => p.entry_ts)) : null};
+    });
+    for (const p of S.positions)
+      if (!used.has(p)) rows.push({...p, notl: notl(p), book: [p], gone: true});
+  }
+  POS = rows;
+  let i = 0;
+  const live = k => ({html: `<span data-k="${k}" data-i="${i}">—</span>`});
+  table($('tpos'), ['mã', 'chiến lược', 'sổ', 'chiều', 'cỡ USD', '1R', 'giá vào',
+    'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'dừng sàn', 'mở từ'],
+    rows, r => [r.symbol,
+      r.book.length
+        ? {html: [...new Set(r.book.map(p => p.strategy))]
+            .map(s => sChip(s).html).join(' ')}
+        : {html: '<span class="neg" title="sàn có, sổ không biết — app sẽ không '
+            + 'tự đóng vị thế này">ngoài sổ</span>'},
+      r.book.map(p => p.sleeve ?? '—').join(', ') || '—', sideTxt(r.side),
+      {html: (r.ex || r.notional ? usd(r.notl)
+        : `<span class="mut" title="suy ra từ tỷ trọng vốn cũ">${usd(r.notl)}*</span>`)
+        + (r.gone ? ' <span class="neg" title="sổ ghi đang mở nhưng sàn không '
+            + 'có">không có trên sàn</span>' : '')},
+      r.r_usd ? usd(r.r_usd) : '—', +r.entry_px.toPrecision(10),
+      live('px'), live('usd'), live('pc'), live('r'),
+      r.stop ? r.stop.toPrecision(6) : '—',
+      /* Lenh STOP_MARKET dang nam tren san cho ca ma — thieu thi bao do. */
+      SF[r.symbol] && SF[r.symbol].side === r.side
+        ? +SF[r.symbol].trigger.toPrecision(8)
+        : (r.ex ? {html: '<span class="neg" title="sàn không có lệnh dừng '
+            + 'an toàn cho mã này">chưa có</span>'} : '—'),
+      (i++, r.entry_ts ? day(r.entry_ts) : '—')]);
+  paintPnl();
+}
+
 function pnlOf(p) {
   const px = MARK[p.symbol];
   if (!px || !p.entry_px) return null;
-  const bps = (px - p.entry_px) / p.entry_px * 1e4 * p.side - FEE;
+  /* Dong lay tu san: gia vao la gia khop that, lai/lo khop dung so san
+     hien — khong tru phi uoc tinh nua (phi da tru vao vi luc khop). */
+  const bps = (px - p.entry_px) / p.entry_px * 1e4 * p.side - (p.ex ? 0 : FEE);
   const v = p.notl * bps / 1e4;
   return {px, bps, usd: v, r: p.r_usd ? v / p.r_usd : null};
 }
@@ -872,6 +931,7 @@ async function loadAcct() {
   try { ACCT = await (await fetch('/api/account')).json(); }
   catch (e) { ACCT = {ok: false, why: e.message}; }
   if (S && !paintAcct()) render();
+  else drawPos();
 }
 
 function paintAcct() {
@@ -914,7 +974,7 @@ function paintPnl() {
   const got = Q.filter(Boolean), tot = got.reduce((a, q) => a + q.usd, 0);
   $('posLive').innerHTML = (got.length
       ? `tổng <b class="${tot >= 0 ? 'pos' : 'neg'}">${esc(signed(tot, usd))} USD</b>`
-        + ` · sau phí ${FEE} bps`
+        + (POS.some(p => p.ex) ? ' · theo sàn' : ` · sau phí ${FEE} bps`)
         + (got.length < POS.length ? ` · ${POS.length - got.length} mã chưa có giá` : '')
         + ' · '
       : '')
@@ -1505,6 +1565,52 @@ function btCharts() {
 
 $('btnBt').onclick = () => runBt();
 $('btnBtReset').onclick = () => { BTV = {...BT.defaults, start: '', end: ''}; buildBtForm(); };
+/* Dua bo tham so tren form backtest vao cau hinh CHAY THAT (/api/config).
+   Chi cac o co trong settings.SPEC moi ap duoc; von ban dau, don bay, phi,
+   muc toi thieu va khoang ngay chi la gia dinh mo phong. 1R la USD tuyet doi
+   nen backtest o von khac von that thi rui ro moi lenh tren tai khoan that
+   khac han — bao bang % von that truoc khi ghi. */
+$('btnBtApply').onclick = async () => {
+  if (!BT) return;
+  let cur;
+  try { cur = (await (await fetch('/api/config')).json()).effective; }
+  catch (e) { msg(e.message, false); return; }
+  const body = btBody(), patch = {}, lines = [];
+  for (const k of Object.keys(BT.spec)) {
+    if (!(k in body)) continue;
+    const v = Number(body[k]);
+    if (!Number.isFinite(v) || v === Number(cur[k])) continue;
+    patch[k] = v;
+    lines.push(`  ${BT.spec[k].desc}: ${cur[k]} → ${v}`);
+  }
+  if (!lines.length) { msg('Form đang trùng cấu hình chạy thật — không có gì để ghi.'); return; }
+  const eqLive = ACCT && ACCT.ok ? ACCT.wallet : (S && S.equity.length ? S.equity.at(-1).value : 0);
+  const r = Number(body.risk_r_usd ?? cur.risk_r_usd);
+  const rr = r * Number(body.alloc_rsi2 ?? cur.alloc_rsi2);
+  const rx = r * Number(body.alloc_xsmom ?? cur.alloc_xsmom);
+  const warn = [];
+  if (eqLive > 0) {
+    warn.push(`Vốn thật ${usd(eqLive)} USD (backtest giả định ${usd(Number(body.start_equity))} USD):`
+      + `\n  rủi ro mỗi lệnh RSI(2) = ${usd(rr)} USD = ${pct(rr / eqLive * 100, 1)}% vốn thật`
+      + `\n  rủi ro mỗi lệnh động lượng = ${usd(rx)} USD = ${pct(rx / eqLive * 100, 1)}% vốn thật`);
+    if (Math.abs(Number(body.start_equity) / eqLive - 1) > 0.2)
+      warn.push('⚠ Vốn backtest lệch vốn thật — kết quả ở trên KHÔNG đại diện cho tài khoản thật.'
+        + ' Muốn giữ cùng tỷ lệ rủi ro thì 1R phải nhân '
+        + `${pct(eqLive / Number(body.start_equity), 3)}.`);
+  }
+  if (!confirm('GHI VÀO CẤU HÌNH CHẠY THẬT (tiền thật, áp dụng từ lượt kế tiếp):\n'
+    + lines.join('\n') + '\n\n' + warn.join('\n\n')
+    + '\n\nKhông áp dụng: vốn ban đầu, đòn bẩy (đặt bằng LEVERAGE), phí, '
+    + 'mức tối thiểu, khoảng ngày.')) return;
+  try {
+    C = await call('/api/config', {patch});
+    try { renderCfg(); } catch (e) { /* tab cau hinh chua mo */ }
+    // «Lấy lại cấu hình đang chạy» phai lay bo VUA ghi, khong phai bo cu.
+    BT.defaults = (await (await fetch('/api/backtest')).json()).defaults;
+    await refresh();
+    msg(`Đã ghi ${lines.length} tham số vào cấu hình chạy thật.`);
+  } catch (e) { msg(e.message, false); }
+};
 $('btnCsv').onclick = () => {
   if (!BTR) return;
   const tr = BTR.trades.filter(t => BTF === 'all' || t.s === BTF);

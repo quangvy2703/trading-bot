@@ -96,18 +96,22 @@ def one_way(actions: list, actual: list) -> tuple[list, list]:
 
 
 def apply_caps(actions: list, equity: float, prices: dict,
-               n_held: int = 0) -> tuple[list, list]:
+               n_held: int = 0, held_gross: float = 0.0) -> tuple[list, list]:
     """Ap tran rui ro TRUOC khi gui bat ky lenh nao. Tra (duoc phep, bi chan).
 
     Co lenh KHONG con tinh tu von: no bang r_usd / R, da tinh san o so muc
     tieu. Von chi con quyet dinh mo duoc bao nhieu lenh cung luc — do la
-    `max_open` va `gross`.
+    `max_open`, `gross` (phan mo them trong luot) va `gross_x` (TONG phoi
+    nhiem ke ca vi the dang giu, `held_gross`, tru phan luot nay dong).
     """
     R = settings.risk()
     ok, blocked = [], []
     gross = 0.0
     n_open = 0
     live = n_held - sum(1 for a in actions if a["action"] == "CLOSE")
+    held = held_gross - sum(float(a.get("notional") or 0.0)
+                            for a in actions if a["action"] == "CLOSE")
+    tot_cap = R["gross_x"] * equity
     for a in actions:
         if a["action"] == "CLOSE":
             ok.append(a)                       # dong vi the khong bao gio bi chan
@@ -125,6 +129,10 @@ def apply_caps(actions: list, equity: float, prices: dict,
             continue
         if gross + notional > R["gross"]:
             blocked.append({**a, "why": f"vượt trần tổng {R['gross']:.0f} USD"})
+            continue
+        if held + gross + notional > tot_cap:
+            blocked.append({**a, "why": f"vượt trần tổng phơi nhiễm "
+                                        f"{R['gross_x']:g}× vốn = {tot_cap:.0f} USD"})
             continue
         if n_open >= R["orders"]:
             blocked.append({**a, "why": "vượt trần số lệnh mỗi lượt"})
@@ -264,6 +272,79 @@ def _fill_market(trader: Trader, j: dict) -> None:
     j["cost"] += ex * (float(r.get("avgPrice") or 0) or j["ref"])
     j["taker"] += ex
     j["rem"] = 0.0
+
+
+def safety_level(p: dict) -> float | None:
+    """Gia kich hoat dung an toan cua MOT vi the trong so.
+
+    RSI(2): dung muc cat lo cua no. Dong luong: SAFETY_R lan R tinh tu gia
+    vao, voi R = r_usd / co lenh (chinh la sigma x sqrt(so ngay giu)).
+    """
+    if p["strategy"] == "rsi2" and p.get("stop"):
+        return float(p["stop"])
+    n, r, e = p.get("notional"), p.get("r_usd"), p.get("entry_px")
+    if not (n and r and e):
+        return None
+    d = min(CFG.safety_r * float(r) / float(n), 0.95)
+    return float(e) * (1 - p["side"] * d)
+
+
+def sync_safety(trader: Trader, book: list, filt: dict) -> dict:
+    """Moi ma dang co vi the (va co trong so) giu DUNG MOT lenh dung an toan.
+
+    San mot chieu: moi ma mot vi the rong, nen dung closePosition cho ca ma,
+    o muc XA nhat trong cac vi the so cung chieu (nhieu lop / nhieu so). Lenh
+    cu sai muc thi huy dat lai; ma het vi the thi huy lenh thua. Ma «ngoài
+    sổ» KHONG dong toi — app khong biet no la gi.
+    """
+    ex = {p["symbol"]: float(p["positionAmt"]) for p in trader.positions()
+          if float(p.get("positionAmt") or 0) != 0}
+    mine: dict = {}
+    for o in trader.open_algo_orders():
+        if str(o.get("clientAlgoId", "")).startswith("sl-"):
+            mine.setdefault(o["symbol"], []).append(o)
+    out = {}
+    for sym, amt in ex.items():
+        side = 1 if amt > 0 else -1
+        lv = [x for x in (safety_level(p) for p in book
+                          if p["symbol"] == sym and p["side"] == side) if x]
+        f = filt.get(sym)
+        if not lv or not f:
+            continue
+        tick = f["tick"] or 0.0001
+        # Lam tron RA XA (an toan hon), khong bao gio vao gan gia.
+        trig = (math.floor(min(lv) / tick) * tick if side > 0
+                else math.ceil(max(lv) / tick) * tick)
+        trig_s = f"{trig:.{f['pprec']}f}"
+        osd = "SELL" if side > 0 else "BUY"
+        keep = None
+        for o in mine.pop(sym, []):
+            if (keep is None and o.get("side") == osd
+                    and abs(float(o.get("triggerPrice") or 0) - trig) < tick / 2):
+                keep = o
+                continue
+            try:
+                trader.cancel_algo(o["algoId"])
+            except Exception as e:
+                db.log("warn", f"{sym}: huỷ dừng an toàn cũ lỗi: {e}")
+        if keep is None:
+            try:
+                keep = trader.stop_close(sym, osd, trig_s,
+                                         f"sl-{sym}-{int(time.time())}"[:36])
+                db.log("info", f"{sym}: đặt dừng an toàn trên sàn {osd} "
+                               f"khi giá đánh dấu {'≤' if side > 0 else '≥'} {trig_s}")
+            except Exception as e:
+                db.log("error", f"{sym}: KHÔNG đặt được dừng an toàn {trig_s}: {e}")
+                continue
+        out[sym] = {"algoId": keep.get("algoId"), "trigger": trig, "side": side}
+    for sym, os_ in mine.items():              # ma da het vi the
+        for o in os_:
+            try:
+                trader.cancel_algo(o["algoId"])
+            except Exception as e:
+                db.log("warn", f"{sym}: huỷ dừng an toàn thừa lỗi: {e}")
+    db.kv_set("safety", out)
+    return out
 
 
 def execute(run_id: int, actions: list, equity: float, prices: dict,

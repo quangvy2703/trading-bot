@@ -12,7 +12,7 @@ import time
 import numpy as np
 
 from . import db, data, executor, settings, strategies as ST, volprofile as VP
-from .binance import DAY, PublicApi
+from .binance import DAY, PublicApi, Trader
 from .config import CFG, FEE_BPS
 
 
@@ -208,6 +208,68 @@ def top_symbols(n: int) -> list[str]:
     return sorted((s for s, r in rank.items() if r <= n), key=lambda s: rank[s])
 
 
+def _pnl_usd(p: dict, px: float, eq: float) -> tuple[float, float]:
+    bps = (px - p["entry_px"]) / p["entry_px"] * 1e4 * p["side"] - FEE_BPS
+    notion = p.get("notional")
+    return (float(notion) if notion else eq * (p.get("weight") or 0.0)) * bps / 1e4, bps
+
+
+def reconcile(prices: dict, eq: float) -> float:
+    """Dong trong SO nhung vi the san da het (dung an toan da khop, hoac dong
+    tay). Khong lam vay thi luot nay gui reduceOnly cho mot vi the khong ton
+    tai, va tinh lai/lo cho mot vi the da dong tu lau. Tra lai/lo da chot."""
+    t = Trader()
+    try:
+        ex = {p["symbol"]: float(p["positionAmt"]) for p in t.positions()}
+        safe = db.kv_get("safety", {}) or {}
+        realised = 0.0
+        for p in open_positions("live"):
+            amt = ex.get(p["symbol"], 0.0)
+            if amt != 0 and (amt > 0) == (p["side"] > 0):
+                continue
+            px, why = prices.get(p["symbol"]), "sàn không còn vị thế"
+            s = safe.get(p["symbol"])
+            if s and s.get("algoId"):
+                try:
+                    a = t.algo_order(s["algoId"])
+                    if float(a.get("actualPrice") or 0) > 0:
+                        px, why = float(a["actualPrice"]), "dừng an toàn trên sàn"
+                except Exception:
+                    pass
+            if not px:
+                db.log("error", f"{p['symbol']}: sàn đã hết vị thế nhưng không có "
+                                f"giá để chốt sổ — để nguyên")
+                continue
+            usd, bps = _pnl_usd(p, px, eq)
+            realised += usd
+            with db.tx() as cx:
+                cx.execute("UPDATE positions SET open=0, exit_px=?, exit_ts=?,"
+                           " exit_why=?, pnl_bps=? WHERE id=?",
+                           (px, int(time.time() * 1000), why, bps, p["id"]))
+            db.log("warn", f"{p['symbol']}: {why} · chốt sổ ở {px:g} · "
+                           f"{usd:+.2f} USD")
+        return realised
+    finally:
+        t.close()
+
+
+def safety_now(filt: dict | None = None) -> None:
+    """Dong bo dung an toan tren san voi so hien tai. Loi chi ghi nhat ky."""
+    t = api = None
+    try:
+        t = Trader()
+        if filt is None:
+            api = PublicApi()
+            filt = data.filters(api)
+        executor.sync_safety(t, open_positions("live"), filt)
+    except Exception as e:
+        db.log("error", f"đồng bộ dừng an toàn lỗi: {e}")
+    finally:
+        for c in (t, api):
+            if c is not None:
+                c.close()
+
+
 def run_once(force: bool = False) -> dict:
     t0 = time.time()
     m = mode()
@@ -239,17 +301,21 @@ def run_once(force: bool = False) -> dict:
         except Exception as e:
             db.log("warn", f"cập nhật nến 1H lỗi: {e}")
 
+        prices = api.prices()
+        eq = equity_now()
+        if m == "live":
+            eq += reconcile(prices, eq)
         cur_pos = open_positions(m)
         target, note = build_target(P, rank, day, cur_pos)
-        prices = api.prices()
         filt = data.filters(api) if m == "live" else {}
-        eq = equity_now()
 
         actions = executor.plan(target, cur_pos)
         clash = []
         if m == "live":          # so giay giu nguyen hanh vi nhu backtest
             actions, clash = executor.one_way(actions, cur_pos)
-        allowed, blocked = executor.apply_caps(actions, eq, prices, len(cur_pos))
+        allowed, blocked = executor.apply_caps(
+            actions, eq, prices, len(cur_pos),
+            sum(float(p.get("notional") or 0.0) for p in cur_pos))
         blocked += clash
         done = executor.execute(run_id, allowed, eq, prices, filt, m)
 
@@ -291,6 +357,8 @@ def run_once(force: bool = False) -> dict:
                          a.get("notional"), a.get("r_usd"), a["px"],
                          int(time.time() * 1000), a.get("stop"), m))
         eq += realised          # lai/lo da chot la USD, khong phai ty le
+        if m == "live":
+            safety_now(filt)    # sau khi so da ghi vi the moi
         mtm = mark_to_market(P, day, eq, prices)
         with db.tx() as cx:
             cx.execute("INSERT OR REPLACE INTO equity(ts,mode,value) "
