@@ -11,7 +11,7 @@ import time
 
 import numpy as np
 
-from . import db, data, executor, settings, strategies as ST
+from . import db, data, executor, settings, strategies as ST, volprofile as VP
 from .binance import DAY, PublicApi
 from .config import CFG, FEE_BPS
 
@@ -88,19 +88,40 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
            if r_rsi2 > 0 else [])
     for s in sig[:max(0, free)]:
         stop = ST.rsi2_stop(s["close"], s["atr"])
+        how = "6×ATR"
+        if R.get("stop_hvn"):
+            # Dinh khoi luong gan nhat duoi gia (docs/stop-dinh-day.md). Loi
+            # mang hay khong co HVN → giu 6×ATR, khong bo lenh.
+            try:
+                lv = VP.hvn_below(s["symbol"], int(day) + DAY, s["close"], s["atr"],
+                                  int(R["vp_days"]), float(R["vp_bin"]))
+            except Exception as e:
+                lv = None
+                db.log("warn", f"{s['symbol']}: không dựng được volume profile: {e}")
+            if lv is not None:
+                stop = max(lv - float(R["vp_buf"]) * s["atr"], s["close"] * (1 - R["cap"]))
+                how = "HVN"
         # R = khoang cach toi stop theo ty le gia. Co lenh = r_usd / R.
         rf = (s["close"] - stop) / s["close"] if s["close"] > 0 else 0.0
         if rf <= 0:
             continue
+        # Stop gan (HVN co khi chi cach 2%) cho lenh rat to. Vuot tran lenh
+        # thi THU NHO ve dung tran — rui ro < 1R — chu khong bo ca lenh.
+        r_use, notional = r_rsi2, r_rsi2 / rf
+        if K["order"] > 0 and notional > K["order"]:
+            notional = K["order"]
+            r_use = notional * rf
         # chi so lop TRONG nho nhat: lop goc co the da cat lo rieng truoc
         used = layers.get(s["symbol"], set())
         k = next(i for i in range(len(used) + 1) if i not in used)
         target.append({"strategy": "rsi2", "sleeve": k or None,
                        "symbol": s["symbol"],
-                       "side": 1, "stop": stop, "r_usd": r_rsi2,
-                       "notional": r_rsi2 / rf,
+                       "side": 1, "stop": stop, "r_usd": r_use,
+                       "notional": notional,
                        "why": f"RSI(2)={s['rsi']:.1f} · hạng TK #{s['rank']}"
-                              f" · R {rf*100:.1f}%"
+                              f" · R {rf*100:.1f}% ({how})"
+                              + (f" · thu về trần {K['order']:.0f} USD = {r_use / r_rsi2:.2f}R"
+                                 if r_use < r_rsi2 else "")
                               + (f" · MUA THÊM lớp {k + 1}" if used else "")})
     if r_rsi2 > 0:
         note["rsi2"] = {
@@ -177,6 +198,16 @@ def mark_to_market(P: dict, day: int, eq: float,
     return v
 
 
+def top_symbols(n: int) -> list[str]:
+    """Top n thanh khoan cua ngay da dong gan nhat trong kho."""
+    bars = data.load_all(settings.strat()[0]["min_bars"])
+    P = ST.prep({s: b for s, b in bars.items() if data.is_crypto(b)})
+    if not P:
+        return []
+    rank = ST.ranks_on(P, int(max(d["t"][-1] for d in P.values())))
+    return sorted((s for s, r in rank.items() if r <= n), key=lambda s: rank[s])
+
+
 def run_once(force: bool = False) -> dict:
     t0 = time.time()
     m = mode()
@@ -201,6 +232,12 @@ def run_once(force: bool = False) -> dict:
             raise RuntimeError("kho nến rỗng — chưa tải được dữ liệu")
         day = int(max(d["t"][-1] for d in P.values()))
         rank = ST.ranks_on(P, day)
+        # Nen 1H cho top 20 — kho cho tab «Tinh lich su» mo phong stop HVN.
+        # Lenh that van tai 1H truc tiep luc dung profile (volprofile.hvn_below).
+        try:
+            data.refresh_1h(api, [s_ for s_, r_ in rank.items() if r_ <= 20])
+        except Exception as e:
+            db.log("warn", f"cập nhật nến 1H lỗi: {e}")
 
         cur_pos = open_positions(m)
         target, note = build_target(P, rank, day, cur_pos)
@@ -221,8 +258,8 @@ def run_once(force: bool = False) -> dict:
         # bo qua vi duoi muc toi thieu ("bo qua") khong duoc coi la da mo /
         # da dong: ghi vao la so noi bo va san lech nhau ngay tu luot dau, va
         # luot sau se gui reduceOnly dong mot vi the khong ton tai.
-        filled = [a for a in done if a.get("status") not in ("lỗi", "bỏ qua")]
-        failed = [a for a in done if a.get("status") in ("lỗi", "bỏ qua")]
+        filled = [a for a in done if a.get("status") not in ("lỗi", "bỏ qua", "không khớp")]
+        failed = [a for a in done if a.get("status") in ("lỗi", "bỏ qua", "không khớp")]
         realised = 0.0
         with db.tx() as cx:
             for a in filled:

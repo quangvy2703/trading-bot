@@ -2,13 +2,13 @@
 
 Một trang web duy nhất để vận hành hai chiến lược đã chốt:
 
-- **RSI(2) Connors v2** — [docs/rsi2-connors.md](../docs/rsi2-connors.md)
+- **RSI(2) Connors v3.1**, cắt lỗ ở HVN — [docs/rsi2-connors.md](../docs/rsi2-connors.md)
 - **Động lượng cắt ngang điều chỉnh biến động** — [docs/xsmom-volnorm.md](../docs/xsmom-volnorm.md)
 
 Toàn bộ chạy trong Docker: **một dịch vụ, một ổ đĩa, một cổng**.
 
 ```bash
-cd live
+cd trading-bot
 cp .env.example .env          # sửa nếu cần; để trống vẫn chạy được sổ giấy
 docker compose up -d --build
 open http://127.0.0.1:8777
@@ -16,7 +16,8 @@ open http://127.0.0.1:8777
 
 Lần khởi động đầu tự **gieo mầm** kho nến từ `../reports/.cache/uni1d`
 (mount chỉ-đọc) trong luồng nền — khoảng 580.000 nến, 2–3 phút. Bỏ dòng mount
-đó thì hệ tự tải từ Binance, lâu hơn nhiều.
+đó thì hệ tự tải từ Binance, lâu hơn nhiều. Nến 1H cho stop HVN gieo một lần
+từ `../reports/.cache/uni_tf/1h` (mount `/seed1h`).
 
 ## Mặc định là SỔ GIẤY
 
@@ -32,9 +33,14 @@ Khoá 1 nằm ở **tầng mã**: thiếu nó thì hàm đặt lệnh thật né
 gọi thẳng trong container, không đi qua UI. Thiết kế thế để một cú bấm nhầm
 trong trình duyệt không thể chạm vào tiền.
 
-`BINANCE_ENV=testnet` (mặc định) trỏ vào Binance Futures testnet — tiền giả
-nhưng đi hết đường ống thật: ký API, làm tròn khối lượng theo `stepSize`,
-trượt giá, lệnh hỏng. Đổi sang `live` là đổi sang tiền thật.
+`BINANCE_ENV=testnet` trỏ vào Binance Futures testnet — tiền giả nhưng đi
+hết đường ống thật: ký API, làm tròn khối lượng theo `stepSize`, trượt giá,
+lệnh hỏng. `live` là tiền thật.
+
+**Cấu hình hiện tại đã mở khoá 1 và 2:** `docker-compose.yml` đặt
+`LIVE_TRADING_ENABLED: "1"`, mặc định `BINANCE_ENV` là `live` (`.env.example`
+ghi `testnet`), và khoá API đã có trong `.env`. Chỉ còn công tắc trong UI
+ngăn lệnh thật.
 
 ### Tài khoản phải đặt đúng trước
 
@@ -43,11 +49,13 @@ trượt giá, lệnh hỏng. Đổi sang `live` là đổi sang tiền thật.
   Lúc bật công tắc hệ gọi `/fapi/v1/positionSide/dual` kiểm trước và **từ chối
   bật** nếu tài khoản đang ở Hedge — để lỗi lộ ra lúc bấm nút, không phải lúc
   00:05 UTC.
-- **Đòn bẩy và kiểu ký quỹ** hệ **không** đặt, dùng mặc định của từng mã trên
-  tài khoản. Tự đặt trước.
+- **Đòn bẩy và kiểu ký quỹ** hệ tự đặt trước khi vào lệnh: đưa mã về
+  **CROSS** và đòn bẩy `LEVERAGE` (mặc định 5). Mã đang kẹt isolated (đang có
+  vị thế) thì được nạp thêm ký quỹ cho tới khi đòn bẩy thực ≤ mức đó.
 - **Khoá API**: bật Futures, **tắt rút tiền**, khoá theo IP.
-- **`START_EQUITY_USD` phải bằng số tiền thật sự nạp.** Cỡ lệnh tính bằng
-  `START_EQUITY_USD × tỷ trọng`, không đọc số dư từ sàn (xem § KHÔNG làm).
+- **`START_EQUITY_USD` phải bằng số tiền thật sự nạp.** Cỡ lệnh không phụ
+  thuộc vốn (`RISK_R_USD / R`), nhưng đường vốn, sụt và trần ký quỹ của tab
+  «Tính lịch sử» tính từ con số này. Hệ không đọc số dư từ sàn (xem § KHÔNG làm).
 
 ## Một ngày chạy thế nào
 
@@ -57,23 +65,45 @@ là khớp luôn, nên độ lệch so với backtest là nhỏ nhất.
 
 ```
 1. tải nến mới cho các mã đang niêm yết
-2. xếp hạng thanh khoản (trung vị giá trị giao dịch USD trượt 30 ngày)
+2. xếp hạng thanh khoản (trung vị giá trị giao dịch USD trượt 30 ngày),
+   tải bổ sung nến 1H cho top 20
 3. RSI(2) : đóng vị thế chạm stop hoặc RSI>70, rồi lấp chỗ trống bằng tín hiệu mới
+            (stop ở HVN gần nhất dưới giá, không có thì 6×ATR)
 4. động lượng : đúng MỘT sổ trong bảy tái cân bằng hôm nay, sáu sổ kia giữ nguyên
 5. sổ mục tiêu → việc cần làm → đặt lệnh (giấy hoặc thật)
 6. đánh giá lại vốn theo giá hiện tại, ghi nhật ký
 ```
 
-Vốn chia theo `ALLOC_RSI2` / `ALLOC_XSMOM` (mặc định 50/50). Mỗi vị thế
-RSI(2) bằng `ALLOC_RSI2 / 5`; mỗi vị thế động lượng bằng
-`ALLOC_XSMOM / 28` (7 sổ × 2 mua + 2 bán). Tổng tỷ trọng tuyệt đối ≤ 100%,
-ròng ≈ 0 ở phần động lượng.
+### Đặt lệnh — Limit trước, thị trường sau cùng
+
+`ORDER_MODE=limit` (mặc định): mọi lệnh là **LIMIT GTX** (chỉ được làm
+maker, phí 0,02%/lượt thay vì 0,05%) ở giá tốt nhất cùng phía — mua ở bid,
+bán ở ask. Cả lô đặt cùng lúc, chờ `LIMIT_WAIT_S` giây (20), huỷ phần chưa
+khớp rồi đặt lại ở giá mới, tối đa `LIMIT_ROUNDS` vòng (5) — khoảng 2 phút.
+
+Còn thiếu sau vòng cuối:
+
+- **lệnh ĐÓNG luôn chuyển sang thị trường** cho phần còn lại — không bao giờ
+  để kẹt vị thế vì chờ giá;
+- **lệnh MỞ** chuyển sang thị trường nếu `LIMIT_FALLBACK=1` (mặc định), đặt
+  0 thì bỏ phần chưa khớp (ghi sổ đúng phần đã khớp, trạng thái «khớp một
+  phần» / «không khớp»).
+
+Lệnh không đọc lại hay không huỷ được thì bot **dừng hẳn với mã đó** (lệnh
+có thể vẫn treo trên sàn — đặt thêm là có nguy cơ khớp gấp đôi) và ghi lỗi
+«KIỂM TAY». `ORDER_MODE=market` quay về cách cũ.
+
+Backtest vẫn tính **10 bps** khứ hồi (taker cả hai đầu) — cố ý thận trọng
+cho tới khi có đủ lệnh thật để đo tỉ lệ khớp maker.
+
+Cỡ mỗi lệnh tính theo đơn vị R (xem § Cỡ lệnh), không chia vốn theo tỷ
+trọng.
 
 ## Config nào của chiến lược nào
 
-**24 tham số, bốn nhóm.** Hai nhóm riêng từng chiến lược, hai nhóm dùng chung.
+**29 tham số, bốn nhóm.** Hai nhóm riêng từng chiến lược, hai nhóm dùng chung.
 
-### Riêng RSI(2) — 9 ô
+### Riêng RSI(2) — 14 ô
 
 | tham số | chốt | nghĩa |
 |---|---|---|
@@ -83,9 +113,14 @@ ròng ≈ 0 ở phần động lượng.
 | `rsi2.rsi_out` | 70 | thoát khi RSI(2) > |
 | `rsi2.ma` | 20 | lọc xu hướng close > MA |
 | `rsi2.atr` | 14 | chu kỳ ATR |
-| `rsi2.atr_k` | 6,0 | bội ATR cho cắt lỗ |
+| `rsi2.atr_k` | 6,0 | bội ATR cho cắt lỗ (khi không có HVN) |
 | `rsi2.cap` | 0,40 | trần cắt lỗ |
 | `rsi2.min_bars` | 205 | số nến lịch sử tối thiểu |
+| `rsi2.layers` | 2 (bot đặt 3) | số lớp mỗi mã, 1 = không mua thêm |
+| `rsi2.stop_hvn` | 1 | cắt lỗ ở HVN, 0 = 6×ATR |
+| `rsi2.vp_days` | 20 | số ngày nến 1H dựng volume profile |
+| `rsi2.vp_bin` | 0,5 | độ rộng ô profile (× ATR) |
+| `rsi2.vp_buf` | 0,25 | đệm dưới HVN (× ATR) |
 
 ### Riêng động lượng cắt ngang — 8 ô
 
@@ -122,11 +157,46 @@ sụt không đổi; từ khoảng 16 trở lên sụt bắt đầu tăng. Bản
 ### Mua thêm RSI(2) — `RSI2_LAYERS` / `rsi2.layers`
 
 Đang giữ một mã mà tín hiệu RSI(2) lặp lại thì mở thêm một lớp, tối đa
-`RSI2_LAYERS` lớp (đặt trong `docker-compose.yml`, mặc định **2**; tab Cấu
-hình ghi đè được qua `rsi2.layers`). Mỗi lớp là một vị thế riêng — cột «sổ»
+`RSI2_LAYERS` lớp (đặt trong `docker-compose.yml`, hiện là **3**; mặc định
+trong mã là 2; tab Cấu hình ghi đè được qua `rsi2.layers`). Mỗi lớp là một vị thế riêng — cột «sổ»
 của RSI(2) là số thứ tự lớp (trống = lớp gốc) — có stop và 1R riêng, cùng
 thoát khi RSI(2) > 70. Bằng chứng yếu (26 lệnh, chưa ngoài mẫu); đặt 1 để
 tắt. Chi tiết ở `docs/rsi2-connors.md` § Mua thêm.
+
+### Cắt lỗ RSI(2) ở đỉnh khối lượng — `RSI2_STOP_HVN` / `rsi2.stop_hvn`
+
+Bật mặc định (`RSI2_STOP_HVN=1`). Mỗi tín hiệu RSI(2) mới, bot tải **20 ngày
+nến 1H** của mã đó, dựng volume profile (khối lượng USD đặt vào giá điển
+hình, ô rộng 0,5×ATR, làm mượt), tìm **đỉnh khối lượng (HVN) gần nhất nằm dưới
+giá**, đặt stop = HVN − 0,25×ATR (vẫn không xa hơn trần 40%). Không có HVN
+dưới giá, hay tải nến lỗi → giữ stop 6×ATR như cũ. Lý do lệnh ghi rõ
+`(HVN)` hay `(6×ATR)`. Code ở `app/volprofile.py`, chép đúng định nghĩa của
+`scripts/vp_stops.py` (đã đối chiếu 400/400 mẫu).
+
+Stop HVN thường gần hơn nhiều (trung vị ~11% so với ~35%), nên cùng 1R thì
+**lệnh to hơn** — có khi tới ~800 USD ở 1R × 8 = 16 USD. Lệnh vượt
+`MAX_ORDER_USD` (500) được **thu nhỏ về đúng trần** (rủi ro < 1R, ghi «thu về
+trần … R») thay vì bị bỏ. `MAX_GROSS_USD` nâng lên 1.500 để hai tín hiệu cùng
+ngày không chặn nhau.
+
+Bằng chứng: đạt luật đăng ký trước (R/năm÷sụt 0,86 → 1,85, hơn 6/6 năm) nhưng
+phần lớn cải thiện là cỡ lệnh to hơn; Sharpe tháng 1,11 → 1,22 với KTC chứa 0
+— xem `docs/stop-dinh-day.md` § Volume profile.
+
+Tab «Tính lịch sử» mô phỏng stop HVN và việc thu nhỏ lệnh về trần y như chạy
+thật, dùng bảng `bars1h`: gieo một lần từ `reports/.cache/uni_tf/1h` (mount
+`/seed1h`), sau đó mỗi lượt chạy và nút «Tải dữ liệu» cập nhật thêm top 20
+thanh khoản. Mã nào thiếu nến 1H thì lệnh đó dùng 6×ATR — dòng chú thích
+dưới «Theo chiến lược» ghi bao nhiêu tín hiệu dùng HVN, bao nhiêu thiếu nến
+1H, bao nhiêu bị thu về trần. Đặt `rsi2.stop_hvn` = 0 trong form để so với
+bản 6×ATR. Với cấu hình đang chạy: vốn cuối 2.099 so với 1.716 USD, CAGR
+29,5% so với 24,9%, sụt 20,1% so với 23,9%. Bảng đầy đủ ở
+`docs/rsi2-connors.md` § Bot đang chạy gì.
+
+**Chốt lời đã thử, không dùng.** 22 kiểu (R, ATR, HVN/POC phía trên, đỉnh
+cũ; có và không có thoát RSI). Không kiểu nào nâng Sharpe tháng quá thoát RSI
+> 70, nên RSI(2) vẫn chỉ thoát khi RSI > 70 hoặc chạm stop. Chi tiết ở
+`docs/stop-dinh-day.md` § Điểm chốt lời.
 
 ### Tab «Tính lịch sử»
 
@@ -141,10 +211,10 @@ app, lệnh tối thiểu và ký quỹ của sàn, funding thật) — code ở
 
 | tham số | biến môi trường | chốt | chặn gì |
 |---|---|---|---|
-| `risk_r_usd` | `RISK_R_USD` | 100 | 1R — số USD rủi ro mỗi lệnh |
+| `risk_r_usd` | `RISK_R_USD` | 2 | 1R — số USD rủi ro mỗi lệnh |
 | `risk_max_open` | `RISK_MAX_OPEN` | 33 | số vị thế mở cùng lúc |
-| `max_order_usd` | `MAX_ORDER_USD` | 200 | giá trị **một lệnh** |
-| `max_gross_usd` | `MAX_GROSS_USD` | 1.000 | **tổng** mở thêm mỗi lượt |
+| `max_order_usd` | `MAX_ORDER_USD` | 500 | giá trị **một lệnh** |
+| `max_gross_usd` | `MAX_GROSS_USD` | 1.500 | **tổng** mở thêm mỗi lượt |
 | `max_orders_per_run` | `MAX_ORDERS_PER_RUN` | 40 | **số lệnh** mỗi lượt |
 
 Năm ô này **không phân biệt chiến lược** — một lệnh RSI(2) và một lệnh động
@@ -158,9 +228,9 @@ lượng + 5 chỗ RSI(2)), không phải 33 mỗi bên.
 | riêng RSI(2) · riêng động lượng | **có** | **không** |
 | bật/tắt · dùng chung | **có** | **có** |
 
-Tham số riêng từng chiến lược **cố ý không mở qua biến môi trường**: hai bộ
-này được chọn kèm kế toán đa phép thử (49 ô cắt ngang, ngưỡng Šidák 0,00105),
-nên đổi chúng phải đi qua UI — nơi có băng cảnh báo lệch và ghi nhật ký — chứ
+Tham số riêng từng chiến lược **cố ý không mở qua biến môi trường** (trừ
+`RSI2_LAYERS` và `RSI2_STOP_HVN`): hai bộ này được chọn kèm kế toán đa phép
+thử (§ Bội số phép thử trong hai tài liệu), nên đổi chúng phải đi qua UI — nơi có băng cảnh báo lệch và ghi nhật ký — chứ
 không lặng lẽ qua `docker-compose.yml`.
 
 ## Cỡ lệnh — đơn vị R
@@ -170,11 +240,13 @@ còn chia đều vốn:
 
 ```
 cỡ lệnh (USD) = RISK_R_USD / R
-   RSI(2)      R = (giá vào − cắt lỗ) / giá vào      ← thường 40% (trần stop)
+   RSI(2)      R = (giá vào − cắt lỗ) / giá vào      ← HVN trung vị ~11%, 6×ATR ~35%
    động lượng  R = độ lệch chuẩn log 30n × √số ngày giữ
 ```
 
-`RISK_R_USD` mặc định **100** — mỗi lệnh mất đúng chừng đó khi chạm điểm thua.
+`RISK_R_USD` mặc định **2** (tài khoản test 500 USD) — mỗi lệnh mất đúng chừng
+đó, nhân hệ số của chiến lược, khi chạm điểm thua. Các ví dụ dưới đây dùng
+1R = 100 của nghiên cứu.
 **Vốn không quyết định cỡ lệnh**, nó chỉ quyết định mở được bao nhiêu lệnh
 cùng lúc; trần đó là `RISK_MAX_OPEN` (mặc định **33** = 7 sổ × 4 vị thế + 5
 chỗ RSI(2)).
@@ -250,10 +322,11 @@ Quy tắc: `MAX_ORDER ≈ 25 × 1R` (lệnh lớn nhất quan sát được là 
 chính các vị thế biến động thấp — nhóm cỡ lệnh lớn nhất — sẽ bị chặn, mà đó
 không phải nhóm đáng bỏ.
 
-**Trần mặc định `MAX_ORDER_USD=200` và `MAX_GROSS_USD=1000` được đặt cho cách
-chia đều vốn cũ** — để nguyên với `1R=100` thì **mọi lệnh động lượng đều bị
-chặn**. Trang có cảnh báo đỏ ngay ở ô «Thao tác» khi hai con số này lệch
-nhau, nên lỗi lộ ra trước khi tới giờ chạy chứ không phải sau.
+**Trần mặc định `MAX_ORDER_USD=500` và `MAX_GROSS_USD=1500` đặt cho tài khoản
+test 1R = 2.** Nâng 1R mà để nguyên hai trần này thì **gần như mọi lệnh động
+lượng sẽ bị chặn**, còn lệnh RSI(2) bị thu nhỏ hết về trần. Trang có cảnh báo
+đỏ ngay ở ô «Thao tác» khi 1R và trần lệch nhau, nên lỗi lộ ra trước khi tới
+giờ chạy chứ không phải sau.
 
 Cả hai đều sửa được trong tab Cấu hình mà không cần dựng lại ảnh.
 
@@ -264,11 +337,13 @@ và hiện ở cột *ghi chú* trong bảng «việc cần làm».
 
 | Biến | Mặc định | Ý nghĩa |
 |---|---|---|
-| `MAX_GROSS_USD` | 1000 | tổng giá trị mở thêm trong một lượt |
-| `MAX_ORDER_USD` | 200 | giá trị một lệnh |
+| `MAX_GROSS_USD` | 1500 | tổng giá trị mở thêm trong một lượt |
+| `MAX_ORDER_USD` | 500 | giá trị một lệnh |
 | `MAX_ORDERS_PER_RUN` | 40 | số lệnh mở mỗi lượt |
 
-Lệnh **đóng** vị thế không bao giờ bị chặn — trần chỉ hạn chế mở thêm.
+Lệnh **đóng** vị thế không bao giờ bị chặn — trần chỉ hạn chế mở thêm. Riêng
+lệnh mở RSI(2) vượt `MAX_ORDER_USD` thì được **thu nhỏ về trần** chứ không bị
+chặn (§ Cắt lỗ RSI(2) ở đỉnh khối lượng).
 
 **Dừng khẩn** tắt công tắc rồi đóng sạch vị thế đang mở.
 
@@ -307,13 +382,15 @@ không chỗ nào làm cả trang cuộn ngang:
 Chuyển động chỉ còn một chỗ (đèn đỏ nhấp nháy khi đang chạy thật) và nó tắt
 khi máy bật `prefers-reduced-motion`.
 
-## Bốn tab
+## Năm tab
+
+**Tính lịch sử** — xem § Tab «Tính lịch sử» ở trên.
 
 **Bảng điều khiển** — vốn, sụt, vị thế, lượt chạy, ba đèn khoá, việc cần làm,
 đường vốn, bảng vị thế.
 
-**Phương pháp** — đọc thẳng hai bản đặc tả đã chốt trong trang:
-`docs/rsi2-connors.md` và `docs/xsmom-volnorm.md`. Thư mục `docs/` được gắn
+**Phương pháp** — đọc thẳng các tài liệu đã chốt trong trang:
+`docs/rsi2-connors.md`, `docs/xsmom-volnorm.md`, `docs/money-management-r.md` và `docs/stop-dinh-day.md`. Thư mục `docs/` được gắn
 vào container ở `/docs` **chỉ đọc**, nên sửa tài liệu là trang thấy ngay, không
 phải dựng lại ảnh. Markdown do chính trang dựng (một trình tối thiểu ~90 dòng)
 — không kéo thư viện ngoài, trang vẫn chạy khi máy không có mạng. Liên kết
@@ -324,14 +401,16 @@ lục dính bên phải tự sáng theo mục đang đọc.
 lại kết quả resolve có còn nằm trong `/docs` không, nên `..%2f..%2fetc%2fpasswd`
 trả 404 chứ không đọc được gì ngoài thư mục đó.
 
-**Cấu hình** — sửa được 24 tham số lúc chạy: phân bổ vốn, toàn bộ tham số
+**Cấu hình** — sửa được 29 tham số lúc chạy: phân bổ vốn, toàn bộ tham số
 RSI(2), toàn bộ tham số động lượng, trần rủi ro. Mỗi dòng hiện **giá trị đã
 chốt trong docs** bên cạnh **giá trị đang dùng**; dòng nào đúng bộ chốt thì
 làm mờ, dòng nào đang lệch thì gạch ngang giá trị chốt và kẻ vạch vàng ở mép
 trái, ô nào đang sửa thì viền vàng.
 
-Vì sao làm vậy: hai bộ tham số được chọn kèm kế toán đa phép thử (36 ô cắt
-ngang, ngưỡng Šidák 0,00135). Đổi một con số là kết quả thật **không còn được
+Vì sao làm vậy: hai bộ tham số được chọn kèm kế toán đa phép thử (≈418 ô cho
+RSI(2), 276 ô cho động lượng — § Bội số phép thử trong hai tài liệu). Riêng
+`rsi2.layers` và `rsi2.stop_hvn` là lựa chọn vận hành, đặt qua
+`docker-compose.yml`, nên giá trị ở đó cũng được tính là «bộ chốt». Đổi một con số là kết quả thật **không còn được
 bảo chứng bởi nghiên cứu**. Nên hệ luôn nói rõ đang lệch bao nhiêu ô — một
 băng cảnh báo trong tab và một huy hiệu đỏ trên tên tab — và ghi mọi thay đổi
 vào nhật ký (`đổi tham số rsi2.slots: 5 → 3`). Nút **Trả về bộ đã chốt** đưa
@@ -373,6 +452,7 @@ bấm «Chạy ngay».
   giao dịch đều lệch 0.
 - Ba chốt chặn chạy thật đều từ chối đúng, kể cả khi gọi thẳng hàm đặt lệnh
   trong container.
+- Mức HVN của `app/volprofile.py` khớp `scripts/vp_stops.py` trên 400/400 mẫu.
 - Trang không cuộn ngang ở 1440/1280/1024/860/768/560/390 px trên **cả ba tab**; bảng rộng cuộn
   trong khung riêng.
 
@@ -416,8 +496,10 @@ nhiều và chưa làm.
 
 Cả hai **chưa có kiểm định ngoài mẫu sạch**. RSI(2) từng âm khỏi đỉnh **373
 ngày**; động lượng cắt ngang **661 ngày (21,7 tháng)** và 94% số ngày nằm
-dưới đỉnh cũ. Danh mục 50/50 trong backtest cho CAGR 50,3% với sụt 24,6%,
-nhưng đợt chìm dài nhất vẫn **645 ngày**. Đây là lý do mặc định là sổ giấy.
+dưới đỉnh cũ. Tab «Tính lịch sử» với cấu hình đang chạy (500 USD, 1R = 2,
+2021-04 → 2026-10) cho vốn cuối 2.099 USD, CAGR 29,5%, sụt 20,1%. Stop HVN và
+3 lớp mua thêm đều là lựa chọn vận hành có bằng chứng yếu. Đây là lý do công
+tắc UI mặc định tắt.
 
 ## Tệp
 
@@ -425,12 +507,15 @@ nhưng đợt chìm dài nhất vẫn **645 ngày**. Đây là lý do mặc đ�
 |---|---|
 | `docker-compose.yml`, `Dockerfile` | một dịch vụ, ổ đĩa `livedata`, cổng 127.0.0.1:8777 |
 | `app/config.py` | cấu hình từ biến môi trường + tham số hai chiến lược |
-| `app/db.py` | SQLite + WAL, một người ghi |
-| `app/binance.py` | API công khai (dữ liệu) và API có ký (đặt lệnh) |
-| `app/data.py` | gieo mầm, tải bổ sung, lọc perp-crypto |
+| `app/settings.py` | bộ chốt + phần ghi đè từ tab Cấu hình, kiểm giới hạn |
+| `app/db.py` | SQLite + WAL, một người ghi (bảng `bars`, `bars1h`, …) |
+| `app/binance.py` | API công khai (dữ liệu, nến 1H) và API có ký (đặt lệnh, LIMIT GTX) |
+| `app/data.py` | gieo mầm nến 1D và 1H, tải bổ sung, lọc perp-crypto |
 | `app/indicators.py` | chỉ báo — chép nguyên bản nghiên cứu |
 | `app/strategies.py` | sinh tín hiệu hai chiến lược |
-| `app/executor.py` | hai lớp khoá, trần rủi ro, đặt lệnh giấy/thật |
-| `app/runner.py` | một lượt chạy hằng ngày |
+| `app/volprofile.py` | volume profile, mức HVN dưới giá cho stop RSI(2) |
+| `app/executor.py` | hai lớp khoá, trần rủi ro, đặt lệnh limit/thị trường, giấy/thật |
+| `app/runner.py` | một lượt chạy hằng ngày, stop HVN, thu lệnh về trần |
+| `app/backtest.py` | engine tab «Tính lịch sử» |
 | `app/main.py` | web + lịch chạy nền |
 | `app/static/index.html` | trang quản lý |

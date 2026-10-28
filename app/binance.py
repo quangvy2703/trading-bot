@@ -45,6 +45,11 @@ class PublicApi:
             p["startTime"] = start_ms
         return self._get("/fapi/v1/klines", **p)
 
+    def klines_1h(self, symbol: str, start_ms: int, limit: int = 1500) -> list:
+        """Nen 1H — chi de dung volume profile cho cat lo RSI(2), khong luu kho."""
+        return self._get("/fapi/v1/klines", symbol=symbol, interval="1h",
+                         startTime=int(start_ms), limit=int(limit))
+
     def prices(self) -> dict:
         """Gia khop gan nhat cho moi ma — dung lam gia vao/ra cua so giay."""
         return {x["symbol"]: float(x["price"])
@@ -122,6 +127,24 @@ class Trader:
         return self._call("POST", "/fapi/v1/order", symbol=symbol, side=side,
                           type="LIMIT", timeInForce="GTC", quantity=qty,
                           price=price)
+
+    def book(self, symbol: str) -> tuple[float, float]:
+        """Gia mua / ban tot nhat tren CHINH san dat lenh (testnet co so lenh rieng)."""
+        r = self._c.get("/fapi/v1/ticker/bookTicker", params={"symbol": symbol})
+        if r.status_code >= 400:
+            raise RuntimeError(f"{r.status_code} {r.text[:400]}")
+        x = r.json()
+        return float(x["bidPrice"]), float(x["askPrice"])
+
+    def post_only(self, symbol: str, side: str, qty: float, price: str,
+                  reduce_only: bool = False) -> dict:
+        """LIMIT GTX: chi duoc lam maker. Gia ma khop ngay thi san tra EXPIRED
+        thay vi khop nhu taker — phi luon la phi maker."""
+        p = {"symbol": symbol, "side": side, "type": "LIMIT", "timeInForce": "GTX",
+             "quantity": qty, "price": price}
+        if reduce_only:
+            p["reduceOnly"] = "true"
+        return self._call("POST", "/fapi/v1/order", **p)
 
     def order_status(self, symbol: str, order_id) -> dict:
         return self._call("GET", "/fapi/v1/order", symbol=symbol,

@@ -1,7 +1,7 @@
 """Cau hinh HIEU LUC = bo da chot trong docs + phan nguoi dung ghi de.
 
 Vi sao phai tach ra: hai bo tham so trong docs duoc chon kem ke toan da phep
-thu (36 o cat ngang, nguong Sidak 0,00135). Sua mot con so la ket qua that
+thu (≈418 o RSI(2), 276 o dong luong — § Boi so phep thu trong docs). Sua mot con so la ket qua that
 khong con duoc bao chung boi nghien cuu nua. Nen moi gia tri deu di kem gia
 tri DA CHOT, va he luon noi ro dang chay lech bao nhieu o.
 """
@@ -18,8 +18,9 @@ SPEC = {
     # He so nhan cho 1R cua tung chien luoc. 0 = TAT han chien luoc do (vi
     # the dang mo cua no se duoc dong o luot chay ke tiep). Khong con la "ty
     # trong von": dinh co theo R khong chia von cho ai ca.
-    # Tran 50 chu khong 5: can bang rui ro cho RSI(2) k* = 32 (docs/
-    # money-management-r.md § Ghep hai chien luoc), tran 5 se chan ca muc do.
+    # Tran 50 chu khong 5: RSI(2) dang chay o 8, va bang quet trong docs/
+    # money-management-r.md § Ghep hai chien luoc di toi 32 (so k* = 32 cu
+    # dem trung lenh, xem muc SUA o do).
     "alloc_rsi2":      ("alloc", float, 0.0, 50.0, "hệ số 1R cho RSI(2) — 0 là tắt"),
     "alloc_xsmom":     ("alloc", float, 0.0, 50.0, "hệ số 1R cho động lượng — 0 là tắt"),
     # --- RSI(2) ---
@@ -33,6 +34,10 @@ SPEC = {
     "rsi2.cap":        ("rsi2", float, 0.05, 0.95, "trần cắt lỗ (tỷ lệ)"),
     "rsi2.min_bars":   ("rsi2", int, 30, 1000, "số nến lịch sử tối thiểu"),
     "rsi2.layers":     ("rsi2", int, 1, 5, "số lớp mỗi mã — 1 là không mua thêm"),
+    "rsi2.stop_hvn":   ("rsi2", int, 0, 1, "cắt lỗ ở đỉnh khối lượng HVN — 0 là 6×ATR"),
+    "rsi2.vp_days":    ("rsi2", int, 3, 60, "số ngày nến 1H dựng volume profile"),
+    "rsi2.vp_bin":     ("rsi2", float, 0.1, 2.0, "độ rộng ô profile (× ATR)"),
+    "rsi2.vp_buf":     ("rsi2", float, 0.0, 2.0, "đệm dưới HVN (× ATR)"),
     # --- dong luong cat ngang ---
     "xsmom.topn":      ("xsmom", int, 5, 500, "vũ trụ top N thanh khoản"),
     "xsmom.lookback":  ("xsmom", int, 5, 365, "chân trời chấm điểm (ngày)"),

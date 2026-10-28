@@ -49,6 +49,76 @@ def seed_from_npz(path: str | None = None) -> int:
     return n
 
 
+def seed_1h_from_npz(path: str | None = None) -> int:
+    """Gieo nen 1H tu reports/.cache/uni_tf/1h (cot t, o, h, l, c, v)."""
+    d = Path(path or CFG.seed1h_dir)
+    if not d.is_dir():
+        return 0
+    n = 0
+    for f in sorted(d.glob("*.npz")):
+        try:
+            a = np.load(f)["k"]
+        except Exception:
+            continue
+        if not len(a):
+            continue
+        with db.tx() as cx:
+            cx.executemany(
+                "INSERT OR IGNORE INTO bars1h(symbol,ts,h,l,c,v) VALUES(?,?,?,?,?,?)",
+                [(f.stem, int(r[0]), float(r[2]), float(r[3]), float(r[4]), float(r[5]))
+                 for r in a])
+        n += 1
+    db.log("info", f"gieo mầm nến 1H: {n} mã từ {d}")
+    return n
+
+
+def refresh_1h(api: PublicApi, symbols: list[str], days: int = 60) -> int:
+    """Tai bo sung nen 1H (chi nen DA DONG). Ma chua co thi lay `days` ngay."""
+    cx = db.connect()
+    last = dict(cx.execute("SELECT symbol, MAX(ts) FROM bars1h GROUP BY symbol"))
+    cx.close()
+    now = int(time.time() * 1000)
+    n = 0
+    for sym in symbols:
+        try:
+            st = (last[sym] + 3_600_000) if sym in last else now - days * DAY
+            rows = []
+            while st < now:
+                ks = api.klines_1h(sym, st, limit=1500)
+                rows += [(sym, int(k[0]), float(k[2]), float(k[3]), float(k[4]), float(k[5]))
+                         for k in ks if int(k[6]) < now]
+                if len(ks) < 1500:
+                    break
+                st = int(ks[-1][0]) + 3_600_000
+            if rows:
+                with db.tx() as cx2:
+                    cx2.executemany("INSERT OR REPLACE INTO bars1h(symbol,ts,h,l,c,v)"
+                                    " VALUES(?,?,?,?,?,?)", rows)
+                n += len(rows)
+        except Exception as e:
+            db.log("warn", f"tải nến 1H {sym} lỗi: {e}")
+    return n
+
+
+def load_1h() -> dict:
+    """{ma: (t, gia_dien_hinh, khoi_luong_usd)} — dau vao cua volprofile.level."""
+    cx = db.connect()
+    try:
+        rows = cx.execute("SELECT symbol, ts, h, l, c, v FROM bars1h ORDER BY symbol, ts").fetchall()
+    finally:
+        cx.close()
+    out, i = {}, 0
+    while i < len(rows):
+        s = rows[i][0]
+        j = i
+        while j < len(rows) and rows[j][0] == s:
+            j += 1
+        a = np.array([tuple(r)[1:] for r in rows[i:j]], dtype=float)
+        out[s] = (a[:, 0].astype(np.int64), (a[:, 1] + a[:, 2] + a[:, 3]) / 3, a[:, 3] * a[:, 4])
+        i = j
+    return out
+
+
 def known_symbols() -> list[str]:
     cx = db.connect()
     try:

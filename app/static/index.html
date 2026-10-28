@@ -551,7 +551,8 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
       </div>
       <div class="cols">
         <div class="colA">
-          <div class="panel"><div class="ph"><h3>Theo chiến lược</h3></div>
+          <div class="panel"><div class="ph"><h3>Theo chiến lược</h3>
+            <span class="sub" id="btStopSub"></span></div>
             <div class="tw"><table id="btPer"></table></div></div>
           <div class="panel"><div class="ph"><h3>Theo năm</h3>
             <span class="sub">lãi theo đường vốn đánh giá lại theo ngày</span></div>
@@ -1347,6 +1348,16 @@ function renderBt() {
   btCharts();
 
   const P = r.per;
+  const stopTxt = x => {
+    const t = x.stops;
+    if (!t) return '—';
+    if (t.mode !== 'hvn') return '6×ATR';
+    const n = t.hvn + t.atr;
+    return `HVN ở ${n0(t.hvn)}/${n0(n)} tín hiệu, còn lại 6×ATR`
+      + (t.no1h ? ` · ${n0(t.no1h)} thiếu nến 1H` : '')
+      + (t.clip ? ` · ${n0(t.clip)} thu về trần` : '');
+  };
+  $('btStopSub').textContent = P.rsi2 ? 'RSI(2) cắt lỗ: ' + stopTxt(P.rsi2) : '';
   table($('btPer'), ['chiến lược', 'lệnh', 'thắng', 'R TB', 'lãi USD', 'funding',
     'giữ TB', 'sụt USD', 'âm dài nhất', 'bị chặn', 'đang mở'],
     ['rsi2', 'xsmom'].filter(k => P[k].trades || P[k].blocked), k => {

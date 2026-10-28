@@ -24,13 +24,14 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-from . import data, db, settings
+from . import data, db, settings, volprofile as VP
 from . import indicators as I
 from .binance import DAY
 from .config import CFG, FEE_BPS
 
 _LOCK = threading.Lock()
 _CACHE: dict = {"key": None}
+_CACHE1H: dict = {"key": None}
 
 
 # ---------------------------------------------------------------- du lieu
@@ -89,6 +90,18 @@ def _load() -> dict:
          "RSI": RSI, "DVT": DVT, "FD": FD, "LG": LG, "ranks": {}}
     _CACHE.update(key=k, D=D)
     return D
+
+
+def _load_1h() -> dict:
+    """Nen 1H cho stop HVN — cache theo dau van bang bars1h."""
+    cx = db.connect()
+    try:
+        k = tuple(cx.execute("SELECT COUNT(*), MAX(ts) FROM bars1h").fetchone())
+    finally:
+        cx.close()
+    if _CACHE1H["key"] != k:
+        _CACHE1H.update(key=k, H=data.load_1h())
+    return _CACHE1H["H"]
 
 
 def _sma(X: np.ndarray, n: int) -> np.ndarray:
@@ -200,6 +213,12 @@ def _run(p: dict) -> dict:
     lev, eq0 = p["leverage"], p["start_equity"]
     epoch = int(T[0])
     Lb, hold = int(X["lookback"]), int(X["hold"])
+    # Chi cho nghien cuu quan ly von (scripts/mm_overlay.py), khong co tren UI:
+    # ham (curve) -> (he so rsi2, he so xsmom) nhan vao 1R cua lenh MOI mo
+    # hom nay. curve[-1] la close ngay j — dung dieu bot biet luc 00:05.
+    rmult = p.get("rmult")
+    H1 = _load_1h() if R.get("stop_hvn") else None
+    stopc = {"hvn": 0, "atr": 0, "no1h": 0, "clip": 0}
 
     # bat dau tu ngay dau tien co ma du nen — truoc do khong chien luoc nao
     # vao duoc lenh, de vao chi keo dai duong von phang va ha CAGR
@@ -230,6 +249,7 @@ def _run(p: dict) -> dict:
         blocked[key] = blocked.get(key, 0) + 1
 
     for j in range(j0, j1 + 1):
+        mr, mx = rmult(curve) if rmult else (1.0, 1.0)
         # ---- funding cua ngay j cho vi the dang mo (khop truoc ngay j) ----
         for q in pos:
             f = FD[q["si"], j] * q["notional"] * q["side"]
@@ -269,14 +289,33 @@ def _run(p: dict) -> dict:
                 cand.sort(key=lambda si: RSI[si, j])
                 for si in cand[:free]:
                     c = float(C[si, j])
-                    stop = max(c - R["atr_k"] * float(ATR[si, j]), c * (1 - R["cap"]))
+                    a_ = float(ATR[si, j])
+                    stop = max(c - R["atr_k"] * a_, c * (1 - R["cap"]))
+                    if H1 is not None:
+                        # giong runner.build_target(): HVN gan nhat duoi gia,
+                        # khong co (hoac kho thieu nen 1H) thi 6×ATR
+                        h1 = H1.get(syms[si])
+                        lv = (VP.level(*h1, int(T[j]) + DAY, c, a_, int(R["vp_days"]),
+                                       float(R["vp_bin"])) if h1 else None)
+                        if lv is not None:
+                            stop = max(lv - float(R["vp_buf"]) * a_, c * (1 - R["cap"]))
+                            stopc["hvn"] += 1
+                        else:
+                            stopc["atr"] += 1
+                            stopc["no1h"] += h1 is None
                     rf = (c - stop) / c
                     used = held.get(si, set())
                     k = next(i for i in range(len(used) + 1) if i not in used)
-                    if rf > 0:
+                    if rf > 0 and mr > 0:
+                        # vuot tran lenh: THU NHO ve tran, giong chay that
+                        r_use, nt_ = r_rsi2 * mr, r_rsi2 * mr / rf
+                        if p["max_order_usd"] > 0 and nt_ > p["max_order_usd"]:
+                            nt_ = p["max_order_usd"]
+                            r_use = nt_ * rf
+                            stopc["clip"] += 1
                         opens.append({"strategy": "rsi2", "sleeve": k or None,
                                       "si": si, "side": 1, "stop": stop,
-                                      "r_usd": r_rsi2, "notional": r_rsi2 / rf})
+                                      "r_usd": r_use, "notional": nt_})
         elif any(q["strategy"] == "rsi2" for q in pos):
             closes += [(q, "chiến lược tắt") for q in pos
                        if q["strategy"] == "rsi2" and id(q) not in cset]
@@ -311,15 +350,43 @@ def _run(p: dict) -> dict:
                            (side < 0 and not C[si, j] < mv):
                             continue
                     rf = float(vol[si]) * np.sqrt(hold)
-                    if rf > 0:
+                    if rf > 0 and mx > 0:
                         new.append({"strategy": "xsmom", "sleeve": sl, "si": int(si),
-                                    "side": side, "stop": None, "r_usd": r_x,
-                                    "notional": r_x / rf})
+                                    "side": side, "stop": None, "r_usd": r_x * mx,
+                                    "notional": r_x * mx / rf, "sig": float(vol[si])})
         keep = {(q["si"], q["side"]) for q in old}
         want = {(a["si"], a["side"]) for a in new}
         closes += [(q, "tái cân bằng" if r_x > 0 else "chiến lược tắt") for q in old
                    if (q["si"], q["side"]) not in want and id(q) not in cset]
         opens += [a for a in new if (a["si"], a["side"]) not in keep]
+
+        # ---- nhoi lenh dong luong — chi nghien cuu (scripts/xsmom_add.py) ----
+        # p["xadd"] = {"mode": "thuan"|"nguoc", "d": so σ ngay, "size": he so
+        # tung lop them}. Lop them cung so, cung ma, cung chieu nen dong cung
+        # luc voi lop goc o lan tai can bang ma lop goc bi bo.
+        xa = p.get("xadd")
+        if xa and r_x > 0:
+            going = {id(q) for q, _ in closes}
+            for q in pos:
+                if q["strategy"] != "xsmom" or q.get("base") or id(q) in going \
+                        or not q.get("sig"):
+                    continue
+                n_ = q.get("nadd", 0)
+                if n_ >= len(xa["size"]) or not np.isfinite(C[q["si"], j]):
+                    continue
+                mv = q["side"] * (C[q["si"], j] / q.get("last_px", q["entry_px"]) - 1)
+                if xa["mode"] == "ngaunhien":          # phep gia: cung tan suat, sai thoi diem
+                    hit = xa["rng"].random() < xa["prob"]
+                elif xa["mode"] == "thuan":
+                    hit = mv >= xa["d"] * q["sig"]
+                else:
+                    hit = mv <= -xa["d"] * q["sig"]
+                if hit:
+                    k_ = xa["size"][n_]
+                    opens.append({"strategy": "xsmom", "sleeve": q["sleeve"],
+                                  "si": q["si"], "side": q["side"], "stop": None,
+                                  "r_usd": q["r_usd"] * k_,
+                                  "notional": q["notional"] * k_, "base": q})
 
         # ---- tran: dung thu tu executor.plan() + apply_caps() ----
         cids = {id(q) for q, _ in closes}
@@ -373,6 +440,9 @@ def _run(p: dict) -> dict:
                 continue
             held_g += nt
             ok2.append({**a, "entry_px": float(px), "entry_j": j + 1, "fund": 0.0})
+            if a.get("base") is not None:
+                a["base"]["nadd"] = a["base"].get("nadd", 0) + 1
+                a["base"]["last_px"] = float(px)
 
         # ---- khop o open j+1 ----
         for q, why in closes:
@@ -410,8 +480,11 @@ def _run(p: dict) -> dict:
             dead = True
             break
 
-    return _report(p, curve, trades, blocked, pos, peak_g, peak_mu,
-                   nopen_sum, dead, time.time() - t0, D)
+    out = _report(p, curve, trades, blocked, pos, peak_g, peak_mu,
+                  nopen_sum, dead, time.time() - t0, D)
+    out["per"]["rsi2"]["stops"] = {**stopc, "mode": "hvn" if H1 is not None else "atr",
+                                   "bars1h_syms": len(H1) if H1 is not None else 0}
+    return out
 
 
 # ---------------------------------------------------------------- bao cao

@@ -31,15 +31,28 @@ services:
       BINANCE_ENV: "${BINANCE_ENV:-live}"
       # ============ DUNG CHUNG CHO CA HAI CHIEN LUOC ============
       # ---- tran rui ro, ap o tang ma truoc khi gui lenh ----
-      MAX_GROSS_USD: "${MAX_GROSS_USD:-500}"
-      # 150 chu khong 50: o ALLOC_RSI2 = 8 lenh RSI(2) trung vi 40 USD nhung
-      # p99 106, lon nhat 141 (stop gan → R nho → co lenh lon). O 50, 1% lenh
-      # dong luong (lon nhat 80 USD) cung da bi chan.
-      MAX_ORDER_USD: "${MAX_ORDER_USD:-150}"
+      # Tong danh nghia MO THEM moi luot. 1500 chu khong 500: voi stop HVN
+      # mot lenh RSI(2) co the toi 500 USD, hai tin hieu cung ngay se chan nhau.
+      MAX_GROSS_USD: "${MAX_GROSS_USD:-1500}"
+      # 500 chu khong 150: stop HVN (RSI2_STOP_HVN=1) co khi chi cach 2% gia,
+      # o 1R × 8 = 16 USD lenh toi ~800 USD. Lenh RSI(2) vuot tran duoc THU
+      # NHO ve dung tran (rui ro < 1R, ghi «thu về trần» trong ly do) chu khong
+      # bi bo. O 500: ~4,5% lenh RSI(2) bi thu nho; o 150 la 21%.
+      MAX_ORDER_USD: "${MAX_ORDER_USD:-500}"
       MAX_ORDERS_PER_RUN: "${MAX_ORDERS_PER_RUN:-40}"
       # ---- ky quy: app tu dua moi ma ve CHEO + don bay nay truoc khi vao lenh ----
       # Ma ket isolated (dang co vi the) duoc nap them toi khi don bay thuc <= muc nay.
       LEVERAGE: "${LEVERAGE:-5}"
+      # ---- cach dat lenh: limit (maker 0,02%/luot) | market (taker 0,05%/luot) ----
+      # limit = LIMIT GTX o gia tot nhat cung phia, moi vong cho LIMIT_WAIT_S
+      # giay roi huy + dat lai o gia moi, toi da LIMIT_ROUNDS vong (~2 phut).
+      # Con thieu sau het vong: lenh DONG luon chuyen sang thi truong (khong de
+      # ket vi the); lenh MO chuyen sang thi truong neu LIMIT_FALLBACK=1, de 0
+      # thi bo phan chua khop (co the lo dung nhung lenh gia chay nhanh nhat).
+      ORDER_MODE: "${ORDER_MODE:-limit}"
+      LIMIT_ROUNDS: "${LIMIT_ROUNDS:-5}"
+      LIMIT_WAIT_S: "${LIMIT_WAIT_S:-20}"
+      LIMIT_FALLBACK: "${LIMIT_FALLBACK:-1}"
       # ---- don vi rui ro: 1R = so USD mat khi cham diem cat lo ----
       # Co lenh = RISK_R_USD / R, nen no KHONG phu thuoc von. Von chi quyet
       # dinh mo duoc bao nhieu lenh cung luc (RISK_MAX_OPEN).
@@ -67,15 +80,24 @@ services:
       # cho rieng. Bang chung yeu (26 lenh lop 2, chua ngoai mau) — xem
       # docs/rsi2-connors.md § Mua them. Muon tat: dat 1.
       RSI2_LAYERS: "${RSI2_LAYERS:-3}"
+      # ---- RSI(2) cat lo o dinh khoi luong (HVN) gan nhat duoi gia ----
+      # 1 = bat: moi tin hieu tai 20 ngay nen 1H, dung volume profile, stop =
+      # HVN gan nhat − 0,25×ATR (tran 40% giu nguyen). Khong co HVN / loi mang
+      # → 6×ATR nhu cu. 0 = tat. Bang chung: dat luat nghien cuu nhung phan lon
+      # la co lenh to hon; Sharpe chenh KTC chua 0 — docs/stop-dinh-day.md.
+      # Tab «Tinh lich su» mo phong y nhu vay (bang bars1h, gieo tu /seed1h).
+      # Chot loi da thu 22 kieu, khong kieu nao hon thoat RSI > 70 — giu nguyen.
+      RSI2_STOP_HVN: "${RSI2_STOP_HVN:-1}"
       START_EQUITY_USD: "${START_EQUITY_USD:-500}"
       # chay hang ngay luc 00:05 UTC, ngay sau khi nen 1D dong
       RUN_AT_UTC: "${RUN_AT_UTC:-00:05}"
       #
       # ============ THAM SO RIENG TUNG CHIEN LUOC ============
       # KHONG dat qua bien moi truong. Chung duoc chot trong app/config.py
-      # (RSI2 = 9 o, XSMOM = 8 o) va sua luc chay qua tab «Cau hinh»:
+      # (RSI2 = 14 o, XSMOM = 8 o) va sua luc chay qua tab «Cau hinh»:
       #   RSI(2)     : rsi2.topn slots rsi_in rsi_out ma atr atr_k cap min_bars
-      #                (rieng rsi2.layers co ca bien RSI2_LAYERS o tren)
+      #                vp_days vp_bin vp_buf (volume profile cho stop HVN)
+      #                (rieng rsi2.layers / stop_hvn co bien RSI2_LAYERS / RSI2_STOP_HVN o tren)
       #   Dong luong : xsmom.topn lookback frac legs sleeves hold min_bars ma
       # Ly do: hai bo nay duoc chon kem ke toan da phep thu (49 o cat ngang,
       # nguong Sidak 0,00105). Doi chung la ket qua that khong con duoc bao
@@ -86,7 +108,10 @@ services:
       # Mo cache nghien cuu CHI DOC de gieo mam lan dau cho nhanh.
       # Bo dong nay thi lan chay dau se tu tai tu Binance (lau hon nhieu).
       - ../reports/.cache/uni1d:/seed:ro
-      # Hai ban dac ta da chot, hien o tab «Phương pháp». Chi doc.
+      # Nen 1H (top 10 tung co) cho tab «Tinh lich su» mo phong stop HVN. Chi
+      # doc, chi gieo mot lan; sau do bot tu cap nhat top 20 moi luot chay.
+      - ../reports/.cache/uni_tf/1h:/seed1h:ro
+      # Cac tai lieu da chot, hien o tab «Phương pháp». Chi doc.
       - ../docs:/docs:ro
     logging:
       driver: json-file

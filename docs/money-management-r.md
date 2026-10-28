@@ -82,6 +82,23 @@ cháy** — vốn xuống âm.
 
 Trần thứ hai thay cho khái niệm "N chỗ", vốn vô nghĩa khi mỗi lệnh một cỡ.
 
+### Trong bot: trần tính bằng USD
+
+Bot không chặn theo % vốn mà theo hai con số USD, áp trước khi gửi lệnh:
+`MAX_ORDER_USD` cho một lệnh và `MAX_GROSS_USD` cho tổng phần mở thêm mỗi lượt.
+Từ 28/10/2026 (tài khoản test 500 USD, 1R = 2), hai con số là **500 / 1.500**.
+Lý do là stop HVN của RSI(2) có khi chỉ cách giá 2%, nên ở 1R × 8 = 16 USD
+lệnh lên tới ~800 USD.
+
+- Lệnh **RSI(2)** vượt `MAX_ORDER_USD` được **thu nhỏ về đúng trần**. Rủi ro
+  thực khi đó < 1R, lý do lệnh ghi «thu về trần … R». Lệnh không bị bỏ, vì
+  stop gần không phải dấu hiệu lệnh xấu ([stop-dinh-day.md](stop-dinh-day.md)).
+- Lệnh **động lượng** vượt trần vẫn bị chặn như cũ.
+- Lệnh **đóng** không bao giờ bị chặn.
+
+Quy tắc chọn trần khi đổi 1R vẫn là `MAX_ORDER ≈ 25 × 1R × hệ số`, kiểm lại bằng
+tab «Tính lịch sử» (cột «bị chặn»).
+
 ## Phụ lục — bản theo % vốn (đã thử, không chốt)
 
 Vặn risk% thì lợi nhuận và sụt đi lên cùng nhịp, tỷ lệ gần như bất biến:
@@ -342,6 +359,62 @@ chạy vẫn hợp lý**; lý lẽ cho 32 thì không còn.
 Bảng `rsi2-connors.md` (176 lệnh, +301,5 bps/lệnh) cũng chứa 33 lệnh trùng
 này — **chưa dựng lại**.
 
+## Đổi cỡ lệnh theo thời gian — đã thử 27/10/2026, LOẠI cả ba
+
+Câu hỏi: không đổi tín hiệu, chỉ đổi **1R của lệnh mới** theo diễn biến gần
+đây — có làm danh mục đang chạy tốt hơn không? Chạy trên engine của tab
+«Tính lịch sử» (hệ số tính từ đường vốn đến close hôm trước, chỉ nhân vào
+lệnh mới — đúng cái bot làm được). 1R = 100, không trần, ALLOC 8/1,
+`rsi2.layers` = 3, 2021-04-07 → 2026-10-25.
+
+Luật đăng ký trước, quyết trên **toàn bộ thời gian**: (a) KTC 98,3% của
+chênh Sharpe > 0 (bootstrap cặp, block 30 ngày, Bonferroni 3 ô), (b) lãi
+năm/sụt tăng, (c) Sharpe tốt hơn ≥ 4/6 năm, (d) hai lân cận tham số cũng
+tốt hơn.
+
+| | lãi USD | sụt USD | lãi/sụt | Sharpe | chênh Sharpe KTC98 | năm tốt | lân cận | |
+|---|---|---|---|---|---|---|---|---|
+| **gốc** | 63.812 | 10.882 | 1,06 | **1,06** | | | | |
+| V1 nhắm biến động động lượng, 63n | 46.397 | 10.962 | 0,76 | 0,79 | **[−0,59 ; −0,02]** | 1/6 | 42n 1,00 · 126n 0,86 | ✗✗✗✗ |
+| V2 nhắm biến động cả danh mục, 63n | 44.594 | 11.305 | 0,71 | 0,75 | **[−0,67 ; −0,03]** | 1/6 | 0,99 · 0,83 | ✗✗✗✗ |
+| V3 lọc đường vốn (dưới SMA50 → ½R) | 47.715 | **7.406** | 1,16 | 1,05 | [−0,27 ; +0,24] | 3/6 | 30n 0,98 · 100n 1,03 | ✗✓✗✗ |
+
+V1/V2: hệ số = clip(σ* / σ₆₃, 0,25, 2), σ* là trung vị nhân quả của σ₆₃.
+Hệ số trung bình đúng **1,00** (p10 0,67 · p90 1,30), nên đây là so ở **cùng
+phơi nhiễm trung bình** — chênh lệch là do *thời điểm*.
+
+**Nhắm biến động không chỉ vô ích mà có hại có ý nghĩa** — ngược với cổ
+phiếu, nơi Barroso & Santa-Clara (2015) thấy nó gần gấp đôi Sharpe của động
+lượng. Phép giả xác nhận: giữ nguyên chuỗi hệ số của V1 nhưng dịch lệch thời
+gian 365 / 730 / 1.095 ngày cho Sharpe 1,04 / 0,88 / 1,06 — đều hơn 0,79.
+Cái hại đến từ việc **giảm cỡ đúng lúc động lượng crypto kiếm tiền**: lợi
+thế ở đuôi phải (xem `xsmom-volnorm.md` § Frog-in-the-pan), và đuôi đó đến
+trong giai đoạn biến động cao. Ý tưởng ngược lại (tăng cỡ khi biến động
+cao) là nhìn sau, chưa thử.
+
+V3 cắt sụt 32% nhưng cắt lãi 25% — Sharpe đứng yên, tức nó chỉ là **hạ
+phơi nhiễm trung bình** đội lốt quản lý rủi ro. Muốn sụt thấp hơn thì hạ
+`RISK_R_USD` cho rẻ hơn.
+
+### Lãi kép — phép tính, không phải phép thử
+
+1R tỉ lệ với vốn, cập nhật mỗi ngày, so với 1R cố định (cùng engine):
+
+| vốn đầu | | vốn cuối | CAGR | sụt |
+|---|---|---|---|---|
+| 300R | 1R cố định | ×3,13 | 22,8% | 21,5% |
+| 300R | lãi kép | ×6,24 | 39,1% | 32,3% |
+| 150R | 1R cố định | ×5,25 | 34,8% | 30,6% |
+| 150R | lãi kép | ×23,10 | 76,1% | 58,6% |
+
+Ở **cùng mức sụt ~31%**, lãi kép từ 300R cho 39,1%/năm so với 34,8% của 1R
+cố định từ 150R — lãi kép nhỉnh hơn một chút, không phải phép màu. Đổi lại
+sụt tính theo % lớn dần theo vốn. Cách làm thực tế cho bot: **định kỳ đặt
+lại `RISK_R_USD` = vốn / 300** (ví dụ mỗi tháng), không cần code mới.
+
+Script: `scripts/mm_overlay.py`. Engine nhận thêm khoá `rmult` (chỉ dùng
+cho nghiên cứu, không có trên UI).
+
 ## Tệp
 
 | | |
@@ -353,3 +426,5 @@ này — **chưa dựng lại**.
 | `scripts/rsi2_topn_recheck.py` | Dựng lại bảng top N, đối chiếu luật chỗ cũ |
 | `scripts/dvt_window.py` | Cửa sổ thanh khoản 30 so với 10 ngày |
 | `scripts/combo_rsi2_xsmom.py` | Ghép hai chiến lược, đánh giá lại theo ngày, hệ số cân rủi ro |
+| `scripts/mm_overlay.py` | Đổi cỡ lệnh theo thời gian (nhắm biến động, lọc đường vốn) + lãi kép — loại |
+| `trading-bot/app/backtest.py` | Engine tab «Tính lịch sử»: mô phỏng đúng bot, kể cả stop HVN và thu lệnh về trần |
