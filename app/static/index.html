@@ -619,6 +619,12 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
     </div>
     <div class="panel" style="margin-top:12px"><div class="ph"><h3>Các lượt chạy</h3></div>
       <div class="tw"><table id="trun"></table></div></div>
+    <div class="panel" style="margin-top:12px"><div class="ph"><h3>Sổ giấy theo tin</h3>
+      <span class="sub">chỉ ghi, không đặt lệnh — docs/huy-niem-yet.md</span></div>
+      <p class="mut" id="newsSt" style="margin:0 0 10px">—</p>
+      <div class="tw" style="max-height:330px"><table id="tnp"></table></div>
+      <h4 style="margin:14px 0 6px">Tin nhận được gần đây</h4>
+      <div class="tw" style="max-height:330px"><table id="tnews"></table></div></div>
   </section>
 </div>
 </div>
@@ -1664,6 +1670,30 @@ async function call(path, body) {
 async function refresh() {
   S = await (await fetch('/api/state')).json();
   render();
+  try { renderNews(await (await fetch('/api/news')).json()); } catch (e) {}
+}
+
+const KIND = {S: 'gỡ spot', F: 'gỡ perp', M: 'thẻ Monitoring'};
+const sec = v => v == null ? '—' : pct(v, v < 10 ? 1 : 0) + ' s';
+function renderNews(N) {
+  const st = N.status || {}, L = N.latency || {};
+  const lw = L.ws || {}, lp = L.poll || {};
+  $('newsSt').textContent = `WebSocket: ${st.ws || '—'} · đọc API CMS: `
+    + (st.poll ? st.poll : st.poll_ok ? 'chạy, lần cuối ' + when(st.poll_ok) : '—')
+    + ` · độ trễ nhận tin qua WebSocket: ${lw.n ? `trung vị ${sec(lw.p50)}, p90 ${sec(lw.p90)}, nhanh nhất ${sec(lw.min)} (${lw.n} tin)` : 'chưa có mẫu'}`
+    + (lp.n ? ` · qua API CMS: trung vị ${sec(lp.p50)} (${lp.n} tin)` : '')
+    + (st.clock_off_ms != null ? ` · lệch đồng hồ ${st.clock_off_ms} ms` : '');
+  table($('tnp'), ['tin lúc', 'loại', 'mã', 'trễ vào', 'giá bán', 'thấp nhất', 'hoà vốn?',
+    'đóng', 'lý do', 'bps', `USD (${N.usd} USD)`], N.paper || [], r => [
+      when(r.t_pub), KIND[r.kind] || r.kind, r.symbol, sec((r.t_entry - r.t_pub) / 1000),
+      r.entry_px, r.low, r.armed ? 'đã dời' : '—',
+      r.open ? {html: '<span style="color:var(--acc)">đang mở</span>'} : when(r.t_exit),
+      r.why || '—',
+      r.bps == null ? '—' : {html: `<span class="${r.bps >= 0 ? 'pos' : 'neg'}">${r.bps >= 0 ? '+' : ''}${Math.round(r.bps)}</span>`},
+      r.usd == null ? '—' : usd(r.usd)]);
+  table($('tnews'), ['đăng lúc', 'nhận qua', 'trễ', 'tiêu đề', 'phân loại'], N.news || [],
+    n => [when(n.t_pub), n.src, sec((n.t_recv - n.t_pub) / 1000), n.title,
+      n.kinds ? n.kinds.split(',').map(x => (KIND[x.split(':')[0]] || x) + ' ' + x.split(':')[1]).join(', ') : '—']);
 }
 function busy(b) { for (const id of ['btnFetch','btnPrev','btnRun','btnFlat'])
   $(id).disabled = b; }

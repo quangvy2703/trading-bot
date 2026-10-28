@@ -216,6 +216,35 @@ chặn 31 lần mua động lượng (7 lệnh REEF năm 2024) và không lần 
 vốn cuối 2.098,8 → 2.101,5 USD. Bán khống theo tin thì đã thử và **loại** —
 xem `docs/huy-niem-yet.md`.
 
+### Sổ giấy theo tin — `NEWS_PAPER` (chỉ ghi, không đặt lệnh)
+
+Một luồng riêng trong app (`app/news.py`) nghe thông báo của Binance và **không
+bao giờ đặt lệnh**: module này không dùng `Trader`. Nó làm hai việc:
+
+1. **Đo độ trễ nhận tin**, tức thời gian từ giờ đăng bài tới lúc bot nhận được.
+   Mọi thông báo đều là một mẫu đo, không riêng tin huỷ niêm yết. Đây là con
+   số quyết định chiến lược tin gỡ spot có dùng được không: giá bắt đầu rơi từ
+   giây thứ 3 sau tin.
+2. **Ghi lệnh bán khống giả** cho hai ô đã đạt luật nghiên cứu
+   (`docs/huy-niem-yet.md`):
+   - tin gỡ spot: lời 15% thì dời stop về giá vào, giữ 24 giờ;
+   - thẻ Monitoring: không stop, giữ 24 giờ.
+
+   Giá bán lấy từ bookTicker (bid) ngay lúc nhận tin, mua lại ở ask. Chi phí
+   40 bps, chưa tính funding.
+
+Có hai nguồn tin; nguồn nào đến trước thì được tính:
+
+| Nguồn | Cần | Độ trễ |
+|---|---|---|
+| WebSocket thông báo (`wss://api.binance.com/sapi/wss`) | khoá **riêng, chỉ quyền đọc**: `NEWS_API_KEY` / `NEWS_API_SECRET` | sẽ đo |
+| API CMS mục 161 + 49, đọc mỗi 30 giây | không cần | tới ~30 giây |
+
+Khoá giao dịch hiện tại bị sàn từ chối ở WebSocket này (`-2015`). Dùng khoá
+riêng chỉ đọc cũng an toàn hơn. Tạo khoá trên Binance, chỉ bật «Enable
+Reading», điền vào `.env` rồi `docker compose up -d`. Kết quả hiện ở tab
+«Nhật ký» → «Sổ giấy theo tin».
+
 ### Tab «Tính lịch sử»
 
 Tính lại toàn bộ lịch sử trong kho nến với bộ tham số tuỳ chọn — vốn, 1R,
@@ -534,6 +563,7 @@ tắc UI mặc định tắt.
 | `app/strategies.py` | sinh tín hiệu hai chiến lược |
 | `app/volprofile.py` | volume profile, mức HVN dưới giá cho stop RSI(2) |
 | `app/delist.py` | thông báo huỷ niêm yết của Binance, danh sách mã chặn mua |
+| `app/news.py` | sổ giấy theo tin: WebSocket / API CMS, độ trễ, lệnh bán khống giả |
 | `app/executor.py` | hai lớp khoá, trần rủi ro, đặt lệnh limit/thị trường, giấy/thật |
 | `app/runner.py` | một lượt chạy hằng ngày, stop HVN, thu lệnh về trần |
 | `app/backtest.py` | engine tab «Tính lịch sử» |

@@ -27,6 +27,18 @@ CREATE TABLE IF NOT EXISTS bars1h(
   symbol TEXT, ts INTEGER, h REAL, l REAL, c REAL, v REAL,
   PRIMARY KEY(symbol, ts)) WITHOUT ROWID;
 
+-- So giay theo tin (app/news.py): moi thong bao nhan duoc + do tre, va lenh
+-- ban khong GIA. Khong bang nao o day dan toi lenh that.
+CREATE TABLE IF NOT EXISTS news(
+  key TEXT PRIMARY KEY, catalog INTEGER, title TEXT, t_pub INTEGER,
+  t_recv INTEGER, src TEXT, kinds TEXT);
+CREATE TABLE IF NOT EXISTS news_paper(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, news_key TEXT, kind TEXT, symbol TEXT,
+  t_pub INTEGER, t_recv INTEGER, t_entry INTEGER, entry_px REAL, low REAL,
+  last_px REAL, armed INTEGER DEFAULT 0, stop REAL, t_exit INTEGER,
+  exit_px REAL, why TEXT, bps REAL, usd REAL, open INTEGER DEFAULT 1,
+  UNIQUE(news_key, symbol, kind));
+
 -- Thong bao huy niem yet cua Binance (app/delist.py): chan lenh MUA moi.
 CREATE TABLE IF NOT EXISTS delist(
   symbol TEXT, kind TEXT, ts INTEGER, title TEXT,

@@ -49,6 +49,14 @@ class Config:
     # Ma co thong bao huy niem yet trong N ngay gan nhat: khong mo lenh MUA
     # nao (RSI(2) va chan mua dong luong). 0 = tat. Xem app/delist.py.
     delist_ban_days: int = _i("DELIST_BAN_DAYS", 90)
+    # So giay theo tin (app/news.py): do do tre nhan tin + lenh ban khong GIA
+    # cho tin go spot / the Monitoring. Khong bao gio dat lenh that. 0 = tat.
+    news_paper: bool = os.environ.get("NEWS_PAPER", "1") == "1"
+    news_paper_usd: float = _f("NEWS_PAPER_USD", 100)
+    # Khoa API RIENG, chi quyen doc, cho WebSocket thong bao. Thieu thi chi
+    # doc API CMS moi 30 giay (du cho the Monitoring, cham cho tin go spot).
+    news_api_key: str = os.environ.get("NEWS_API_KEY", "")
+    news_api_secret: str = os.environ.get("NEWS_API_SECRET", "")
 
     # He so nhan cho 1R, khong phai ty trong von. 0 = tat chien luoc.
     # RSI(2) = 8 — xem docs/money-management-r.md § Ghep hai chien luoc.

@@ -14,7 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import backtest, data, db, delist, executor, runner, settings
+from . import backtest, data, db, delist, executor, news, runner, settings
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -67,6 +67,8 @@ def _start() -> None:
             except Exception as e:
                 db.log("warn", f"nạp thông báo huỷ niêm yết lỗi: {e}")
         threading.Thread(target=_delist, daemon=True, name="delist").start()
+    if CFG.news_paper:
+        threading.Thread(target=news.run, daemon=True, name="news").start()
     if executor.live_ready()[0]:
         # Vi the isolated thieu ky quy, hay thieu dung an toan tren san, khong
         # doi duoc toi luot chay ke tiep.
@@ -142,6 +144,12 @@ def doc_one(key: str):
     return {"key": key, "title": title, "file": p.name,
             "mtime": int(p.stat().st_mtime * 1000),
             "text": p.read_text(encoding="utf-8")}
+
+
+@app.get("/api/news")
+def news_state():
+    """So giay theo tin: trang thai nguon, do tre, lenh gia, tin gan day."""
+    return news.summary()
 
 
 @app.get("/api/state")

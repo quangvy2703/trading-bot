@@ -1,4 +1,4 @@
-# Tin huỷ niêm yết của Binance — thẻ Monitoring: ĐẠT (sổ giấy) · gỡ spot/perp: LOẠI · chặn mua: BẬT
+# Tin huỷ niêm yết của Binance — gỡ spot + stop hoà vốn: ĐẠT · thẻ Monitoring: ĐẠT · gỡ perp: LOẠI · chặn mua: BẬT
 
 **Ngày chạy:** 28/10/2026 · script `scripts/delist_short.py` (nến ngày) và
 `scripts/delist_1m.py` (nến 1 phút), luật trong docstring, viết trước khi chạy ·
@@ -219,6 +219,54 @@ trước khi giá kịp trôi xuống. Đuôi lỗ không mất hẳn: giá có 
 một giây, nên lệnh stop-market khớp xa giá stop rất nhiều. Thẻ Monitoring và
 tin gỡ perp cho kết quả cùng chiều: stop càng chặt thì TB càng thấp.
 
+### Stop dời theo lời — tin gỡ spot ĐẠT, nếu vào trong ~1 giây
+
+Script `scripts/delist_trail.py` (luật trong docstring, viết trước khi chạy).
+Stop chỉ bật **sau khi** lệnh đã lời g = 5 / 10 / 15%:
+- **BE**: dời stop về đúng giá vào (hoà vốn);
+- **trail d**: stop = đáy thấp nhất × (1 + d), d = 10% hoặc 5%, chỉ hạ xuống;
+- kèm stop thảm hoạ ban đầu: không có, hoặc +30%.
+
+Vào trễ 1 / 5 giây, giữ 24 giờ, khớp stop thận trọng (giá cao nhất trong 1
+giây sau khi chạm). 108 ô. Một loại đạt khi qua cả 5 điều kiện, trong đó
+điều kiện (2) đòi giữ ≥ 80% lời của bản không stop **và** cải thiện cả lệnh
+tệ nhất lẫn p5.
+
+| Loại | Ô chọn | TB (không stop) | KTC 99,95% | p5 (không stop) | tệ nhất (không stop) | Kết luận |
+|---|---|---|---|---|---|---|
+| **S** | **Δ 1 s · g 15% · BE** | **+1.148** (+1.147) | **[+417 ; +1.913]** | −10,3% (−17,5%) | **−20,7%** (−129%) | **ĐẠT** ✓✓✓✓✓ |
+| F | Δ 5 s · g 15% · BE | +755 (+517) | [−226 ; +1.565] | −11,0% (−32,1%) | −34,8% (−124%) | loại ✗✓✓✓✓ |
+| M | Δ 5 s · g 15% · BE | +590 (+650) | [+38 ; +1.146] | −9,9% (−10,8%) | −15,6% (−15,6%) | loại ✓✗✓✓✓ — vốn không có đuôi để cắt |
+
+**Vì sao nó chạy được với tin gỡ spot:** cú rơi đầu tiên rất nhanh và rất sâu.
+79% số lệnh lời đủ 15% để kích hoạt stop trong vòng 24 giờ. Từ lúc
+đó, một cú ép ngược kiểu ALPACA (đáy −21% sau 1 phút, rồi +175%) chỉ đưa lệnh
+về **hoà vốn** chứ không còn lỗ −129%. Lời trung bình gần như không mất, vì
+những lệnh tiếp tục trôi xuống không bao giờ quay lại chạm giá vào.
+
+Các phép kiểm thêm cho ô S (nhìn sau, không đổi kết luận của luật):
+
+```
+funding 24 giờ (bên bán khống trả)   TB −94 bps → lời sau funding +1.055 … +1.088 bps
+KTC gộp cụm theo tháng (23)           Bonferroni 108 ô [+207 ; +1.757] · 528 ô (cả 5 script) [+194 ; +1.807]
+KTC gộp cụm theo bài (26)             Bonferroni 108 ô [+282 ; +1.773] · 528 ô [+177 ; +1.831]
+ô lân cận Δ1s g15% trail 10%          +1.060 · 528 ô gộp theo bài [+316 ; +1.615]
+ô lân cận Δ1s g10% trail 5%           +717  · 528 ô gộp theo bài [+265 ; +927]
+cùng ô nhưng trễ 5 giây               +935  · 528 ô gộp theo bài [−316 ; +1.657] → KHÔNG đứng
+```
+
+Đây là kết quả đầu tiên đứng vững ngay cả khi tính chung mọi lần nhìn vào cùng
+mẫu sự kiện và gộp cụm theo bài thông báo. Nhưng **nó chỉ đứng khi vào lệnh
+trong khoảng 1 giây** (giá khớp là giá thấp nhất trong giây thứ 1–3). Trễ 5
+giây thì khoảng tin cậy chứa 0. Với lại stop thảm hoạ +30% làm **tệ hơn**:
+trong vài giây đầu có những cú giật lên rất mạnh, nên lệnh stop-market khớp ở
+đỉnh giật.
+
+**Điều chưa biết, phải đo trước khi dùng tiền thật:** bot nhận được tin sau
+giờ đăng bao lâu. Giá thị trường bắt đầu rơi ở giây thứ 3, tức các bot nhanh
+nhất nhận tin trong ~2 giây. Đọc API CMS mỗi giây sẽ bị chặn 429. Binance có
+WebSocket thông báo (cần khoá API), nhưng độ trễ của nó chưa đo.
+
 ### Lỗi đã sửa trong lúc chạy
 
 Lần chạy đầu, «mã còn sống» được lấy theo danh sách exchangeInfo. Nhưng perp
@@ -270,7 +318,16 @@ thông báo chỉ có từ 2022-02, nên trước mốc đó luật không có t
   trôi xuống (bán khống TB +292 bps), nên đây là ứng viên thêm vào nếu muốn
   chặn rộng hơn.
 - **Đóng sớm vị thế đang giữ** khi tin ra: chưa đo.
-- **Sổ giấy cho thẻ Monitoring**: chưa xây (xem đề xuất ở trên).
+- **Sổ giấy đã chạy từ 29/10/2026** (`trading-bot/app/news.py`, tab «Nhật ký»
+  → «Sổ giấy theo tin»). Nó chỉ ghi, không đặt lệnh: đo độ trễ nhận tin của
+  mọi thông báo, và ghi lệnh bán khống giả cho tin gỡ spot (lời 15% thì dời
+  stop về hoà vốn) và thẻ Monitoring (giữ 24 giờ).
+  - WebSocket thông báo cần một **khoá API riêng chỉ quyền đọc**
+    (`NEWS_API_KEY`). Khoá giao dịch hiện tại bị từ chối với `-2015`. Khi chưa
+    có khoá đó, sổ giấy chỉ đọc API CMS mỗi 30 giây: vẫn đủ cho thẻ Monitoring,
+    nhưng quá chậm cho tin gỡ spot.
+  - Từ máy chạy bot, một lượt gọi tới fapi mất 0,6–0,9 giây đi về. Riêng việc
+    đọc giá bán sau khi nhận tin đã tốn khoảng 0,3 giây.
 
 ## Tệp
 
@@ -283,5 +340,6 @@ thông báo chỉ có từ 2022-02, nên trước mốc đó luật không có t
 | `scripts/delist_agg_fetch.py` | aggTrades ±10/30 phút quanh tin (data.binance.vision) |
 | `scripts/delist_agg.py` | kiểm định trễ 1–60 giây, 144 ô — thẻ Monitoring đạt |
 | `scripts/delist_stop.py` | stop 1–10% xét từng giao dịch, 108 ô (theo yêu cầu, không đăng ký trước) |
+| `scripts/delist_trail.py` | stop dời theo lời (hoà vốn / trail), 108 ô — tin gỡ spot đạt |
 | `reports/.cache/announce/` | `161.json`, `49.json`, `bodies.json` |
 | `trading-bot/app/delist.py` | luật chặn mua trong bot |

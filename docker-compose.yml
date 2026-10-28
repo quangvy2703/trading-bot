@@ -98,6 +98,15 @@ services:
       # luong khong mo chan mua. Vi the dang giu va chan ban khong doi. Moi
       # luot chay doc 2 trang thong bao moi nhat. 0 = tat. docs/huy-niem-yet.md
       DELIST_BAN_DAYS: "${DELIST_BAN_DAYS:-90}"
+      # ---- so giay theo tin (app/news.py) — CHI GHI, KHONG DAT LENH ----
+      # Do do tre nhan tin + lenh ban khong GIA: tin go spot (loi 15% thi doi
+      # stop ve hoa von) va the Monitoring (giu 24 gio). 0 = tat.
+      NEWS_PAPER: "${NEWS_PAPER:-1}"
+      NEWS_PAPER_USD: "${NEWS_PAPER_USD:-100}"
+      # Khoa RIENG chi quyen doc cho WebSocket thong bao (khoa giao dich bi san
+      # tu choi o day). De trong thi chi doc API CMS moi 30 giay.
+      NEWS_API_KEY: "${NEWS_API_KEY:-}"
+      NEWS_API_SECRET: "${NEWS_API_SECRET:-}"
       START_EQUITY_USD: "${START_EQUITY_USD:-500}"
       # chay hang ngay luc 00:05 UTC, ngay sau khi nen 1D dong
       RUN_AT_UTC: "${RUN_AT_UTC:-00:05}"
