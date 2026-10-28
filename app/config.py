@@ -46,6 +46,9 @@ class Config:
     # KHONG phu thuoc von: von chi quyet dinh mo duoc bao nhieu lenh cung luc.
     risk_r_usd: float = _f("RISK_R_USD", 2)
     risk_max_open: int = _i("RISK_MAX_OPEN", 33)       # 28 dong luong + 5 RSI(2)
+    # Ma co thong bao huy niem yet trong N ngay gan nhat: khong mo lenh MUA
+    # nao (RSI(2) va chan mua dong luong). 0 = tat. Xem app/delist.py.
+    delist_ban_days: int = _i("DELIST_BAN_DAYS", 90)
 
     # He so nhan cho 1R, khong phai ty trong von. 0 = tat chien luoc.
     # RSI(2) = 8 — xem docs/money-management-r.md § Ghep hai chien luoc.

@@ -14,7 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import backtest, data, db, executor, runner, settings
+from . import backtest, data, db, delist, executor, runner, settings
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -26,7 +26,8 @@ DOCS_DIR = Path(os.environ.get("DOCS_DIR", "/docs"))
 DOCS = [("rsi2-connors", "RSI(2) Connors v3.1"),
         ("xsmom-volnorm", "Động lượng cắt ngang"),
         ("money-management-r", "Quản lý vốn theo R"),
-        ("stop-dinh-day", "Cắt lỗ HVN · chốt lời")]
+        ("stop-dinh-day", "Cắt lỗ HVN · chốt lời"),
+        ("huy-niem-yet", "Tin huỷ niêm yết")]
 NAME_OK = re.compile(r"^[a-z0-9][a-z0-9.-]{0,63}$")
 CONFIRM = "TÔI ĐỒNG Ý CHẠY THẬT"
 
@@ -55,6 +56,17 @@ def _start() -> None:
             except Exception as e:
                 db.log("warn", f"gieo mầm nến 1H lỗi: {e}")
         threading.Thread(target=_seed1h, daemon=True, name="seed1h").start()
+    if not db.kv_get("delist_full"):
+        # Lan dau doc het muc «Delisting» (~23 trang, tu 2022-02) cho tab
+        # «Tinh lich su»; sau do moi luot chay doc 2 trang moi nhat.
+        def _delist():
+            try:
+                n = delist.refresh(40)
+                db.kv_set("delist_full", {"rows": n, "ts": int(time.time() * 1000)})
+                db.log("info", f"nạp {n} thông báo huỷ niêm yết")
+            except Exception as e:
+                db.log("warn", f"nạp thông báo huỷ niêm yết lỗi: {e}")
+        threading.Thread(target=_delist, daemon=True, name="delist").start()
     if executor.live_ready()[0]:
         # Vi the isolated thieu ky quy, hay thieu dung an toan tren san, khong
         # doi duoc toi luot chay ke tiep.

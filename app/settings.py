@@ -55,6 +55,8 @@ SPEC = {
     # --- don vi rui ro: 1R la so USD mat khi cham diem cat lo ---
     "risk_r_usd":      ("risk", float, 1.0, 1e6, "1R — số USD rủi ro mỗi lệnh"),
     "risk_max_open":   ("risk", int, 1, 500, "số lệnh mở tối đa cùng lúc"),
+    # --- thong bao huy niem yet: chan lenh MUA moi (app/delist.py) ---
+    "delist_ban_days": ("risk", int, 0, 365, "chặn mua sau thông báo huỷ niêm yết (ngày) — 0 là tắt"),
 }
 
 
@@ -64,7 +66,8 @@ def locked() -> dict:
          "max_gross_usd": CFG.max_gross_usd, "max_gross_x": CFG.max_gross_x,
          "max_order_usd": CFG.max_order_usd,
          "max_orders_per_run": CFG.max_orders_per_run,
-         "risk_r_usd": CFG.risk_r_usd, "risk_max_open": CFG.risk_max_open}
+         "risk_r_usd": CFG.risk_r_usd, "risk_max_open": CFG.risk_max_open,
+         "delist_ban_days": CFG.delist_ban_days}
     for k, v in LOCK_RSI2.items():
         d[f"rsi2.{k}"] = v
     for k, v in LOCK_XSMOM.items():
@@ -101,7 +104,8 @@ def risk() -> dict:
     return {"gross": e["max_gross_usd"], "gross_x": e["max_gross_x"],
             "order": e["max_order_usd"],
             "orders": int(e["max_orders_per_run"]),
-            "r_usd": e["risk_r_usd"], "max_open": int(e["risk_max_open"])}
+            "r_usd": e["risk_r_usd"], "max_open": int(e["risk_max_open"]),
+            "ban_days": int(e["delist_ban_days"])}
 
 
 def alloc() -> dict:

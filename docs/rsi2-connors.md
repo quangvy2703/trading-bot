@@ -16,7 +16,7 @@ neo giá khỏi vũ trụ, và **sửa ba bảng sai** do luật đếm chỗ c�
 ## Bot đang chạy gì — 28/10/2026
 
 Tín hiệu vẫn đúng v3.1 (vào RSI(2) < 10 và close > MA20, thoát RSI(2) > 70).
-Phần vận hành lệch khỏi bản đặc tả ở bốn chỗ, đều do người vận hành chọn:
+Phần vận hành lệch khỏi bản đặc tả ở năm chỗ, đều do người vận hành chọn:
 
 | Chỗ | Đặc tả v3.1 | Bot | Mức bằng chứng |
 |---|---|---|---|
@@ -24,6 +24,7 @@ Phần vận hành lệch khỏi bản đặc tả ở bốn chỗ, đều do ng
 | Mua thêm | 1 lớp | **3 lớp** (`RSI2_LAYERS=3`; mặc định trong mã là 2) | yếu — 26 lệnh lớp 2, xem § Mua thêm |
 | 1R | 1R chung | **1R × 8** (`ALLOC_RSI2=8`) | đo bằng engine app — [money-management-r.md](money-management-r.md) § Ghép hai chiến lược |
 | Đặt lệnh | thị trường (10 bps) | **LIMIT GTX** (maker), hết vòng thì lệnh đóng ra thị trường | backtest vẫn tính 10 bps |
+| Tin huỷ niêm yết | — | **không mở lệnh** trên mã có thông báo gỡ trong 90 ngày (`DELIST_BAN_DAYS`) | chốt an toàn; lịch sử chưa từng chặn lệnh RSI(2) nào — [huy-niem-yet.md](huy-niem-yet.md) |
 
 Đã thử và **giữ nguyên**: chốt lời theo R / ATR / HVN / POC / đỉnh cũ (22 ô,
 không ô nào hơn thoát RSI > 70 — [stop-dinh-day.md](stop-dinh-day.md) § Điểm

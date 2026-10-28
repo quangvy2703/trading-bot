@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-from . import data, db, settings, volprofile as VP
+from . import data, db, delist as DL, settings, volprofile as VP
 from . import indicators as I
 from .binance import DAY
 from .config import CFG, FEE_BPS
@@ -219,6 +219,21 @@ def _run(p: dict) -> dict:
     rmult = p.get("rmult")
     H1 = _load_1h() if R.get("stop_hvn") else None
     stopc = {"hvn": 0, "atr": 0, "no1h": 0, "clip": 0}
+    # Thong bao huy niem yet: ma -> cac moc gio, theo chi so ma cua ma tran
+    ban_d = int(p.get("delist_ban_days") or 0)
+    NOT = {}
+    if ban_d > 0:
+        ixs = {s: i for i, s in enumerate(syms)}
+        NOT = {ixs[s]: np.array(v, np.int64) for s, v in DL.notices().items() if s in ixs}
+    banc = {"rsi2": 0, "xsmom": 0}
+
+    def nobuy(si, j):
+        """Bot chay 00:05 ngay T[j]+1: thay thong bao dang truoc luc do."""
+        v = NOT.get(si)
+        if v is None:
+            return False
+        t_run = int(T[j]) + DAY
+        return bool(np.any((v <= t_run) & (v > t_run - ban_d * DAY)))
 
     # bat dau tu ngay dau tien co ma du nen — truoc do khong chien luoc nao
     # vao duoc lenh, de vao chi keo dai duong von phang va ha CAGR
@@ -286,6 +301,10 @@ def _run(p: dict) -> dict:
                           & (C[:, j] > MA[:, j]) & np.isfinite(ATR[:, j]))
                 cand = [int(si) for si in np.flatnonzero(ok)
                         if len(held.get(si, ())) < R.get("layers", 1)]
+                if NOT:
+                    nb_ = [si for si in cand if nobuy(si, j)]
+                    banc["rsi2"] += len(nb_)
+                    cand = [si for si in cand if si not in nb_]
                 cand.sort(key=lambda si: RSI[si, j])
                 for si in cand[:free]:
                     c = float(C[si, j])
@@ -342,6 +361,9 @@ def _run(p: dict) -> dict:
                 k = max(int(X["legs"]), int(len(idx) * X["frac"]))
                 for si, side in ([(s, 1) for s in order[:k]]
                                  + [(s, -1) for s in order[-k:]]):
+                    if side > 0 and NOT and nobuy(int(si), j):
+                        banc["xsmom"] += 1
+                        continue
                     if XMA is not None:
                         mv = XMA[si, j]
                         if not np.isfinite(mv):
@@ -484,6 +506,7 @@ def _run(p: dict) -> dict:
                   nopen_sum, dead, time.time() - t0, D)
     out["per"]["rsi2"]["stops"] = {**stopc, "mode": "hvn" if H1 is not None else "atr",
                                    "bars1h_syms": len(H1) if H1 is not None else 0}
+    out["delist"] = {"days": ban_d, "syms": len(NOT), **banc}
     return out
 
 

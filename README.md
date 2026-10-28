@@ -66,7 +66,7 @@ là khớp luôn, nên độ lệch so với backtest là nhỏ nhất.
 ```
 1. tải nến mới cho các mã đang niêm yết
 2. xếp hạng thanh khoản (trung vị giá trị giao dịch USD trượt 30 ngày),
-   tải bổ sung nến 1H cho top 20
+   tải bổ sung nến 1H cho top 20, đọc thông báo huỷ niêm yết mới
 3. RSI(2) : đóng vị thế chạm stop hoặc RSI>70, rồi lấp chỗ trống bằng tín hiệu mới
             (stop ở HVN gần nhất dưới giá, không có thì 6×ATR)
 4. động lượng : đúng MỘT sổ trong bảy tái cân bằng hôm nay, sáu sổ kia giữ nguyên
@@ -101,7 +101,7 @@ trọng.
 
 ## Config nào của chiến lược nào
 
-**29 tham số, bốn nhóm.** Hai nhóm riêng từng chiến lược, hai nhóm dùng chung.
+**30 tham số, bốn nhóm.** Hai nhóm riêng từng chiến lược, hai nhóm dùng chung.
 
 ### Riêng RSI(2) — 14 ô
 
@@ -198,6 +198,24 @@ cũ; có và không có thoát RSI). Không kiểu nào nâng Sharpe tháng quá
 > 70, nên RSI(2) vẫn chỉ thoát khi RSI > 70 hoặc chạm stop. Chi tiết ở
 `docs/stop-dinh-day.md` § Điểm chốt lời.
 
+### Chặn mua mã có tin huỷ niêm yết — `DELIST_BAN_DAYS` / `delist_ban_days`
+
+Mặc định **90 ngày**. Mã có thông báo «Binance Will Delist X …» (gỡ spot) hoặc
+«Binance Futures Will Delist XUSDT …» (gỡ perp) trong 90 ngày gần nhất thì:
+- RSI(2) không mở lệnh mới, kể cả lớp mua thêm;
+- động lượng không mở chân mua (chân bán giữ nguyên);
+- vị thế đang giữ không bị đóng sớm.
+
+Thông báo lấy từ API công khai của Binance, bảng `delist`. Lần khởi động đầu
+bot đọc hết lịch sử (~23 trang, từ 2022-02); sau đó mỗi lượt chạy đọc 2 trang
+mới nhất. Mã bị chặn hôm đó hiện trong ghi chú lượt chạy («chặn mua (huỷ niêm
+yết)»). Đặt 0 để tắt.
+
+Đây là chốt an toàn, không phải nguồn lời: trên tab «Tính lịch sử», luật chỉ
+chặn 31 lần mua động lượng (7 lệnh REEF năm 2024) và không lần nào của RSI(2);
+vốn cuối 2.098,8 → 2.101,5 USD. Bán khống theo tin thì đã thử và **loại** —
+xem `docs/huy-niem-yet.md`.
+
 ### Tab «Tính lịch sử»
 
 Tính lại toàn bộ lịch sử trong kho nến với bộ tham số tuỳ chọn — vốn, 1R,
@@ -207,7 +225,7 @@ lệnh. Mô phỏng đúng cơ chế bot (khớp ở open hôm sau, trần theo 
 app, lệnh tối thiểu và ký quỹ của sàn, funding thật) — code ở
 `app/backtest.py`, API `GET/POST /api/backtest`.
 
-### Dùng chung cả hai — 5 ô
+### Dùng chung cả hai — 6 ô
 
 | tham số | biến môi trường | chốt | chặn gì |
 |---|---|---|---|
@@ -216,8 +234,9 @@ app, lệnh tối thiểu và ký quỹ của sàn, funding thật) — code ở
 | `max_order_usd` | `MAX_ORDER_USD` | 500 | giá trị **một lệnh** |
 | `max_gross_usd` | `MAX_GROSS_USD` | 1.500 | **tổng** mở thêm mỗi lượt |
 | `max_orders_per_run` | `MAX_ORDERS_PER_RUN` | 40 | **số lệnh** mỗi lượt |
+| `delist_ban_days` | `DELIST_BAN_DAYS` | 90 | **mua** mã có tin huỷ niêm yết |
 
-Năm ô này **không phân biệt chiến lược** — một lệnh RSI(2) và một lệnh động
+Sáu ô này **không phân biệt chiến lược** — một lệnh RSI(2) và một lệnh động
 lượng ăn chung hạn mức. Trần `risk_max_open = 33` là tổng của cả hai (28 động
 lượng + 5 chỗ RSI(2)), không phải 33 mỗi bên.
 
@@ -390,7 +409,7 @@ khi máy bật `prefers-reduced-motion`.
 đường vốn, bảng vị thế.
 
 **Phương pháp** — đọc thẳng các tài liệu đã chốt trong trang:
-`docs/rsi2-connors.md`, `docs/xsmom-volnorm.md`, `docs/money-management-r.md` và `docs/stop-dinh-day.md`. Thư mục `docs/` được gắn
+`docs/rsi2-connors.md`, `docs/xsmom-volnorm.md`, `docs/money-management-r.md`, `docs/stop-dinh-day.md` và `docs/huy-niem-yet.md`. Thư mục `docs/` được gắn
 vào container ở `/docs` **chỉ đọc**, nên sửa tài liệu là trang thấy ngay, không
 phải dựng lại ảnh. Markdown do chính trang dựng (một trình tối thiểu ~90 dòng)
 — không kéo thư viện ngoài, trang vẫn chạy khi máy không có mạng. Liên kết
@@ -401,7 +420,7 @@ lục dính bên phải tự sáng theo mục đang đọc.
 lại kết quả resolve có còn nằm trong `/docs` không, nên `..%2f..%2fetc%2fpasswd`
 trả 404 chứ không đọc được gì ngoài thư mục đó.
 
-**Cấu hình** — sửa được 29 tham số lúc chạy: phân bổ vốn, toàn bộ tham số
+**Cấu hình** — sửa được 30 tham số lúc chạy: phân bổ vốn, toàn bộ tham số
 RSI(2), toàn bộ tham số động lượng, trần rủi ro. Mỗi dòng hiện **giá trị đã
 chốt trong docs** bên cạnh **giá trị đang dùng**; dòng nào đúng bộ chốt thì
 làm mờ, dòng nào đang lệch thì gạch ngang giá trị chốt và kẻ vạch vàng ở mép
@@ -514,6 +533,7 @@ tắc UI mặc định tắt.
 | `app/indicators.py` | chỉ báo — chép nguyên bản nghiên cứu |
 | `app/strategies.py` | sinh tín hiệu hai chiến lược |
 | `app/volprofile.py` | volume profile, mức HVN dưới giá cho stop RSI(2) |
+| `app/delist.py` | thông báo huỷ niêm yết của Binance, danh sách mã chặn mua |
 | `app/executor.py` | hai lớp khoá, trần rủi ro, đặt lệnh limit/thị trường, giấy/thật |
 | `app/runner.py` | một lượt chạy hằng ngày, stop HVN, thu lệnh về trần |
 | `app/backtest.py` | engine tab «Tính lịch sử» |

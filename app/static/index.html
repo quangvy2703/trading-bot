@@ -1284,6 +1284,7 @@ const BTFORM = [
     ['max_order_usd', 'trần một lệnh', 'USD'],
     ['max_gross_usd', 'trần mở thêm mỗi lượt', 'USD'],
     ['max_orders_per_run', 'lệnh mỗi lượt', ''],
+    ['delist_ban_days', 'chặn mua sau tin huỷ niêm yết', 'ngày'],
     ['one_way', 'sàn một chiều (như chạy thật)', '']]]];
 let BT = null, BTV = {}, BTR = null, BTF = 'all';
 const n0 = v => v == null ? '—' : Math.round(v).toLocaleString('vi-VN');
@@ -1417,7 +1418,10 @@ function renderBt() {
       + (t.no1h ? ` · ${n0(t.no1h)} thiếu nến 1H` : '')
       + (t.clip ? ` · ${n0(t.clip)} thu về trần` : '');
   };
-  $('btStopSub').textContent = P.rsi2 ? 'RSI(2) cắt lỗ: ' + stopTxt(P.rsi2) : '';
+  const dl = r.delist;
+  $('btStopSub').textContent = (P.rsi2 ? 'RSI(2) cắt lỗ: ' + stopTxt(P.rsi2) : '')
+    + (dl && dl.days ? ` · tin huỷ niêm yết (${n0(dl.syms)} mã): chặn ${n0(dl.rsi2)} lần mua RSI(2),`
+       + ` ${n0(dl.xsmom)} lần mua động lượng` : '');
   table($('btPer'), ['chiến lược', 'lệnh', 'thắng', 'R TB', 'lãi USD', 'funding',
     'giữ TB', 'sụt USD', 'âm dài nhất', 'bị chặn', 'đang mở'],
     ['rsi2', 'xsmom'].filter(k => P[k].trades || P[k].blocked), k => {

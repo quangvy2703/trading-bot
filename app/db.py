@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS bars1h(
   symbol TEXT, ts INTEGER, h REAL, l REAL, c REAL, v REAL,
   PRIMARY KEY(symbol, ts)) WITHOUT ROWID;
 
+-- Thong bao huy niem yet cua Binance (app/delist.py): chan lenh MUA moi.
+CREATE TABLE IF NOT EXISTS delist(
+  symbol TEXT, kind TEXT, ts INTEGER, title TEXT,
+  PRIMARY KEY(symbol, kind)) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS funding(
   symbol TEXT, ts INTEGER, rate REAL,
   PRIMARY KEY(symbol, ts)) WITHOUT ROWID;
