@@ -199,6 +199,81 @@ def fix_isolated(trader: Trader) -> list:
     return out
 
 
+def _tick(price: float, f: dict, side: str) -> str:
+    """Lam tron gia ve buoc gia, KHONG vuot sang phia doi dien: mua lam tron
+    xuong, ban lam tron len. Tra chuoi de khong lot sai so dau phay dong."""
+    tick = f.get("tick") or 0.01
+    n = price / tick
+    n = math.floor(n + 1e-9) if side == "BUY" else math.ceil(n - 1e-9)
+    return f"{n * tick:.{int(f.get('pprec', 8))}f}"
+
+
+def _fill_limit(trader: Trader, jobs: list) -> None:
+    """Khop bang LIMIT GTX theo vong, sua `jobs` tai cho.
+
+    Ca lo dat cung luc roi cho mot lan, khong tung lenh mot: 40 lenh × 5
+    vong × 20 giay thi chi mat ~2 phut thay vi hon mot gio.
+
+    Moi vong: dat o gia tot nhat CUNG PHIA (mua o bid, ban o ask) → cho →
+    doc lai → huy phan chua khop → cong don. Lenh khong doc / huy duoc thi
+    DUNG HAN voi ma do (co the van treo tren san) va bao loi to: dat them
+    la co nguy co khop gap doi.
+    """
+    for _ in range(CFG.limit_rounds):
+        live = [j for j in jobs if j["rem"] > 0 and not j["err"]]
+        if not live:
+            return
+        for j in live:
+            j["oid"] = None
+            try:
+                bid, ask = trader.book(j["sym"])
+                px = _tick(bid if j["side"] == "BUY" else ask, j["f"], j["side"])
+                r = trader.post_only(j["sym"], j["side"], j["rem"], px, j["close"])
+                j["oid"] = r.get("orderId")
+            except Exception as e:
+                j["note"] = f"đặt limit lỗi: {str(e)[:200]}"
+        time.sleep(CFG.limit_wait_s)
+        for j in live:
+            if j["oid"] is None:
+                continue
+            try:
+                st = trader.order_status(j["sym"], j["oid"])
+                if st.get("status") in ("NEW", "PARTIALLY_FILLED"):
+                    try:
+                        trader.cancel_order(j["sym"], j["oid"])
+                    except Exception:
+                        pass                    # vua khop het giua hai lan doc
+                    st = trader.order_status(j["sym"], j["oid"])
+                    if st.get("status") in ("NEW", "PARTIALLY_FILLED"):
+                        raise RuntimeError("huỷ không được, lệnh vẫn treo")
+                ex = float(st.get("executedQty") or 0)
+                if ex > 0:
+                    j["filled"] += ex
+                    j["cost"] += ex * float(st.get("avgPrice") or 0)
+                    j["maker"] += ex
+                j["rem"] = round_qty(j["qty"] - j["filled"], j["f"])
+            except Exception as e:
+                j["err"] = True
+                j["note"] = f"lệnh {j['oid']}: {str(e)[:200]}"
+                db.log("error", f"{j['sym']} {j['side']} limit {j['oid']}: {e} — "
+                                "KIỂM TAY trên Binance, lệnh có thể còn treo")
+        jobs_left = [j for j in jobs if j["rem"] > 0 and not j["err"]]
+        for j in jobs_left:
+            # phan du qua nho de MO them thi thoi; DONG thi van phai dong het
+            if not j["close"] and (j["rem"] < j["f"].get("minq", 0)
+                                   or j["rem"] * j["ref"] < j["f"].get("minn", 5)):
+                j["rem"] = 0.0
+
+
+def _fill_market(trader: Trader, j: dict) -> None:
+    r = trader.market_order(j["sym"], j["side"], j["rem"], reduce_only=j["close"])
+    ex = float(r.get("executedQty") or 0) or j["rem"]
+    j["filled"] += ex
+    j["cost"] += ex * (float(r.get("avgPrice") or 0) or j["ref"])
+    j["taker"] += ex
+    j["rem"] = 0.0
+
+
 def safety_level(p: dict) -> float | None:
     """Gia kich hoat dung an toan cua MOT vi the trong so.
 
@@ -285,6 +360,7 @@ def execute(run_id: int, actions: list, equity: float, prices: dict,
     try:
         held = ({p["symbol"]: p for p in trader.positions()}
                 if trader is not None else {})
+        jobs = []
         for a in actions:
             px = prices.get(a["symbol"]) or 0.0
             side = ("BUY" if a["side"] > 0 else "SELL") if a["action"] == "OPEN" \
@@ -297,34 +373,67 @@ def execute(run_id: int, actions: list, equity: float, prices: dict,
             # gia giam thi ban lo sang phan cua lop / so khac cung ma.
             if a["action"] == "CLOSE" and a.get("qty"):
                 qty = float(a["qty"])
-            status, resp = "paper", ""
-            if trader is not None:
-                f = filt.get(a["symbol"], {})
-                qty = round_qty(qty, f)
-                if qty <= 0 or qty < f.get("minq", 0) or qty * px < f.get("minn", 5):
-                    status, resp = "bỏ qua", "khối lượng dưới mức tối thiểu của sàn"
-                else:
-                    if a["action"] == "OPEN":
-                        ensure_margin(trader, a["symbol"], held)
-                    try:
-                        r = trader.market_order(
-                            a["symbol"], side, qty,
-                            reduce_only=(a["action"] == "CLOSE"))
-                        status, resp = "khớp", json.dumps(r)[:900]
-                        if r.get("avgPrice"):
-                            px = float(r["avgPrice"]) or px
-                    except Exception as e:
-                        status, resp = "lỗi", str(e)[:900]
-                        db.log("error", f"{a['symbol']} {side}: {e}")
+            j = {"a": a, "sym": a["symbol"], "side": side, "close": a["action"] == "CLOSE",
+                 "ref": px, "notional": notional, "qty": qty, "rem": 0.0,
+                 "filled": 0.0, "cost": 0.0, "maker": 0.0, "taker": 0.0,
+                 "err": False, "note": "", "status": "paper", "f": {}}
+            jobs.append(j)
+            if trader is None:
+                continue
+            f = filt.get(a["symbol"], {})
+            j["f"] = f
+            j["qty"] = qty = round_qty(qty, f)
+            if qty <= 0 or qty < f.get("minq", 0) or qty * px < f.get("minn", 5):
+                j["status"], j["note"] = "bỏ qua", "khối lượng dưới mức tối thiểu của sàn"
+                continue
+            if not j["close"]:
+                ensure_margin(trader, a["symbol"], held)
+            j["rem"], j["status"] = qty, None
+
+        work = [j for j in jobs if j["status"] is None]
+        if work and CFG.order_mode == "limit":
+            _fill_limit(trader, work)
+        for j in work:
+            if j["rem"] > 0 and not j["err"] and (
+                    j["close"] or CFG.order_mode != "limit" or CFG.limit_fallback):
+                try:
+                    _fill_market(trader, j)
+                except Exception as e:
+                    j["err"] = True
+                    j["note"] = f"lệnh thị trường lỗi: {str(e)[:200]}"
+                    db.log("error", f"{j['sym']} {j['side']}: {e}")
+            if j["filled"] <= 0:
+                j["status"] = "lỗi" if j["err"] else "không khớp"
+            elif j["close"] and j["rem"] > 0:
+                # dong do dang: so noi bo giu vi the mo de luot sau dong tiep
+                j["status"] = "lỗi"
+                db.log("error", f"{j['sym']}: đóng mới khớp {j['filled']}/{j['qty']} "
+                                "— phần còn lại vẫn trên sàn, KIỂM TAY")
+            elif j["filled"] < j["qty"] - 1e-12:
+                j["status"] = "khớp một phần"
+            else:
+                j["status"] = "khớp"
+
+        for j in jobs:
+            a, px, qty, notional = j["a"], j["ref"], j["qty"], j["notional"]
+            resp = j["note"]
+            if j["filled"] > 0:
+                px = j["cost"] / j["filled"] if j["cost"] > 0 else px
+                qty = j["filled"]
+                if not j["close"]:
+                    notional = qty * px        # so ghi theo phan THUC SU khop
+                resp = json.dumps({"maker": j["maker"], "taker": j["taker"],
+                                   "note": j["note"]}, ensure_ascii=False)
             with db.tx() as cx:
                 cx.execute(
                     "INSERT INTO orders(run_id,ts,strategy,sleeve,symbol,action,"
                     "side,qty,notional,mode,status,px,resp) "
                     "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (run_id, int(time.time() * 1000), a["strategy"],
-                     a.get("sleeve"), a["symbol"], a["action"], side, qty,
-                     notional, mode, status, px, resp))
-            done.append({**a, "px": px, "qty": qty, "status": status})
+                     a.get("sleeve"), a["symbol"], a["action"], j["side"], qty,
+                     notional, mode, j["status"], px, resp[:900]))
+            done.append({**a, "px": px, "qty": qty, "status": j["status"],
+                         **({"notional": notional} if j["filled"] > 0 else {})})
         if trader is not None:
             # Lenh da khop roi: loi o day tuyet doi khong duoc lam mat `done`,
             # neu khong so noi bo se lech san.

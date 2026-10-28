@@ -23,9 +23,10 @@ PAGE = Path(__file__).parent / "static" / "index.html"
 # Hai ban dac ta da chot. Gan ../docs vao /docs CHI DOC trong compose, nen sua
 # tai lieu la trang thay ngay, khong phai dung lai anh.
 DOCS_DIR = Path(os.environ.get("DOCS_DIR", "/docs"))
-DOCS = [("rsi2-connors", "RSI(2) Connors v3"),
+DOCS = [("rsi2-connors", "RSI(2) Connors v3.1"),
         ("xsmom-volnorm", "Động lượng cắt ngang"),
-        ("money-management-r", "Quản lý vốn theo R")]
+        ("money-management-r", "Quản lý vốn theo R"),
+        ("stop-dinh-day", "Cắt lỗ HVN · chốt lời")]
 NAME_OK = re.compile(r"^[a-z0-9][a-z0-9.-]{0,63}$")
 CONFIRM = "TÔI ĐỒNG Ý CHẠY THẬT"
 
@@ -46,6 +47,14 @@ def _start() -> None:
             except Exception as e:
                 db.log("warn", f"gieo mầm lỗi: {e}")
         threading.Thread(target=_seed, daemon=True, name="seed").start()
+    if not db.kv_get("seeded1h"):
+        def _seed1h():
+            try:
+                n = data.seed_1h_from_npz()
+                db.kv_set("seeded1h", {"files": n, "ts": int(time.time() * 1000)})
+            except Exception as e:
+                db.log("warn", f"gieo mầm nến 1H lỗi: {e}")
+        threading.Thread(target=_seed1h, daemon=True, name="seed1h").start()
     if executor.live_ready()[0]:
         # Vi the isolated thieu ky quy, hay thieu dung an toan tren san, khong
         # doi duoc toi luot chay ke tiep.
@@ -102,7 +111,7 @@ def _rows(sql: str, *a) -> list:
 
 @app.get("/api/docs")
 def docs_list():
-    """Hai ban dac ta cho tab «Phương pháp»."""
+    """Cac tai lieu cho tab «Phương pháp»."""
     return [{"key": k, "title": t, "ok": (DOCS_DIR / f"{k}.md").is_file()}
             for k, t in DOCS]
 
@@ -268,7 +277,9 @@ def fetch():
     try:
         syms = data.live_symbols(api)
         n = data.refresh(api, syms)
-        return {"symbols": len(syms), "bars_added": n}
+        top = runner.top_symbols(20)
+        n1 = data.refresh_1h(api, top)
+        return {"symbols": len(syms), "bars_added": n, "bars1h_added": n1, "top_1h": len(top)}
     finally:
         api.close()
 

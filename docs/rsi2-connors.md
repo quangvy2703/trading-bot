@@ -13,6 +13,37 @@ neo giá khỏi vũ trụ, và **sửa ba bảng sai** do luật đếm chỗ c�
 
 **v3.1 không đổi luật — nó sửa một lỗi đếm làm mọi con số v3 phóng đại.**
 
+## Bot đang chạy gì — 28/10/2026
+
+Tín hiệu vẫn đúng v3.1 (vào RSI(2) < 10 và close > MA20, thoát RSI(2) > 70).
+Phần vận hành lệch khỏi bản đặc tả ở bốn chỗ, đều do người vận hành chọn:
+
+| Chỗ | Đặc tả v3.1 | Bot | Mức bằng chứng |
+|---|---|---|---|
+| Cắt lỗ | 6×ATR, trần 40% | **HVN gần nhất dưới giá − 0,25×ATR** (volume profile 20 ngày nến 1H), không có HVN thì 6×ATR | đạt luật, nhưng phần lớn là cỡ lệnh to hơn; Sharpe tháng chênh KTC chứa 0 — [stop-dinh-day.md](stop-dinh-day.md) |
+| Mua thêm | 1 lớp | **3 lớp** (`RSI2_LAYERS=3`; mặc định trong mã là 2) | yếu — 26 lệnh lớp 2, xem § Mua thêm |
+| 1R | 1R chung | **1R × 8** (`ALLOC_RSI2=8`) | đo bằng engine app — [money-management-r.md](money-management-r.md) § Ghép hai chiến lược |
+| Đặt lệnh | thị trường (10 bps) | **LIMIT GTX** (maker), hết vòng thì lệnh đóng ra thị trường | backtest vẫn tính 10 bps |
+
+Đã thử và **giữ nguyên**: chốt lời theo R / ATR / HVN / POC / đỉnh cũ (22 ô,
+không ô nào hơn thoát RSI > 70 — [stop-dinh-day.md](stop-dinh-day.md) § Điểm
+chốt lời), stop ở đáy cũ (24 ô, không hơn), khung 4H / 1H (không qua luật), lưới
+tham số nến D (giữ bộ cũ).
+
+Tab «Tính lịch sử» với cấu hình đang chạy (500 USD, 1R = 2, 2021-04 →
+2026-10, cả hai chiến lược):
+
+| | vốn cuối | CAGR | sụt | lãi riêng RSI(2) | sụt riêng RSI(2) | R TB RSI(2) |
+|---|---|---|---|---|---|---|
+| stop 6×ATR | 1.716 | 24,9% | 23,9% | 211 USD | 49 USD | +0,073 |
+| **stop HVN (đang chạy)** | **2.099** | **29,5%** | **20,1%** | **593 USD** | **84 USD** | **+0,206** |
+
+Stop HVN có ở 74/183 tín hiệu; 109 tín hiệu còn lại dùng 6×ATR, trong đó 19
+tín hiệu là do mã thiếu nến 1H. Có 8 lệnh bị thu nhỏ về trần 500 USD. Sụt
+riêng của RSI(2) tăng 71%, đúng như dự kiến khi lệnh to hơn. Sụt cả danh mục
+tính bằng USD gần như không đổi (219 so với 218 USD); tính theo % thì thấp hơn
+chỉ vì lúc đó vốn đã lớn hơn.
+
 ---
 
 ## v3.1 — một mã, một lệnh (27/10/2026)
@@ -57,7 +88,7 @@ và `fixed_r_usd.py` cũng đã gọi `one_per_symbol`.
 
 Luật thêm: đang giữ một mã mà RSI(2) **lại** < 10 và close > MA20 thì mở
 thêm một lớp, tối đa `rsi2.layers` lớp mỗi mã (**mặc định 2** — mua thêm một
-lần). Mỗi lớp có stop, cỡ 1R và chỗ riêng (vẫn tính vào 5 chỗ); mọi lớp thoát
+lần; bot hiện đặt **3** qua `RSI2_LAYERS`). Mỗi lớp có stop, cỡ 1R và chỗ riêng (vẫn tính vào 5 chỗ); mọi lớp thoát
 khi RSI(2) > 70.
 
 Đây chính là phần v3 đã vô tình đo, nay làm có chủ ý. Lợi suất theo lớp, top
@@ -98,7 +129,9 @@ vũ trụ : top 10 mã theo trung vị giá trị giao dịch USD 30 ngày,
 vào    : RSI(2) < 10  VÀ  close > MA20   → khớp ở open nến 1D kế tiếp
 thoát  : nến đầu tiên có RSI(2) > 70     → khớp ở close nến đó
 stop   : max(giá_vào − 6×ATR(14),  giá_vào × 0,60)
+         (bot: HVN − 0,25×ATR khi có HVN dưới giá — xem § Bot đang chạy gì)
 lớp    : tối đa 2 lớp mỗi mã — mua thêm khi tín hiệu lặp lại lúc đang giữ
+         (bot: 3)
 phí    : 10 bps/lệnh khứ hồi + funding thực tế
 cỡ lệnh: risk% × vốn ÷ R,  R = (giá_vào − stop) / giá_vào
          trần cỡ một lệnh 25% vốn · tổng rủi ro đang mở ≤ 5 × risk%
@@ -283,6 +316,238 @@ hoàn hảo theo độ rộng stop:
 74% số lệnh bị cắt và tỷ lệ thắng rơi từ 75% xuống 26%. Vào 4H + stop 1H thì
 mọi biến thể đều có KTC chứa 0 — không còn lợi thế nào để phá.
 
+## Khung 4H đo lại bằng R, có lưới — 27/10/2026, LOẠI
+
+Lần thử cũ dịch máy móc luật 1D sang 4H (RSI(2) = 8 tiếng, MA20 = 3,3 ngày)
+và đo bằng bps/lệnh. Lần này đo bằng **R** (cỡ lệnh = 1R / khoảng stop, phí
+tính trên danh nghĩa → phí_R = 10 bps / khoảng stop), quy đổi MA theo ngày,
+lưới 36 ô: chu kỳ RSI 2/3/6 × vào 5/10/20 × ra 50/70 × MA 5/20 ngày. Top 10
+thanh khoản, 5 chỗ, cùng engine chạy bản 1D làm mốc. Chưa tính funding (đã
+kiểm riêng ở dưới: không đổi gì). Script `scripts/rsi2_4h_grid.py`.
+
+| | lệnh | R/lệnh | R/năm | sụt R | R/năm÷sụt | stop TB | phí |
+|---|---|---|---|---|---|---|---|
+| **1D đang chạy** (cùng engine) | 156 | +0,062 | +1,7 | 2,0 | 0,86 | 35,5% | 0,003R |
+| 4H ô chọn: RSI(2) < 5, ra > 50, MA 5 ngày | 401 | +0,036 | +2,6 | 1,8 | 1,43 | 19,4% | 0,007R |
+
+Bằng R, câu chuyện "phí cố định ăn hết" **đúng một nửa**: stop 4H gần gấp
+đôi nên phí ăn gấp đôi phần R (0,007 so với 0,003), nhưng nhiều lệnh hơn
+bù lại — R/năm của ô chọn còn **cao hơn** 1D. Ô này qua cả bốn điều kiện
+đăng ký trước (KTC Bonferroni 36 ô [+0,001 ; +0,069], dương 6/6 năm).
+
+Nhưng ba cảnh báo, nên chạy thêm kiểm bền đăng ký trước
+(`scripts/rsi2_4h_robust.py`):
+
+- ô nằm ở **góc** lưới (ngưỡng vào thấp nhất, MA ngắn nhất), lân cận giảm
+  dần 1,43 → 0,57 / 0,20 / −0,01 — dốc, không phải vùng ổn định;
+- luật chọn ô **sửa sau lần chạy đầu** (ô < 30 lệnh bị gán −9 kéo điểm ô
+  bên cạnh) — sửa đúng, nhưng vẫn là một bậc tự do;
+- KTC chỉ vừa loại 0.
+
+| Kiểm bền | Kết quả | |
+|---|---|---|
+| (A) mở rộng lưới quanh góc: vào 3/5/7 × ra 40/50/60 × MA 3/5/10 ngày | 27/27 ô dương, trung vị R/năm÷sụt 0,63; ô kề đạt 4/6 | **đạt** |
+| (B) **dịch mốc giờ nến 4H** (dựng từ nến 1H) lệch 0 / 1 / 2 / 3 giờ | R/lệnh **+0,032 / +0,022 / −0,000 / +0,004** | **trượt** |
+| (C) funding thật | +0,036 → +0,038R | đạt |
+
+#### Bảng lưới đầy đủ
+
+Mỗi ô: **R/năm ÷ sụt R** · R/lệnh · số lệnh. «—» = dưới 30 lệnh. Mốc 1D
+cùng engine: 0,86 · +0,062 · 156.
+
+Lưới 36 ô (vào / ra):
+
+| RSI · MA | 5/50 | 5/70 | 10/50 | 10/70 | 20/50 | 20/70 |
+|---|---|---|---|---|---|---|
+| RSI(2) · 5 ngày | **1,43** · +0,036 · 401 | 0,57 · +0,032 · 398 | 0,20 · +0,010 · 1.272 | 0,09 · +0,006 · 1.238 | −0,13 · −0,006 · 3.083 | −0,13 · −0,011 · 2.741 |
+| RSI(2) · 20 ngày | −0,01 · −0,001 · 1.109 | −0,03 · −0,003 · 1.051 | −0,12 · −0,008 · 2.184 | −0,11 · −0,010 · 1.937 | −0,17 · −0,014 · 3.848 | −0,15 · −0,019 · 3.132 |
+| RSI(3) · 5 ngày | — (4) | — (4) | 0,14 · +0,018 · 94 | 0,12 · +0,019 · 94 | 0,08 · +0,007 · 938 | 0,03 · +0,004 · 904 |
+| RSI(3) · 20 ngày | 0,13 · +0,020 · 153 | −0,05 · −0,014 · 152 | 0,02 · +0,002 · 651 | −0,08 · −0,013 · 612 | −0,10 · −0,009 · 1.902 | −0,10 · −0,015 · 1.540 |
+| RSI(6) · 5 ngày | — (0) | — (0) | — (0) | — (0) | — (1) | — (1) |
+| RSI(6) · 20 ngày | — (0) | — (0) | — (9) | — (9) | 0,13 · +0,017 · 284 | −0,05 · −0,012 · 272 |
+
+11/24 ô đủ lệnh dương. Hai quy luật rõ: **MA 20 ngày giết lợi thế** (0/6 ô
+dương ở RSI(2)), và **càng quá bán sâu càng tốt** (vào < 5 tốt hơn < 10, < 10 tốt hơn < 20).
+
+Lưới mở rộng quanh góc, RSI(2) (vào / ra):
+
+| MA | 3/40 | 3/50 | 3/60 | 5/40 | 5/50 | 5/60 | 7/40 | 7/50 | 7/60 |
+|---|---|---|---|---|---|---|---|---|---|
+| 3 ngày | — (22) | — (22) | — (22) | 4,84 · +0,057 · 104 | 1,18 · +0,046 · 104 | 1,06 · +0,045 · 104 | 0,88 · +0,029 · 273 | 0,63 · +0,028 · 273 | 0,52 · +0,030 · 273 |
+| 5 ngày | 0,92 · +0,039 · 151 | 0,93 · +0,039 · 151 | 0,73 · +0,035 · 151 | 1,47 · +0,033 · 402 | **1,43** · +0,036 · 401 | 1,01 · +0,033 · 400 | 0,57 · +0,021 · 720 | 0,60 · +0,024 · 717 | 0,59 · +0,025 · 711 |
+| 10 ngày | 0,28 · +0,009 · 373 | 0,10 · +0,005 · 371 | 0,00 · +0,000 · 371 | 0,54 · +0,014 · 812 | 0,38 · +0,012 · 804 | 0,14 · +0,007 · 798 | 0,47 · +0,013 · 1.258 | 0,35 · +0,012 · 1.231 | 0,14 · +0,006 · 1.204 |
+
+Ngưỡng ra gần như không quan trọng; MA ngắn và quá bán sâu là tất cả.
+
+Dịch mốc giờ của nến 4H, ô chọn:
+
+| Nến 4H bắt đầu lúc | 0h | 1h | 2h | 3h |
+|---|---|---|---|---|
+| R/lệnh | +0,032 | +0,022 | −0,000 | +0,004 |
+| R/năm ÷ sụt | 1,07 | 0,34 | −0,01 | 0,08 |
+
+**(B) quyết định.** Chỉ cần nến 4H bắt đầu ở 02:00 thay vì 00:00 UTC là lợi
+thế biến mất. Một hiệu ứng thật về hoảng loạn rồi bật lại không thể phụ
+thuộc vào chỗ ta cắt nến; thứ phụ thuộc như vậy hoặc là may, hoặc gắn với
+lịch của sàn (mốc funding 00/08/16 UTC trùng mốc nến 4H gốc) — giả thuyết
+sau là một tín hiệu khác, chưa kiểm. Bài học trùng `dong-tien-cuong-buc.md`:
+lưới thời gian cố định khiến mọi lệnh vào cùng một giờ, phải luôn dịch lưới.
+
+### Cùng phép dịch mốc áp cho bản 1D ĐANG CHẠY — cũng phụ thuộc mốc
+
+Dựng nến ngày từ nến 1H với mốc bắt đầu lệch 0–20 giờ, chạy đúng luật đã
+chốt (RSI(2) < 10, ra > 70, MA20, stop 6×ATR, top 10, 5 chỗ), cùng engine R.
+67 mã có đủ nến 1H; lệch 0 giờ tái tạo được bản gốc (+0,071 so với +0,062).
+
+| Ngày bắt đầu lúc (UTC) | lệnh | R/lệnh | R/năm | R/năm÷sụt | 2022 |
+|---|---|---|---|---|---|
+| **00:00 (bot đang dùng)** | 121 | **+0,071** | +1,5 | 0,86 | −0,3 |
+| 04:00 | 104 | +0,078 | +1,5 | 0,57 | −1,6 |
+| 08:00 | 109 | +0,012 | +0,2 | 0,08 | −2,0 |
+| 12:00 | 108 | +0,003 | +0,1 | 0,02 | −2,6 |
+| 16:00 | 115 | −0,016 | −0,3 | −0,05 | −5,6 |
+| 20:00 | 114 | +0,003 | +0,1 | 0,01 | −3,9 |
+
+**Lợi thế của bản 1D chỉ có khi ngày được cắt ở 00:00–04:00 UTC.** Trung
+bình 6 mốc chỉ +0,025R/lệnh, khoảng 1/3 con số đầu bảng. Hai cách đọc, dữ
+liệu này chưa tách được:
+
+1. **May** — mỗi mốc chỉ ~110 lệnh, KTC của bản gốc đã rộng [+0,014 ;
+   +0,109]; con số đầu bảng là một lần rút thuận lợi.
+2. **Neo vào nến chuẩn** — gần như cả thị trường nhìn nến ngày Binance cắt
+   ở 00:00 UTC (mặc định của sàn và TradingView). "RSI(2) < 10 trên nến ngày"
+   là tín hiệu đám đông *thấy*; trên nến lệch giờ thì không ai thấy nó. Mốc
+   00:00 UTC cũng là ngay sau phiên Mỹ đóng cửa.
+
+Cách 2 hợp lý về hành vi nhưng là giải thích **sau khi** thấy số. Nó cho
+một dự đoán kiểm được: nếu đúng, lợi thế phải tập trung ở lệnh vào lúc
+00:00 và các mốc lệch phải **tệ đều** chứ không ngẫu nhiên — bảng trên khớp
+với điều đó (08–20 giờ đều ≈ 0), nhưng sáu điểm thì chưa đủ để gọi là
+bằng chứng.
+
+**Hệ quả vận hành:** bot dùng đúng nến 00:00 UTC nên nó đang giao dịch
+đúng ô tốt. Nhưng hệ số `ALLOC_RSI2` = 8 được chọn theo con số đầu bảng; nếu
+cách đọc 1 đúng thì lợi thế thật nhỏ hơn ~3 lần, và ×8 là quá tay. Chưa đổi
+gì — ghi lại để theo dõi lệnh thật so với kỳ vọng +0,06R/lệnh.
+
+**Trả lời "vì sao RSI không chạy dưới 1D":** không phải vì không có gì —
+cả lưới quanh RSI(2) < 5 trên 4H đều dương nhẹ. Mà vì phần dương đó
+**không bền với cách cắt nến** — và hoá ra bản 1D cũng vậy. Khác biệt duy
+nhất: bản 1D chạy trên đúng cách cắt mà cả thị trường dùng.
+
+## Nhồi lệnh (DCA / pyramiding) — 28/10/2026, KHÔNG THAY
+
+Lệnh gốc giữ nguyên bộ đang chạy. Thêm lớp, quyết ở close, khớp open hôm sau,
+**cùng stop** với lệnh gốc; mỗi lớp rủi ro 1R (đều) hoặc 1-2-4R (gấp đôi,
+martingale) tới stop đó. Lưới 36 ô: chiều (ngược = giá giảm thêm d×ATR / thuận
+= giá tăng thêm d×ATR) × d 1/2/3 × tối đa N 1/2/3 lớp × cỡ. Chấm trên 6 cách
+cắt ngày. Script `scripts/rsi2_add.py`, luật trong docstring.
+
+| | R/năm | sụt R | R/năm÷sụt | điểm 6 mốc | lệnh có nhồi | R của chúng |
+|---|---|---|---|---|---|---|
+| **gốc** | +1,74 | 2,02 | 0,86 | +0,25 | — | — |
+| ngược d1 N2 đều | +3,72 | 3,35 | 1,11 | +0,30 | 41 | +0,4R tổng, thắng 56% |
+| ngược d2 N1 đều | +2,39 | 2,08 | 1,15 | +0,34 | 18 | **−3,1R** tổng, thắng 39% |
+| **ngược d3 N1 gấp đôi (ô chọn)** | **+3,08** | **1,86** | **1,66** | **+0,45** | **5** | +5,8R, thắng 5/5 |
+| thuận (mọi ô) | +1,72 … +1,74 | 2,02 … 2,74 | 0,63 … 0,86 | ≤ +0,25 | gần 0 | — |
+
+**Nhồi thuận không làm gì:** RSI(2) thoát ngay khi giá bật (RSI > 70), trước
+khi giá kịp tăng thêm 2–3 ATR — ở d2/d3 không lệnh nào được nhồi. Cấu trúc
+"bán khi mạnh" và "mua thêm khi mạnh" loại trừ nhau.
+
+**Nhồi ngược ô chọn đẹp nhưng đứng trên 5 lệnh.** Cả cải thiện R/năm, 2022
+từ −0,9 lên +2,4 lẫn sụt thấp hơn đến từ **5/156 lệnh** có nhồi — cả 5 đều hồi
+lại. Chưa lệnh nào có nhồi chạm stop, nên lệnh tệ nhất vẫn ghi −1R, trong khi
+rủi ro thật của mỗi lệnh nhồi là **3R** (1R gốc + 2R lớp gấp đôi). Nới ngưỡng
+xuống 2 ATR để có 18 lệnh nhồi thì tổng của chúng **âm** (−3,1R); 1 ATR với 41
+lệnh thì ≈ 0. Tức là không có hiệu ứng hệ thống "giá giảm thêm thì hồi mạnh
+hơn" — chỉ có 5 lệnh may ở đuôi.
+
+Theo luật: trượt (1) — chỉ hơn gốc 4/6 mốc cắt ngày. **Không thay.**
+
+Liên quan: `rsi2.layers` của bot (mua thêm khi RSI(2) vẫn < 10 ngày hôm sau)
+cũng là một dạng nhồi ngược theo thời gian, bằng chứng 26 lệnh lớp 2 — yếu
+cùng kiểu.
+
+## Quét lại 4H trên mọi mốc cắt, và lưới 1H — 27/10/2026
+
+Lần trước chỉ ô 4H được chọn mới bị dịch mốc. Lần này **cả 62 ô 4H** chấm
+trên 4 cách cắt nến (lệch 0/1/2/3 giờ, 73 mã), cộng **lưới 1H mới 54 ô**
+(chu kỳ 2/3/6 × vào 5/10/20 × ra 50/70 × MA 3/5/20 ngày). Script
+`scripts/rsi2_lowtf_scan.py`, luật trong docstring.
+
+**4H — 11/47 ô đủ lệnh dương ở cả 4 mốc; 6 ô qua tiêu chí đặt trước**
+(dương cả 4 mốc · điểm 4 mốc ≥ 0,25 = điểm 6 mốc của bộ 1D · ≥ 4/6 năm):
+
+| RSI(2) vào / ra / MA ngày | R/lệnh 0h · 1h · 2h · 3h | R/năm TB 4 mốc | KTC95 R/tháng | KTC Bonf. 62 ô (mốc 0) | tương quan với 1D |
+|---|---|---|---|---|---|
+| 5 / 40 / 5 | +0,027 +0,013 +0,004 +0,006 | +0,65 | [−0,015 ; +0,122] | [−0,006 ; +0,058] | +0,17 |
+| 5 / 50 / 3 | +0,054 +0,012 +0,012 +0,019 | +0,36 | [+0,003 ; +0,056] | [−0,010 ; +0,108] | +0,14 |
+| 3 / 40 / 10 | +0,005 +0,020 +0,007 +0,009 | +0,57 | [−0,029 ; +0,116] | [−0,039 ; +0,039] | +0,10 |
+| 5 / 40 / 10 | +0,010 +0,013 +0,005 +0,002 | +0,84 | [−0,061 ; +0,199] | [−0,026 ; +0,035] | +0,16 |
+| 7 / 50 / 3 | +0,027 +0,013 +0,005 +0,011 | +0,51 | [−0,006 ; +0,091] | [−0,018 ; +0,073] | +0,10 |
+| 7 / 40 / 3 | +0,027 +0,003 +0,006 +0,009 | +0,40 | [−0,009 ; +0,076] | [−0,016 ; +0,062] | +0,04 |
+
+Một **vùng** có thật: quá bán sâu (< 3–7), MA rất ngắn (3–10 ngày), thoát
+sớm (40–50). Bền với cách cắt nến — điều mà ô "tốt nhất" lần trước không có.
+Nhưng nhỏ: 0,4–0,8 R/năm, và không ô nào có KTC Bonferroni loại 0. So sánh
+công bằng: bộ 1D đang chạy, **trung bình 6 mốc cắt ngày**, cũng chỉ ~0,5
+R/năm (+2,80R / 5,8 năm) — tức sau khi trừ phần "may của mốc 00:00", 4H và 1D
+ngang nhau. Tương quan thấp (≤ 0,17) nên về nguyên tắc bổ sung được.
+
+**Kết luận 4H:** có dấu hiệu, chưa có bằng chứng. Không đáng dựng bộ chạy
+4H riêng (bot đang chạy theo ngày) cho 0,5 R/năm chưa chứng minh.
+
+**1H — không có gì.** 10/44 ô đủ lệnh có R/lệnh > 0, không ô nào qua (KTC
+Bonferroni 54 ô + ≥ 4/6 năm + R/năm÷sụt ≥ 0,86). Stop 1H chỉ cách ~8,7% nên
+phí ăn **0,016R/lệnh** — gấp 5 lần 1D — trong khi lợi thế mỗi lệnh gần 0.
+Không dịch mốc được cho 1H (kho chỉ có nến 1 phút của BTC).
+
+## Lưới tham số trên nến D, chấm trên 6 mốc cắt ngày — 27/10/2026, GIỮ bộ cũ
+
+Chu kỳ RSI và hai ngưỡng 10/70 là **mặc định Connors**, chưa từng quét trên
+toàn vũ trụ. Lưới 81 ô: chu kỳ 2/3/4 × vào 5/10/15 × ra 50/70/80 × MA
+10/20/50 ngày, đo bằng R, cùng engine với lưới 4H. **Mỗi ô chấm trên 6 cách
+cắt ngày** (nến D dựng từ nến 1H, lệch 0/4/8/12/16/20 giờ, 67 mã) — điểm =
+TB R/năm÷sụt qua 6 mốc. Script `scripts/rsi2_1d_grid.py`, luật trong docstring.
+
+**57/81 ô không đủ lệnh — đúng cấu trúc, không phải lỗi:** RSI(2) < 10 là
+hai ngày giảm mạnh liền nhau, nên giá gần như luôn **dưới** MA10 (BTC: 0 lệnh
+cả 5,5 năm). Tương tự RSI(3)/(4) với MA20. Lưới có nghĩa thật chỉ có 24 ô.
+
+Ô hợp lệ — điểm 6 mốc · [R/lệnh thấp nhất .. cao nhất qua 6 mốc]:
+
+| | 10/50 | **10/70** | 10/80 | 15/50 | 15/70 | 15/80 |
+|---|---|---|---|---|---|---|
+| RSI(2) · MA20 | **+0,29** [+0,006 .. +0,059] | **+0,25** [−0,016 .. +0,078] ← đang chạy | +0,07 [−0,048 .. +0,080] | +0,14 [−0,008 .. +0,030] | +0,08 | +0,03 |
+| RSI(2) · MA50 | +0,04 | +0,07 | +0,07 | +0,05 | +0,02 | +0,01 |
+| RSI(3) · MA50 | +0,13 | +0,12 | +0,03 | +0,02 | +0,02 | −0,01 |
+
+(Thêm: RSI(2)·MA50 vào < 5 cho +0,02 / +0,06 / +0,07; RSI(4)·MA50 vào < 15
+cho +0,20 / +0,00 / −0,09.)
+
+| | lệnh | R/lệnh gốc | KTC Bonferroni 81 ô | R/năm÷sụt gốc | 6 mốc R/lệnh |
+|---|---|---|---|---|---|
+| **Ô chọn: RSI(2) < 10, ra > 50, MA20** | 156 | +0,038 | [−0,025 ; +0,100] | 0,63 | +0,054 +0,059 +0,006 +0,017 +0,009 +0,029 |
+| **Đang chạy: RSI(2) < 10, ra > 70, MA20** | 156 | +0,062 | [−0,027 ; +0,134] | 0,86 | +0,071 +0,078 +0,012 +0,003 **−0,016** +0,003 |
+
+Ô chọn qua 4/5 điều kiện thay thế (dương 5/6 năm, dương **cả 6 mốc** — ô duy
+nhất trong lưới làm được vậy, 3/3 lân cận, điểm 6 mốc cao hơn), trượt (1):
+KTC Bonferroni 81 ô chứa 0. **Theo luật: giữ bộ đang chạy.**
+
+Ba điều rút ra:
+
+1. **Bộ đang chạy đứng thứ 2/24** theo điểm 6 mốc — Connors chọn mặc định
+   gần như tốt nhất lưới. Không có bộ nào rõ ràng hơn.
+2. **Thoát sớm (RSI > 50) bền hơn với cách cắt nến** nhưng lời ít hơn ở mốc
+   00:00 mà bot dùng (+0,054 so với +0,071). Chọn giữa hai bộ chính là chọn
+   giữa hai cách đọc ở mục trên: nếu thị trường neo vào nến 00:00 thì bộ
+   đang chạy tốt hơn; nếu con số 00:00 là may thì ra > 50 an toàn hơn.
+3. **Ở mức kế toán 81 ô, không ô nào — kể cả bộ đang chạy — có KTC loại 0.**
+   Bằng chứng cho RSI(2) 1D đứng trên KTC95 của một ô duy nhất được chọn
+   trước khi quét (+0,014 ; +0,109). Quét càng rộng thì ngưỡng càng cao; đây
+   là cái giá của việc quét.
+
 ## Những gì đã thử và KHÔNG được
 
 Mọi nỗ lực **chọn lệnh tại thời điểm vào** đều thất bại. Năm cách độc lập:
@@ -302,6 +567,17 @@ biến động kết quả lệnh nằm ngoài tầm với của mọi thứ đo
 **Bất đối xứng rút ra:** mọi thứ về **chọn lệnh lúc vào** đều thất bại; mọi
 thứ về **xử lý sau khi vào** (độ rộng stop, luật thoát, độ dài MA lọc) và về
 **chọn vũ trụ** (thanh khoản) đều có hiệu lực.
+
+Đợt 28/10/2026 thử tiếp phía **xử lý sau khi vào**. Kết quả giữ đúng quy luật
+trên ở phía stop, còn luật thoát thì đã gần tối ưu:
+
+| Phép thử | Kết quả |
+|---|---|
+| **Stop ở đáy cũ** (pivot, Donchian, ZigZag, nổi bật; 24 ô) | không hơn 6×ATR. Đáy cũ gần nhất nằm trong vùng nhiễu nên cắt nhầm lệnh tốt |
+| **Stop ở HVN của volume profile** (48 ô) | **đạt luật** (R/năm÷sụt 0,86 → 1,85, hơn 6/6 năm). Phần lớn cải thiện đến từ lệnh to hơn; Sharpe tháng 1,11 → 1,22, KTC chứa 0. Đã bật trong bot |
+| **Chốt lời** R / ATR / HVN / POC / đỉnh cũ, có và không có thoát RSI (22 ô) | không hơn. Chốt xa trùng mốc vì RSI > 70 chạm trước; chốt gần cắt bớt lệnh thắng; bỏ thoát RSI làm sụt tăng 3–6 lần |
+
+Chi tiết ở [stop-dinh-day.md](stop-dinh-day.md).
 
 ## Bẫy đã sập và cách gỡ
 
@@ -327,7 +603,14 @@ thứ về **xử lý sau khi vào** (độ rộng stop, luật thoát, độ d�
 | Cách diễn đạt bộ lọc thanh khoản | 10 |
 | Mức top N | 7 |
 | Khung thời gian × cách đặt stop | 21 |
-| **Tổng** | **≈ 90** |
+| Khung 4H bằng R: lưới 36 + lưới mở rộng 27 (27/10/2026) | 63 |
+| Nến D: chu kỳ × ngưỡng vào × ngưỡng ra × MA, 6 mốc cắt (27/10/2026) | 81 |
+| Nến 1H: lưới 54 ô (27/10/2026; 62 ô 4H chỉ chấm lại, không tính thêm) | 54 |
+| Nhồi lệnh ngược / thuận (28/10/2026) | 36 |
+| Stop ở đáy cũ: 12 cách × 2 đệm (28/10/2026) | 24 |
+| Stop / chốt lời ở volume profile (28/10/2026) | 48 |
+| Chốt lời với stop HVN: 11 mức × có/không thoát RSI (28/10/2026) | 22 |
+| **Tổng** | **≈ 418** |
 
 Đây là ô tốt trong khoảng 90 ô. Bằng chứng mạnh nhất chống lại lo ngại này:
 
@@ -426,6 +709,14 @@ Ba script còn giữ luật cũ và **chưa được dùng lại**: `rsi2_best.p
 | `scripts/fetch_universe_1d.py` | Liệt kê + tải 900 mã USDT perp (resume được) |
 | `scripts/fetch_universe_tf.py` | Tải nến 4H / 1H cho tập mã chỉ định |
 | `scripts/rsi2_mtf.py` | Đa khung: vào 1D stop 4H, vào 4H stop 1H |
+| `scripts/rsi2_4h_grid.py` | Khung 4H đo bằng R, có lưới; engine R dùng chung cho các script dưới |
+| `scripts/rsi2_4h_robust.py` | 4H trên 6 mốc dịch giờ |
+| `scripts/rsi2_1d_grid.py` | Lưới nến D chấm trên 6 mốc cắt ngày (`day_from_1h`) |
+| `scripts/rsi2_lowtf_scan.py` | Quét 4H mọi mốc + lưới 1H |
+| `scripts/rsi2_add.py` | Nhồi lệnh thuận / ngược |
+| `scripts/swing_stops.py` | Stop ở đỉnh/đáy cũ, bốn cách xác định |
+| `scripts/vp_stops.py` | Stop / chốt lời ở volume profile — nguồn của stop HVN trong bot |
+| `scripts/rsi2_tp.py` | Điểm chốt lời với stop HVN |
 | `scripts/rsi2_deploy.py` | Lưới trần stop (30/35/40%) |
 | `scripts/rsi2_ma20_stop.py` | Lưới MA20 × 6 độ rộng stop |
 | `scripts/rsi2_trendma.py` | Lưới 7 độ dài MA + null vào lệnh ngẫu nhiên |

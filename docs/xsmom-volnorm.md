@@ -511,6 +511,107 @@ nào thì đổi.
 
 Script: `scripts/xsmom_resid.py`.
 
+## Nhồi lệnh — 28/10/2026, KHÔNG THAY (nhồi ngược là ứng viên yếu)
+
+Engine của tab «Tính lịch sử» (khoá nghiên cứu `xadd`). Lớp gốc giữ nguyên bộ
+đang chạy. Mỗi ngày, với mỗi lớp gốc đang giữ: **thuận** — lời từ lớp gần
+nhất ≥ d×σ ngày; **ngược** — lỗ ≥ d×σ ngày → thêm một lớp ở open hôm sau,
+cỡ = lớp gốc × hệ số; lớp thêm đóng cùng lớp gốc. Lưới 18 ô: chiều × d 1/2/3
+× {1 lớp ×1, 2 lớp ×1×1, 2 lớp ×2×4}. Động lượng riêng (ALLOC_RSI2 = 0),
+1R = 100, không trần. Script `scripts/xsmom_add.py`, luật trong docstring.
+
+| | R/năm | sụt R | Sharpe | 2022 |
+|---|---|---|---|---|
+| **gốc** | +96 | 109 | **0,91** | −14,9 |
+| thuận d1, 1 lớp | +173 | 145 | 0,98 | −21,0 |
+| thuận d1, 2 lớp ×2×4 | +402 | 497 | 0,84 | −99,4 |
+| **ngược d1, 1 lớp** | +160 | 117 | **1,14** | −15,5 |
+| ngược d1, 2 lớp | +185 | 135 | 1,21 | −3,8 |
+| ngược d1, 2 lớp ×2×4 (ô chọn) | +324 | 274 | 1,31 | +30,6 |
+| ngược d2, 1 lớp | +133 | 110 | 1,09 | +1,9 |
+| ngược d3, 1 lớp | +109 | 107 | 0,97 | −4,3 |
+
+- **Nhồi thuận** làm R/năm to lên nhưng Sharpe gần như không đổi, còn bản
+  gấp đôi thì tệ hơn (0,84) và sụt gấp 4,5 lần — chỉ là phơi nhiễm lớn hơn.
+- **Nhồi ngược dương ở cả 9/9 ô** (Sharpe 0,97–1,31), tốt hơn gốc 5/6 năm ở
+  ô chọn. Nhưng KTC Bonferroni 18 ô của chênh Sharpe là [−0,54 ; +1,28] —
+  **trượt (1), không thay.**
+
+**Phép giả — nhồi ở thời điểm ngẫu nhiên, cùng tần suất:** Sharpe trung bình
+**0,99** (5 lần rút, dải 0,87–1,10). Tức là khoảng một nửa phần cải thiện chỉ
+là "cầm nhiều lớp hơn"; phần do *thời điểm* (giá đi ngược thì thêm) là
++0,10–0,22 Sharpe so với giả, nằm ở mép trên dải giả:
+
+| ô | Sharpe | KTC95 chênh so với gốc | giả ngẫu nhiên TB |
+|---|---|---|---|
+| ngược d1, 1 lớp | 1,14 | [−0,05 ; +0,47] | 0,99 |
+| ngược d2, 1 lớp | 1,09 | [−0,06 ; +0,38] | 0,95 |
+| ngược d1, 2 lớp | 1,21 | [−0,07 ; +0,63] | 0,99 |
+
+Hướng của nó khớp với một điều đã biết: lợi thế động lượng nằm ở đuôi phải
+và đường đi trong tuần nhiễu — mua thêm khi một mã thắng điều chỉnh là mua
+rẻ hơn cùng một lợi thế. Nhưng chưa chứng minh được, và chưa được chấm trên
+6 cách cắt ngày (engine đọc nến D cắt 00:00). **Ứng viên cho sổ giấy, không
+phải cho tiền thật.**
+
+## Lệnh nhồi có khung riêng ±1 ATR — 28/10/2026, XÁC NHẬN cho sổ giấy
+
+Ý của người vận hành: lệnh gốc giữ nguyên; khi giá đã đi **đúng chiều 1 ATR**
+so với giá vào, mở thêm một lệnh nhồi có **chốt lời +1 ATR, cắt lỗ −1 ATR**
+riêng. Câu hỏi chỉ còn: bản thân lệnh nhồi có kỳ vọng dương không?
+
+**Bước 1 — lưới** (`scripts/add_bracket.py`): kích hoạt t 0,5/1/1,5 ATR × khung
+b 0,5/1/1,5 ATR × tối đa N 1/3 lệnh nhồi × độc lập / đóng cùng lệnh gốc, trên
+lệnh thật của engine (ALLOC 8/1), cùng ngày chạm cả hai → tính cắt lỗ. 72 ô.
+
+- **RSI(2): không có gì.** Ô người dùng 45 lệnh nhồi, +0,005R. RSI(2) thoát
+  trước khi giá kịp đi xa; bản "đóng cùng lệnh gốc" gần như không có lệnh.
+- **Động lượng: có.** Ô người dùng (1 / 1 / 1 / độc lập): 1.736 lệnh nhồi,
+  thắng 55,0%, **+0,085R/lệnh**, dương 5/6 năm, **6/6 lân cận dương**. Khung
+  0,5 ATR âm ở mọi ô (phí 10 bps ÷ khung hẹp + nhiễu), khung ≥ 1 ATR dương ở
+  mọi ô. t 1,5 / b 1 / N 3: +0,103R, **dương cả 6 năm**.
+- Trượt luật lưới: KTC Bonferroni 72 ô [−0,059 ; +0,247].
+
+**Phép giả** — cùng khung ±1 ATR, vào ở ngày **ngẫu nhiên** trong lúc giữ lệnh
+gốc, cùng số lệnh, 5 lần rút: **−0,016R** (dải −0,048 … +0,016). Tức là lợi
+thế không đến từ "đứng cùng phía với một lệnh động lượng" mà từ **điểm kích
+hoạt**: sau khi một mã động lượng đã đi đúng 1 ATR, xác suất đi tiếp thêm 1
+ATR trước khi lùi 1 ATR là ~55%. Gộp vào động lượng: Sharpe 0,91 → 1,05.
+
+**Bước 2 — phép xác nhận đăng ký trước, chỉ ô người dùng**
+(`scripts/add_bracket_confirm.py`): nến D dựng từ nến 1H ở **6 cách cắt
+ngày**, ATR trên chính nến đó, chạm chốt lời / cắt lỗ xét trên **nến 1H** (cùng
+một giờ chạm cả hai → cắt lỗ). 102/134 mã có nến 1H.
+
+| Cắt ngày | 0h | 4h | 8h | 12h | 16h | 20h |
+|---|---|---|---|---|---|---|
+| lệnh nhồi | 1.134 | 1.160 | 1.173 | 1.165 | 1.152 | 1.176 |
+| thắng | 55,6% | 53,9% | 52,9% | 51,2% | 57,4% | 59,5% |
+| **R/lệnh** | **+0,097** | +0,063 | +0,045 | +0,011 | +0,133 | +0,176 |
+
+```
+TB 6 cách cắt        +0,087 R/lệnh
+phép giả mốc 0h      −0,003 (5 lần: −0,011 +0,000 −0,005 −0,064 +0,072)
+thật − giả           +0,099 · KTC95 [+0,006 ; +0,195]
+mốc 0h theo năm R    +21 · +29 · +11 · +24 · +19 · +6   (dương cả 6 năm)
+```
+
+**Đạt cả ba điều kiện → XÁC NHẬN, là ứng viên cho sổ giấy.** Đây là kết quả
+đầu tiên trong cả chuỗi nghiên cứu sau RSI(2) và động lượng qua được một phép
+xác nhận đăng ký trước. Nó **không** phải chiến lược độc lập: nó sống bên
+trong động lượng (chỉ nhồi vào mã đang được động lượng giữ, đúng chiều).
+
+Giới hạn còn lại:
+
+- Bằng chứng mỏng ở mốc 12h (+0,011); KTC của phần hơn phép giả chỉ vừa loại
+  0 (+0,006).
+- Thực thi khác backtest: cần **lệnh chốt lời / cắt lỗ đặt sẵn trên sàn**
+  (TAKE_PROFIT_MARKET / STOP_MARKET, reduceOnly đúng khối lượng lớp nhồi) — bot
+  hiện chỉ chạy một lần mỗi ngày và chưa đặt lệnh chờ nào. Trượt giá của lệnh
+  stop chưa tính.
+- Rủi ro mỗi lệnh nhồi 1R = 1 ATR — cỡ lệnh lớn hơn lớp gốc nhiều lần nếu
+  dùng cùng 1R; phải chọn hệ số riêng khi chạy thật.
+
 ## Những gì đã thử và KHÔNG được
 
 Hai đợt sàng lọc, **36 ô cắt ngang** cộng 6 ô theo-từng-lệnh:
@@ -530,6 +631,12 @@ Hai đợt sàng lọc, **36 ô cắt ngang** cộng 6 ô theo-từng-lệnh:
 | Mở rộng danh mục (20% / 30% / 40% mỗi chân) | KTC chứa 0 ở mọi cấu hình |
 | Frog-in-the-pan (chọn 2/4 theo độ giật), 27/10/2026 | **Loại.** −25,1 bps/kỳ, CAGR/sụt 1,06 so với 1,61. Cắt mất đuôi phải của hạng #1 |
 | Động lượng phần dư (β 90 ngày với rổ đều top 20), 27/10/2026 | **Loại.** −2,4 bps/kỳ, nửa dò −25,9. Sụt 34,2% nhưng cơ chế beta không xuất hiện |
+| Bán khống perp mới niêm yết (615 sự kiện, giữ 30 ngày), 27/10/2026 | **Loại.** Trung vị giá −21% nhưng TB ròng −116 bps — đuôi bơm ×5–×34 ăn hết. Xem `niem-yet-moi.md` |
+| Dữ liệu ngoài: TVL (DefiLlama), tỉ lệ khối lượng perp/spot, cung stablecoin, 27/10/2026 | **Loại cả ba.** Perp/spot sát nút (+62 bps/kỳ) nhưng đo bằng khối lượng Bybit thì về 0 (+1,4) — không phải hiệu ứng đầu cơ chung. Xem `du-lieu-ngoai.md` |
+| Giao dịch trong ngày: 1H (động lượng trong ngày, phá vỡ biên độ, mùa vụ giờ, đảo chiều sau sốc) + 15 phút (momentum vùng nhiễu, ORB đầu phiên, BTC dẫn altcoin, mùa vụ thứ × phiên), 27/10/2026 | **Loại cả tám họ** (158 ô). Trước phí ≈ 0 ở 15 phút; ô dương ở 1H đều chỉ mua. Xem `trong-ngay.md` |
+| Nhồi lệnh thuận / ngược trên động lượng, 28/10/2026 | **Không thay.** Thuận chỉ là phơi nhiễm lớn hơn; ngược tốt hơn ở 9/9 ô (Sharpe 0,91 → 1,14) nhưng KTC chứa 0 và một nửa là hiệu ứng cầm nhiều lớp hơn |
+| Lệnh nhồi có khung ±1 ATR sau khi giá đi đúng 1 ATR, 28/10/2026 | **Xác nhận cho sổ giấy.** +0,087R/lệnh TB 6 cách cắt ngày, phép giả −0,003; RSI(2) thì không có gì |
+| Stop ở đỉnh/đáy cũ (pivot, Donchian, ZigZag, nổi bật) cho lệnh nhồi, lệnh gốc động lượng và RSI(2), 28/10/2026 | **Không hơn stop đang dùng ở cả ba chỗ** (96 ô). Volume profile (96 ô): stop HVN cho RSI(2) đạt luật nhưng phần lớn là cỡ lệnh to hơn, Sharpe chênh KTC chứa 0. Xem `stop-dinh-day.md` |
 
 **Quan trọng:** ba thứ *có* tín hiệu — chia biến động, động lượng 14 ngày (đảo
 dấu), sốc khối lượng (đảo dấu) — đều chỉ về **cùng một phía: mua cái vừa
@@ -612,12 +719,27 @@ giữ lại, không cộng tiếp vào đây.
 |---|---|---|
 | Frog-in-the-pan, chia dò < 2024-07 / kiểm ≥ 2024-07 | 1 | **loại** — trượt cả ba điều kiện |
 | Động lượng phần dư, cùng cách chia | 1 | **loại** — trượt (1) và (2) |
+| Bán khống perp mới niêm yết, chia theo ngày niêm yết | 1 | **loại** — trượt (1) và (2); mẫu sự kiện riêng |
+| TVL Δ30 · perp/spot Σ30 · stablecoin Δ30, toàn mẫu | 3 | **loại** — Bonferroni 98,3%, perp/spot trượt (1) và (4) sát nút |
 
-Tổng cắt ngang lên **60 ô**. Mỗi ô này được quyết bằng **nửa kiểm tách riêng**
+Tổng cắt ngang lên **156 ô** (gồm 1 ô xác nhận perp/spot bằng Bybit, 18 ô nhồi lệnh, 72 ô lệnh nhồi có khung + 1 ô xác nhận). Mỗi ô này được quyết bằng **nửa kiểm tách riêng**
 đã tuyên bố trước, không bằng ngưỡng Šidák toàn mẫu.
 
 Lưu ý: hai ô dùng **cùng một** nửa kiểm. Nửa đó giờ đã bị nhìn hai lần, nên
 biến thể thứ ba trở đi không còn coi nó là sạch được nữa.
+
+### Thêm ngày 28/10/2026 — stop ở đỉnh/đáy cũ và volume profile
+
+| Nhóm | Số ô | Kết quả |
+|---|---|---|
+| Stop đỉnh/đáy cũ cho lệnh nhồi (12 cách × 2 đệm × 2 kiểu chốt) | 48 | **loại**. Tốt nhất +0,056R so với mốc ±1 ATR +0,085 |
+| Stop đỉnh/đáy cũ cho lệnh gốc (12 × 2 đệm) | 24 | **loại**. ZigZag 3 cắt sụt ~23% mà không mất lãi, nhưng hơn gốc chỉ 3/6 năm |
+| Volume profile cho lệnh nhồi (L × w × HVN/POC × đệm) | 24 | **loại**. R/lệnh −0,04 … +0,02 so với mốc +0,08 … +0,12 |
+| Volume profile cho lệnh gốc | 24 | **loại**. POC 5 ngày cắt sụt gần một nửa nhưng lãi giảm 14%, hơn gốc 3/6 năm |
+| **Cộng thêm** | **120 ô** | |
+
+Tổng lên **276 ô**. Chi tiết ở `stop-dinh-day.md`. Các ô của RSI(2) trong cùng
+đợt được tính bên `rsi2-connors.md`.
 
 ## Điều này CHƯA chứng minh
 
@@ -652,6 +774,9 @@ biến thể thứ ba trở đi không còn coi nó là sạch được nữa.
 | `scripts/xsmom_frog.py` | Frog-in-the-pan — đã thử, **bị loại**. Luật quyết trong docstring |
 | `scripts/xsmom_resid.py` | Động lượng phần dư — đã thử, **bị loại**. Dùng lại `blend` của script ếch |
 | `scripts/xsmom_detail.py` | Bóc từng năm, đường vốn đánh giá lại theo ngày |
+| `scripts/xsmom_add.py` | Nhồi lệnh thuận / ngược — không thay |
+| `scripts/add_bracket.py`, `add_bracket_confirm.py` | Lệnh nhồi có khung ±1 ATR: lưới rồi xác nhận 6 mốc cắt + phép giả |
+| `scripts/swing_stops.py`, `vp_stops.py` | Stop ở đỉnh/đáy cũ và volume profile (chỗ A, B) — loại |
 | `scripts/xsmom_page.py` | Dựng dữ liệu + trang UI |
 | `scripts/webapp/static/xsmom.html` | Khuôn trang |
 | `reports/xsmom.html` | Trang đã dựng (2,7 MB) |

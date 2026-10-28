@@ -21,6 +21,12 @@ CREATE TABLE IF NOT EXISTS bars(
   symbol TEXT, ts INTEGER, o REAL, h REAL, l REAL, c REAL, v REAL,
   PRIMARY KEY(symbol, ts)) WITHOUT ROWID;
 
+-- Nen 1H chi de dung volume profile (cat lo HVN cua RSI(2)) — chi giu
+-- top thanh khoan, khong phai ca vu tru. Xem app/volprofile.py.
+CREATE TABLE IF NOT EXISTS bars1h(
+  symbol TEXT, ts INTEGER, h REAL, l REAL, c REAL, v REAL,
+  PRIMARY KEY(symbol, ts)) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS funding(
   symbol TEXT, ts INTEGER, rate REAL,
   PRIMARY KEY(symbol, ts)) WITHOUT ROWID;

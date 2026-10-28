@@ -23,6 +23,7 @@ def _i(k: str, d: int) -> int:
 class Config:
     db_path: str = os.environ.get("DB_PATH", "/data/live.db")
     seed_dir: str = os.environ.get("SEED_DIR", "/seed")
+    seed1h_dir: str = os.environ.get("SEED1H_DIR", "/seed1h")
     run_at_utc: str = os.environ.get("RUN_AT_UTC", "00:05")
 
     # --- cong tac chay that, LOP KHOA THU NHAT (tang ma) ---
@@ -36,8 +37,8 @@ class Config:
     api_secret: str = os.environ.get("BINANCE_API_SECRET", "")
 
     # --- tran rui ro, ap TRUOC khi gui bat ky lenh nao ---
-    max_gross_usd: float = _f("MAX_GROSS_USD", 500)
-    max_order_usd: float = _f("MAX_ORDER_USD", 150)
+    max_gross_usd: float = _f("MAX_GROSS_USD", 1500)
+    max_order_usd: float = _f("MAX_ORDER_USD", 500)
     max_orders_per_run: int = _i("MAX_ORDERS_PER_RUN", 40)
 
     # --- don vi rui ro (docs/money-management-r.md) ---
@@ -60,6 +61,18 @@ class Config:
     # Ma ket o ISOLATED (co vi the nen san khong cho doi) duoc nap them cho toi
     # khi don bay thuc <= muc nay.
     leverage: int = _i("LEVERAGE", 5)
+
+    # --- cach dat lenh ---
+    # limit : LIMIT GTX (chi maker, 0,02%/luot) o gia tot nhat cung phia, moi
+    #         vong cho limit_wait_s giay, chua khop thi huy va dat lai o gia
+    #         moi; het limit_rounds vong ma con thieu thi:
+    #           - DONG: luon lenh thi truong cho phan con lai (khong de ket lenh)
+    #           - MO  : thi truong neu limit_fallback, khong thi bo phan con lai
+    # market: lenh thi truong nhu cu (taker 0,05%/luot)
+    order_mode: str = os.environ.get("ORDER_MODE", "limit")
+    limit_rounds: int = _i("LIMIT_ROUNDS", 5)
+    limit_wait_s: float = _f("LIMIT_WAIT_S", 20)
+    limit_fallback: bool = os.environ.get("LIMIT_FALLBACK", "1") == "1"
 
     # --- tran TONG phoi nhiem, tinh CA vi the dang mo (boi so von) ---
     # MAX_GROSS_USD chi chan phan mo them trong MOT luot; qua nhieu luot tong
@@ -111,6 +124,13 @@ RSI2 = {
     # khi da xem so, chua kiem ngoai mau. Moi lop la them 1R tren CUNG mot ma.
     # Xem docs/rsi2-connors.md § Mua them. Dat qua RSI2_LAYERS trong compose.
     "layers": _i("RSI2_LAYERS", 2),
+    # Cat lo o dinh khoi luong (HVN) gan nhat duoi gia, thay 6×ATR khi tim
+    # duoc (~44% lenh). Bat 28/10/2026 theo yeu cau van hanh. Bang chung: dat
+    # luat cua scripts/vp_stops.py (R/nam÷sut 0,86 → 1,85, hon 6/6 nam) NHUNG
+    # phan lon la co lenh to hon (stop gan ~3 lan); Sharpe thang 1,11 → 1,22,
+    # KTC chua 0. Xem docs/stop-dinh-day.md § Volume profile. 0 = 6×ATR nhu cu.
+    "stop_hvn": _i("RSI2_STOP_HVN", 1),
+    "vp_days": 20, "vp_bin": 0.5, "vp_buf": 0.25,
 }
 XSMOM = {
     "topn": 20, "lookback": 30, "frac": 0.10, "sleeves": 7, "hold": 7,
