@@ -636,6 +636,7 @@ Hai đợt sàng lọc, **36 ô cắt ngang** cộng 6 ô theo-từng-lệnh:
 | Giao dịch trong ngày: 1H (động lượng trong ngày, phá vỡ biên độ, mùa vụ giờ, đảo chiều sau sốc) + 15 phút (momentum vùng nhiễu, ORB đầu phiên, BTC dẫn altcoin, mùa vụ thứ × phiên), 27/10/2026 | **Loại cả tám họ** (158 ô). Trước phí ≈ 0 ở 15 phút; ô dương ở 1H đều chỉ mua. Xem `trong-ngay.md` |
 | Nhồi lệnh thuận / ngược trên động lượng, 28/10/2026 | **Không thay.** Thuận chỉ là phơi nhiễm lớn hơn; ngược tốt hơn ở 9/9 ô (Sharpe 0,91 → 1,14) nhưng KTC chứa 0 và một nửa là hiệu ứng cầm nhiều lớp hơn |
 | Lệnh nhồi có khung ±1 ATR sau khi giá đi đúng 1 ATR, 28/10/2026 | **Xác nhận cho sổ giấy.** +0,087R/lệnh TB 6 cách cắt ngày, phép giả −0,003; RSI(2) thì không có gì |
+| Bán khống sau tin huỷ niêm yết của Binance (gỡ spot, gỡ perp, thẻ Monitoring), 28/10/2026 | **Loại cả ba** (72 ô). Gỡ spot: +693 bps/lệnh, vượt phép giả, nhưng KTC chứa 0 — 7/67 lệnh lỗ > 50% do ép bán khống; phần rơi lớn nhất (−19%) nằm trong ngày thông báo. Bản nến 1 phút (96 ô): phút đầu sau tin đã rơi −11%, phần trôi 24 giờ còn +400 … +700 bps nhưng KTC vẫn chứa 0. Bản aggTrades (144 ô): **thẻ Monitoring đạt** (+650 bps, giữ 24 giờ, trễ không quan trọng) → ứng viên sổ giấy. Đổi lại: bot **chặn mua** mã có tin. Xem `huy-niem-yet.md` |
 | Stop ở đỉnh/đáy cũ (pivot, Donchian, ZigZag, nổi bật) cho lệnh nhồi, lệnh gốc động lượng và RSI(2), 28/10/2026 | **Không hơn stop đang dùng ở cả ba chỗ** (96 ô). Volume profile (96 ô): stop HVN cho RSI(2) đạt luật nhưng phần lớn là cỡ lệnh to hơn, Sharpe chênh KTC chứa 0. Xem `stop-dinh-day.md` |
 
 **Quan trọng:** ba thứ *có* tín hiệu — chia biến động, động lượng 14 ngày (đảo
@@ -740,6 +741,20 @@ biến thể thứ ba trở đi không còn coi nó là sạch được nữa.
 
 Tổng lên **276 ô**. Chi tiết ở `stop-dinh-day.md`. Các ô của RSI(2) trong cùng
 đợt được tính bên `rsi2-connors.md`.
+
+### Thêm ngày 28/10/2026 — tin huỷ niêm yết
+
+| Nhóm | Số ô | Kết quả |
+|---|---|---|
+| Bán khống sau thông báo: 3 loại × k 3 × H 4 × stop 2 | 72 | **loại cả ba** — trượt KTC Bonferroni |
+| Bán khống theo giờ đăng tin, nến 1 phút: 3 loại × trễ 4 × giữ 4 × stop 2 | 96 | **loại cả ba** — thẻ Monitoring sát nút (cận dưới −81 bps) |
+| Bán khống trễ 1–60 giây, aggTrades: 3 loại × trễ 6 × giữ 4 × stop 2 | 144 | **thẻ Monitoring ĐẠT** (+650 bps, KTC [+29; +1.205]); gỡ spot / perp loại |
+| Stop 1 / 2 / 3 / 5 / 10% cho các lệnh trên, xét từng giao dịch (theo yêu cầu, sau khi xem số) | 108 | stop càng chặt càng tệ — stop 1% chạm 79–93% số lệnh |
+
+Tổng lên **696 ô**. Ba script nhìn vào **cùng một mẫu sự kiện**: tính chung
+312 ô và gộp cụm theo bài thông báo thì cận dưới của thẻ Monitoring về −4 bps.
+Đây là mẫu sự kiện riêng (mỗi sự kiện là một thông báo), không dùng chung nửa
+kiểm với các ô cắt ngang.
 
 ## Điều này CHƯA chứng minh
 

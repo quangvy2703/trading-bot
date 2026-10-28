@@ -12,7 +12,7 @@ import time
 
 import numpy as np
 
-from . import db, data, executor, settings, strategies as ST, volprofile as VP
+from . import db, data, delist as DL, executor, settings, strategies as ST, volprofile as VP
 from .binance import DAY, PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -61,6 +61,16 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
     r_rsi2 = K["r_usd"] * float(A["rsi2"])
     r_xsmom = K["r_usd"] * float(A["xsmom"])
     target, note = [], {}
+    # Ma co thong bao huy niem yet gan day: khong mo lenh MUA moi (app/delist.py).
+    # Vi the dang giu va chan BAN khong bi dong cham.
+    try:
+        nobuy = DL.banned(DL.notices(), int(time.time() * 1000), K["ban_days"])
+    except Exception as e:
+        nobuy = {}
+        db.log("warn", f"đọc danh sách huỷ niêm yết lỗi: {e}")
+    hit = sorted(s for s in nobuy if rank.get(s, 10**9) <= max(R["topn"], X["topn"]))
+    if hit:
+        note["chặn mua (huỷ niêm yết)"] = hit
 
     def keep_of(p):
         """Vi the dang mo giu nguyen co cu — khong sinh lenh nen chi can khoa."""
@@ -85,7 +95,7 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
         layers.setdefault(p["symbol"], set()).add(p.get("sleeve") or 0)
     free = (R["slots"] - len(keep)) if r_rsi2 > 0 else 0
     sig = (ST.rsi2_signals(P, rank, day,
-                           {k: len(v) for k, v in layers.items()})
+                           {k: len(v) for k, v in layers.items()}, nobuy)
            if r_rsi2 > 0 else [])
     for s in sig[:max(0, free)]:
         stop = ST.rsi2_stop(s["close"], s["atr"])
@@ -147,7 +157,7 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
                            "symbol": p["symbol"], "side": p["side"],
                            "stop": None, **keep_of(p)})
     if r_xsmom > 0:
-        new = ST.xsmom_target(P, rank, day)
+        new = ST.xsmom_target(P, rank, day, nobuy)
     if new:
         for x in new:
             # Khong co stop: 1R = mot lan do lech chuan bat loi qua dung ky
@@ -391,6 +401,12 @@ def _run_once(force: bool = False) -> dict:
             data.refresh_1h(api, [s_ for s_, r_ in rank.items() if r_ <= 20])
         except Exception as e:
             db.log("warn", f"cập nhật nến 1H lỗi: {e}")
+        # Thong bao huy niem yet moi — hai trang moi nhat la du cho mot ngay.
+        # Loi mang khong chan luot chay: danh sach cu van con trong kho.
+        try:
+            DL.refresh(2)
+        except Exception as e:
+            db.log("warn", f"cập nhật thông báo huỷ niêm yết lỗi: {e}")
 
         prices = api.prices()
         eq = equity_now()

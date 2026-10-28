@@ -92,6 +92,12 @@ services:
       # Tab «Tinh lich su» mo phong y nhu vay (bang bars1h, gieo tu /seed1h).
       # Chot loi da thu 22 kieu, khong kieu nao hon thoat RSI > 70 — giu nguyen.
       RSI2_STOP_HVN: "${RSI2_STOP_HVN:-1}"
+      # ---- tin huy niem yet: chan lenh MUA moi ----
+      # Ma co thong bao "Binance Will Delist" (spot) hoac "Binance Futures Will
+      # Delist" (perp) trong N ngay gan nhat: RSI(2) khong mo lop moi, dong
+      # luong khong mo chan mua. Vi the dang giu va chan ban khong doi. Moi
+      # luot chay doc 2 trang thong bao moi nhat. 0 = tat. docs/huy-niem-yet.md
+      DELIST_BAN_DAYS: "${DELIST_BAN_DAYS:-90}"
       START_EQUITY_USD: "${START_EQUITY_USD:-500}"
       # chay hang ngay luc 00:05 UTC, ngay sau khi nen 1D dong
       RUN_AT_UTC: "${RUN_AT_UTC:-00:05}"
