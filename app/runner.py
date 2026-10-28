@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import math
+import threading
 import time
 
 import numpy as np
@@ -280,7 +281,97 @@ def safety_now(filt: dict | None = None) -> None:
                 c.close()
 
 
+# Mot luot chay va mot cu «ep lenh» khong duoc chay chong len nhau: ca hai
+# doc so roi dat lenh, chay chong thi mot lenh co the vao hai lan.
+RUN_LOCK = threading.Lock()
+
+
+def _book_open(cx, a: dict, m: str) -> None:
+    cx.execute(
+        "INSERT INTO positions(strategy,sleeve,symbol,side,qty,"
+        "weight,notional,r_usd,entry_px,entry_ts,stop,mode,open)"
+        " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1)",
+        (a["strategy"], a.get("sleeve"), a["symbol"], a["side"],
+         a.get("qty", 0.0), a.get("weight"),
+         a.get("notional"), a.get("r_usd"), a["px"],
+         int(time.time() * 1000), a.get("stop"), m))
+
+
+_KEEP = ("strategy", "sleeve", "symbol", "side", "stop", "notional", "r_usd",
+         "weight", "why")
+
+
+def _save_blocked(run_id: int, day: int, m: str, blocked: list) -> None:
+    """Luu lenh bi chan cua luot MOI NHAT de UI hien va cho ep vao."""
+    items = [{k: a.get(k) for k in _KEEP} for a in blocked
+             if a.get("action") == "OPEN"]
+    db.kv_set("blocked", {"run_id": run_id, "day": day, "mode": m,
+                          "ts": int(time.time() * 1000), "items": items})
+
+
+def force_blocked(i: int, run_id: int) -> dict:
+    """Ep vao MOT lenh bi chan cua luot moi nhat, BO QUA tran rui ro.
+
+    Van giu cac chot khong the bo: dung che do luc chan, chua co vi the cung
+    khoa, khong nguoc chieu vi the dang giu (san mot chieu), va khong chay
+    chong voi mot luot dang chay.
+    """
+    if not RUN_LOCK.acquire(blocking=False):
+        raise RuntimeError("đang có lượt chạy — đợi xong rồi bấm lại")
+    api = None
+    try:
+        b = db.kv_get("blocked") or {}
+        items = b.get("items") or []
+        if b.get("run_id") != run_id or not (0 <= i < len(items)):
+            raise RuntimeError("danh sách bị chặn đã đổi — tải lại trang")
+        a = items[i]
+        if a.get("forced"):
+            raise RuntimeError("lệnh này đã được ép vào rồi")
+        m = mode()
+        if m != b.get("mode"):
+            raise RuntimeError(f"lệnh bị chặn ở chế độ {b.get('mode')}, "
+                               f"giờ đang là {m}")
+        cur = open_positions(m)
+        k = (a["strategy"], a.get("sleeve"), a["symbol"], a["side"])
+        if any((p["strategy"], p.get("sleeve"), p["symbol"], p["side"]) == k
+               for p in cur):
+            raise RuntimeError("vị thế này đã có trong sổ")
+        if m == "live" and any(p["symbol"] == a["symbol"]
+                               and p["side"] != a["side"] for p in cur):
+            raise RuntimeError("đang giữ chiều ngược lại trên mã này — sàn "
+                               "chạy một chiều, không ép được")
+        api = PublicApi()
+        prices = api.prices()
+        filt = data.filters(api) if m == "live" else {}
+        act = {"action": "OPEN", **{x: a.get(x) for x in _KEEP}}
+        done = executor.execute(run_id, [act], equity_now(), prices, filt, m)
+        d = done[0] if done else {"status": "lỗi"}
+        ok = d.get("status") not in ("lỗi", "bỏ qua")
+        if ok:
+            with db.tx() as cx:
+                _book_open(cx, d, m)
+            items[i] = {**a, "forced": int(time.time() * 1000), "px": d["px"]}
+            db.kv_set("blocked", {**b, "items": items})
+            if m == "live":
+                safety_now(filt)
+        db.log("warn" if ok else "error",
+               f"ÉP LỆNH bị chặn: {a['symbol']} "
+               f"{'MUA' if a['side'] > 0 else 'BÁN'} {a.get('notional') or 0:.0f} USD"
+               f" (lý do chặn: {a.get('why')}) → {d.get('status')}")
+        return {"status": d.get("status"), "px": d.get("px"),
+                "symbol": a["symbol"]}
+    finally:
+        if api is not None:
+            api.close()
+        RUN_LOCK.release()
+
+
 def run_once(force: bool = False) -> dict:
+    with RUN_LOCK:
+        return _run_once(force)
+
+
+def _run_once(force: bool = False) -> dict:
     t0 = time.time()
     m = mode()
     api = PublicApi()
@@ -364,14 +455,8 @@ def run_once(force: bool = False) -> dict:
                         (a["px"], int(time.time() * 1000), "mục tiêu đổi",
                          bps, p["id"]))
                 else:
-                    cx.execute(
-                        "INSERT INTO positions(strategy,sleeve,symbol,side,qty,"
-                        "weight,notional,r_usd,entry_px,entry_ts,stop,mode,open)"
-                        " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1)",
-                        (a["strategy"], a.get("sleeve"), a["symbol"], a["side"],
-                         a.get("qty", 0.0), a.get("weight"),
-                         a.get("notional"), a.get("r_usd"), a["px"],
-                         int(time.time() * 1000), a.get("stop"), m))
+                    _book_open(cx, a, m)
+        _save_blocked(run_id, day, m, blocked)
         eq += realised          # lai/lo da chot la USD, khong phai ty le
         if m == "live":
             safety_now(filt)    # sau khi so da ghi vi the moi

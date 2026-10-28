@@ -181,6 +181,7 @@ def state():
                   "next": nxt.next_run_time.isoformat() if nxt and nxt.next_run_time else None},
         "last_run": db.kv_get("last_run"),
         "safety": db.kv_get("safety", {}) or {},
+        "blocked": db.kv_get("blocked"),
         "equity": _rows("SELECT ts, value FROM equity WHERE mode=? ORDER BY ts", m),
         "positions": _rows(
             "SELECT * FROM positions WHERE open=1 AND mode=? "
@@ -228,6 +229,21 @@ def account():
                      for x in a.get("positions", [])
                      if float(x.get("positionAmt", 0) or 0)],
                  "ts": int(time.time() * 1000)}
+            # Lenh dieu kien dang treo (dung lo / chot loi), ke ca lenh nguoi
+            # dung tu dat hay tu chinh tren Binance. Loi o day khong lam hong
+            # phan so du.
+            try:
+                v["stops"] = [
+                    {"symbol": o["symbol"], "side": o.get("side"),
+                     "type": o.get("orderType"),
+                     "trigger": float(o.get("triggerPrice") or 0),
+                     "close": o.get("closePosition") in (True, "true"),
+                     "qty": float(o.get("quantity") or 0),
+                     "bot": str(o.get("clientAlgoId", "")).startswith("sl-"),
+                     "algoId": o.get("algoId")}
+                    for o in t.open_algo_orders()]
+            except Exception as e:
+                v["stops"], v["stops_err"] = [], str(e)[:200]
         except Exception as e:
             why = str(e)
             ip = re.search(r"request ip: ([0-9a-fA-F.:]+)", why)
@@ -279,6 +295,17 @@ def run_now():
         raise HTTPException(500, str(e))
 
 
+@app.post("/api/force")
+def force(body: dict = Body(...)):
+    """Ep vao mot lenh bi chan cua luot moi nhat — BO QUA tran rui ro."""
+    try:
+        return runner.force_blocked(int(body["i"]), int(body["run_id"]))
+    except (KeyError, ValueError):
+        raise HTTPException(400, "thiếu i / run_id")
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+
+
 @app.post("/api/fetch")
 def fetch():
     api = PublicApi()
@@ -317,7 +344,7 @@ def set_config(body: dict = Body(...)):
 @app.get("/api/backtest")
 def backtest_meta():
     """Gia tri mac dinh cho tab tinh lich su = cau hinh dang chay."""
-    return {"defaults": backtest.defaults(),
+    return {"defaults": backtest.defaults(), "research": backtest.RESEARCH,
             "spec": {k: {"group": g, "type": t.__name__, "min": lo, "max": hi,
                          "desc": d}
                      for k, (g, t, lo, hi, d) in settings.SPEC.items()},
