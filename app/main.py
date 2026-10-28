@@ -152,6 +152,7 @@ def state():
                   "next": nxt.next_run_time.isoformat() if nxt and nxt.next_run_time else None},
         "last_run": db.kv_get("last_run"),
         "safety": db.kv_get("safety", {}) or {},
+        "blocked": db.kv_get("blocked"),
         "equity": _rows("SELECT ts, value FROM equity WHERE mode=? ORDER BY ts", m),
         "positions": _rows(
             "SELECT * FROM positions WHERE open=1 AND mode=? "
@@ -250,6 +251,17 @@ def run_now():
         raise HTTPException(500, str(e))
 
 
+@app.post("/api/force")
+def force(body: dict = Body(...)):
+    """Ep vao mot lenh bi chan cua luot moi nhat — BO QUA tran rui ro."""
+    try:
+        return runner.force_blocked(int(body["i"]), int(body["run_id"]))
+    except (KeyError, ValueError):
+        raise HTTPException(400, "thiếu i / run_id")
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+
+
 @app.post("/api/fetch")
 def fetch():
     api = PublicApi()
@@ -286,7 +298,7 @@ def set_config(body: dict = Body(...)):
 @app.get("/api/backtest")
 def backtest_meta():
     """Gia tri mac dinh cho tab tinh lich su = cau hinh dang chay."""
-    return {"defaults": backtest.defaults(),
+    return {"defaults": backtest.defaults(), "research": backtest.RESEARCH,
             "spec": {k: {"group": g, "type": t.__name__, "min": lo, "max": hi,
                          "desc": d}
                      for k, (g, t, lo, hi, d) in settings.SPEC.items()},

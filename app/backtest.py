@@ -136,6 +136,33 @@ EXTRA = {
 }
 
 
+# Bo tham so LUC NGHIEN CUU, chep tay tu docs — KHONG doc tu config/env, vi
+# do la cau hinh van hanh va da bi doi (RSI2_LAYERS, ALLOC_RSI2, tran...).
+#   rsi2-connors.md     § Bo tham so, v3.1: top 10 · 5 cho · RSI<10/>70 ·
+#                       MA20 · stop max(6xATR14, 40%) · MOT lenh moi ma (lop 2
+#                       la «lua chon van hanh» 27/10, khong phai nghien cuu)
+#   xsmom-volnorm.md    § Bo tham so: top 20 · 30 ngay · 10% moi chan (>= 2) ·
+#                       7 so x 7 ngay · loc MA30 (da chot 26/10)
+#   money-management-r  1R = 100 USD, «khong tran», von om 100% (khong don
+#                       bay); he so RSI(2) = 8 (§ SUA cung ngay: «8 dang chay
+#                       van hop ly», 32/39 da rut lai)
+# Von 100.000 > phoi nhiem dinh ghep ~73.000 o 1R = 100, nen ky quy khong bao
+# gio chan — dung «khong tran» cua docs.
+RESEARCH = {
+    "start_equity": 100_000.0, "leverage": 1.0, "fee_bps": 10.0,
+    "min_notional": 0.0, "one_way": True,
+    "risk_r_usd": 100.0, "alloc_rsi2": 8.0, "alloc_xsmom": 1.0,
+    "risk_max_open": 500, "max_order_usd": 1e9, "max_gross_usd": 1e9,
+    "max_gross_x": 20.0, "max_orders_per_run": 500,
+    "rsi2.topn": 10, "rsi2.slots": 5, "rsi2.rsi_in": 10.0, "rsi2.rsi_out": 70.0,
+    "rsi2.ma": 20, "rsi2.atr": 14, "rsi2.atr_k": 6.0, "rsi2.cap": 0.40,
+    "rsi2.min_bars": 205, "rsi2.layers": 1,
+    "xsmom.topn": 20, "xsmom.lookback": 30, "xsmom.frac": 0.10,
+    "xsmom.sleeves": 7, "xsmom.hold": 7, "xsmom.min_bars": 205,
+    "xsmom.legs": 2, "xsmom.ma": 30,
+}
+
+
 def defaults() -> dict:
     e = settings.effective()
     e.update(start_equity=CFG.start_equity, leverage=float(CFG.leverage),

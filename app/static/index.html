@@ -445,6 +445,18 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
             Bấm «Xem trước» để tính sổ mục tiêu cho nến vừa đóng. Không có lệnh
             nào được đặt cho tới khi bấm «Chạy ngay».</div>
         </div>
+
+        <!-- An khi luot gan nhat khong chan lenh nao. -->
+        <div class="panel" id="blkPanel" style="margin-top:12px;display:none">
+          <div class="ph"><h3>Lệnh bị chặn</h3>
+            <span class="sub" id="blkWhen"></span></div>
+          <div class="tw"><table id="tblk"></table></div>
+          <div class="pb sub">
+            «Ép vào» đặt đúng lệnh đó ngay, <b>bỏ qua mọi trần rủi ro</b>, cỡ
+            lệnh theo USD đã tính lúc chặn. Không ép được lệnh ngược chiều vị
+            thế đang giữ (sàn một chiều) hay vị thế đã có. Lượt chạy kế tiếp
+            thay danh sách này.</div>
+        </div>
       </div>
 
       <div class="colB">
@@ -530,6 +542,9 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
         <div class="row" style="margin-top:12px">
           <button class="warn" id="btnBt">Tính</button>
           <button id="btnBtReset">Lấy lại cấu hình đang chạy</button>
+          <button id="btnBtResearch"
+            title="bộ tham số chốt trong docs: 1R = 100 USD, không trần, vốn ôm 100%, RSI(2) ×8 một lệnh mỗi mã, động lượng lọc MA30">
+            Cấu hình lúc nghiên cứu</button>
           <button class="danger" id="btnBtApply"
             title="ghi các tham số chiến lược và trần rủi ro trên form vào cấu hình chạy thật">
             Dùng cấu hình này cho chạy thật</button>
@@ -789,6 +804,7 @@ function render() {
   FEE = S.fee_bps ?? 0;
   POSKEY = null;
   drawPos();
+  renderBlocked();
   stream(S.stream);
 
   table($('tord'), ['lúc', 'mã', 'việc', 'bên', 'USD', 'trạng thái'],
@@ -1554,6 +1570,11 @@ function btCharts() {
 
 $('btnBt').onclick = () => runBt();
 $('btnBtReset').onclick = () => { BTV = {...BT.defaults, start: '', end: ''}; buildBtForm(); };
+$('btnBtResearch').onclick = () => {
+  BTV = {...BT.defaults, ...BT.research, start: '', end: ''}; buildBtForm();
+  $('btStatus').textContent = 'đã nạp cấu hình nghiên cứu — bấm «Tính». '
+    + 'Kho nến của app ngắn hơn mẫu nghiên cứu nên số tuyệt đối không khớp docs.';
+};
 /* Dua bo tham so tren form backtest vao cau hinh CHAY THAT (/api/config).
    Chi cac o co trong settings.SPEC moi ap duoc; von ban dau, don bay, phi,
    muc toi thieu va khoang ngay chi la gia dinh mo phong. 1R la USD tuyet doi
@@ -1612,6 +1633,41 @@ $('btnCsv').onclick = () => {
   a.download = `tinh-lich-su-${BTF}-${day(Date.now())}.csv`;
   a.click(); URL.revokeObjectURL(a.href);
 };
+
+/* Lenh bi chan cua luot gan nhat (luu o kv `blocked`). Lenh nguoc chieu
+   khong co nut: may chu se tu choi, sàn mot chieu bu tru mat vi the. */
+function renderBlocked() {
+  const B = S.blocked, items = B?.items || [];
+  $('blkPanel').style.display = items.length ? '' : 'none';
+  if (!items.length) return;
+  $('blkWhen').textContent = `lượt #${B.run_id} · nến ${day(B.day)} · ${when(B.ts)}`
+    + (B.mode !== S.mode ? ` · chặn ở chế độ ${B.mode}` : '');
+  const clash = a => (a.why || '').startsWith('đã có vị thế ngược chiều');
+  table($('tblk'), ['mã', 'chiến lược', 'sổ', 'chiều', 'USD', 'lý do chặn', ''],
+    items.map((a, i) => ({...a, _i: i})),
+    a => [a.symbol, sChip(a.strategy), a.sleeve ?? '—', sideTxt(a.side),
+      a.notional ? a.notional.toFixed(2) : '—',
+      {html: `<span class="neg">${esc(a.why || '')}</span>`},
+      a.forced ? {html: `<span class="pos">đã ép · ${when(a.forced)}`
+                        + (a.px ? ` · giá ${+(+a.px).toPrecision(10)}` : '') + '</span>'}
+      : clash(a) || B.mode !== S.mode ? {html: '<span class="mut">—</span>'}
+      : {html: `<button class="warn" data-force="${a._i}">Ép vào</button>`}]);
+}
+$('tblk').onclick = async ev => {
+  const b = ev.target.closest('button[data-force]');
+  if (!b) return;
+  const B = S.blocked, a = B.items[+b.dataset.force];
+  const live = S.mode === 'live';
+  if (!confirm(`${live ? 'TIỀN THẬT · ' : ''}Ép vào lệnh bị chặn:\n\n`
+    + `${a.side > 0 ? 'MUA' : 'BÁN'} ${a.symbol} ≈ ${usd(a.notional)} USD `
+    + `(${a.strategy}, sổ ${a.sleeve ?? '—'})\n`
+    + `Lý do chặn: ${a.why}\n\nLệnh này BỎ QUA mọi trần rủi ro. Tiếp tục?`)) return;
+  b.disabled = true; b.textContent = 'Đang đặt…';
+  try { const j = await call('/api/force', {i: +b.dataset.force, run_id: B.run_id});
+    msg(`${j.symbol}: ${j.status}` + (j.px ? ` ở ${+(+j.px).toPrecision(10)}` : ''),
+        j.status !== 'lỗi' && j.status !== 'bỏ qua');
+    await refresh(); }
+  catch (e) { msg(e.message, false); b.disabled = false; b.textContent = 'Ép vào'; } };
 
 function renderTodo(p) {
   PREV = p;
