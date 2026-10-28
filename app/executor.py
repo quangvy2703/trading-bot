@@ -289,6 +289,22 @@ def safety_level(p: dict) -> float | None:
     return float(e) * (1 - p["side"] * d)
 
 
+STOP_TYPES = ("STOP_MARKET", "STOP", "TRAILING_STOP_MARKET")
+
+
+def hand_stops(algos: list, sym: str, amt: float) -> list:
+    """Lenh dung NGUOI DUNG tu dat tren san (khong mang tien to `sl-`) cho
+    vi the `amt` cua `sym`: dung chieu dong va phu HET vi the. Dung mot phan
+    thi khong tinh — bot van giu dung an toan cua no."""
+    osd = "SELL" if amt > 0 else "BUY"
+    return [o for o in algos
+            if o.get("symbol") == sym and o.get("side") == osd
+            and o.get("orderType") in STOP_TYPES
+            and not str(o.get("clientAlgoId", "")).startswith("sl-")
+            and (o.get("closePosition") in (True, "true")
+                 or float(o.get("quantity") or 0) >= abs(amt))]
+
+
 def sync_safety(trader: Trader, book: list, filt: dict) -> dict:
     """Moi ma dang co vi the (va co trong so) giu DUNG MOT lenh dung an toan.
 
@@ -296,16 +312,43 @@ def sync_safety(trader: Trader, book: list, filt: dict) -> dict:
     o muc XA nhat trong cac vi the so cung chieu (nhieu lop / nhieu so). Lenh
     cu sai muc thi huy dat lai; ma het vi the thi huy lenh thua. Ma «ngoài
     sổ» KHONG dong toi — app khong biet no la gi.
+
+    Dung lo NGUOI DUNG tu dat / tu chinh tren Binance duoc uu tien: ma nao co
+    lenh nhu vay (xem `hand_stops`) thi bot khong dat, va huy dung `sl-` cua
+    chinh no o ma do — giu lai thi lenh bot (thuong chat hon hoac long hon)
+    se de len y nguoi dung. Nguoi dung xoa lenh cua ho thi luot dong bo sau
+    bot dat lai.
     """
     ex = {p["symbol"]: float(p["positionAmt"]) for p in trader.positions()
           if float(p.get("positionAmt") or 0) != 0}
+    algos = trader.open_algo_orders()
+    prev = db.kv_get("safety", {}) or {}
     mine: dict = {}
-    for o in trader.open_algo_orders():
+    for o in algos:
         if str(o.get("clientAlgoId", "")).startswith("sl-"):
             mine.setdefault(o["symbol"], []).append(o)
     out = {}
     for sym, amt in ex.items():
         side = 1 if amt > 0 else -1
+        hand = hand_stops(algos, sym, amt)
+        if hand:
+            # lenh se khop TRUOC: mua → muc cao nhat, ban → muc thap nhat
+            o = (max if side > 0 else min)(
+                hand, key=lambda x: float(x.get("triggerPrice") or 0))
+            for b in mine.pop(sym, []):
+                try:
+                    trader.cancel_algo(b["algoId"])
+                    db.log("info", f"{sym}: có dừng lỗ tự đặt trên Binance — "
+                                   f"huỷ dừng an toàn của bot")
+                except Exception as e:
+                    db.log("warn", f"{sym}: huỷ dừng an toàn của bot lỗi: {e}")
+            if (prev.get(sym) or {}).get("algoId") != o.get("algoId"):
+                db.log("info", f"{sym}: dùng dừng lỗ tự đặt "
+                               f"{o.get('orderType')} {o.get('triggerPrice')}")
+            out[sym] = {"algoId": o.get("algoId"),
+                        "trigger": float(o.get("triggerPrice") or 0),
+                        "side": side, "src": "tay"}
+            continue
         lv = [x for x in (safety_level(p) for p in book
                           if p["symbol"] == sym and p["side"] == side) if x]
         f = filt.get(sym)
@@ -336,7 +379,8 @@ def sync_safety(trader: Trader, book: list, filt: dict) -> dict:
             except Exception as e:
                 db.log("error", f"{sym}: KHÔNG đặt được dừng an toàn {trig_s}: {e}")
                 continue
-        out[sym] = {"algoId": keep.get("algoId"), "trigger": trig, "side": side}
+        out[sym] = {"algoId": keep.get("algoId"), "trigger": trig, "side": side,
+                    "src": "bot"}
     for sym, os_ in mine.items():              # ma da het vi the
         for o in os_:
             try:

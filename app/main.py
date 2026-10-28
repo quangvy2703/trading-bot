@@ -209,6 +209,21 @@ def account():
                      for x in a.get("positions", [])
                      if float(x.get("positionAmt", 0) or 0)],
                  "ts": int(time.time() * 1000)}
+            # Lenh dieu kien dang treo (dung lo / chot loi), ke ca lenh nguoi
+            # dung tu dat hay tu chinh tren Binance. Loi o day khong lam hong
+            # phan so du.
+            try:
+                v["stops"] = [
+                    {"symbol": o["symbol"], "side": o.get("side"),
+                     "type": o.get("orderType"),
+                     "trigger": float(o.get("triggerPrice") or 0),
+                     "close": o.get("closePosition") in (True, "true"),
+                     "qty": float(o.get("quantity") or 0),
+                     "bot": str(o.get("clientAlgoId", "")).startswith("sl-"),
+                     "algoId": o.get("algoId")}
+                    for o in t.open_algo_orders()]
+            except Exception as e:
+                v["stops"], v["stops_err"] = [], str(e)[:200]
         except Exception as e:
             why = str(e)
             ip = re.search(r"request ip: ([0-9a-fA-F.:]+)", why)

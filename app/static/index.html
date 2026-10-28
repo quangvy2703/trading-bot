@@ -876,7 +876,8 @@ function drawPos() {
   if (!S) return;
   const A = S.mode === 'live' && ACCT && ACCT.ok ? ACCT : null;
   const SF = S.safety || {};
-  const key = JSON.stringify([S.positions.map(p => p.id), A && A.positions, SF]);
+  const key = JSON.stringify([S.positions.map(p => p.id), A && A.positions,
+                              A && A.stops, SF]);
   if (key === POSKEY) return;
   POSKEY = key;
   const eqNow = S.equity.length ? S.equity.at(-1).value : 0;
@@ -918,13 +919,38 @@ function drawPos() {
       r.r_usd ? usd(r.r_usd) : '—', +r.entry_px.toPrecision(10),
       live('px'), live('usd'), live('pc'), live('r'),
       r.stop ? r.stop.toPrecision(6) : '—',
-      /* Lenh STOP_MARKET dang nam tren san cho ca ma — thieu thi bao do. */
-      SF[r.symbol] && SF[r.symbol].side === r.side
-        ? +SF[r.symbol].trigger.toPrecision(8)
-        : (r.ex ? {html: '<span class="neg" title="sàn không có lệnh dừng '
-            + 'an toàn cho mã này">chưa có</span>'} : '—'),
+      stopCell(r, A, SF),
       (i++, r.entry_ts ? day(r.entry_ts) : '—')]);
   paintPnl();
+}
+
+/* Cot «dừng sàn»: chay that thi doc THANG lenh dieu kien dang treo tren san
+   (/api/account → stops), ke ca lenh ban tu dat / tu chinh tren Binance.
+   «tay» = lenh cua ban (bot nhuong, khong dat chong); «bot» = dung an toan
+   bot tu dat. Chua doc duoc san thi lui ve ban ghi cua bot. */
+function stopCell(r, A, SF) {
+  if (A && A.stops && r.ex) {
+    const osd = r.side > 0 ? 'SELL' : 'BUY';
+    const st = A.stops.filter(o => o.symbol === r.symbol && o.side === osd);
+    if (!st.length) return {html: '<span class="neg" title="sàn không có lệnh '
+      + 'dừng nào cho vị thế này">chưa có</span>'};
+    const amt = Math.abs(A.positions.find(x => x.symbol === r.symbol)?.amt || 0);
+    return {html: st.sort((a, b) => a.trigger - b.trigger).map(o => {
+      const tp = o.type.startsWith('TAKE_PROFIT');
+      const le = tp ? r.side < 0 : r.side > 0;          // kich hoat khi gia ≤ ?
+      const part = !o.close && o.qty && o.qty < amt;
+      return `<span class="${tp ? 'pos' : ''}" title="${o.type}`
+        + (o.close ? ' · đóng hết' : ` · ${o.qty}`) + `">`
+        + `${tp ? 'chốt ' : ''}${le ? '≤' : '≥'} ${+o.trigger.toPrecision(8)}`
+        + (part ? ` <span class="mut">(${o.qty})</span>` : '')
+        + ` <span class="chip" title="${o.bot ? 'dừng an toàn bot tự đặt'
+            : 'bạn tự đặt trên Binance — bot không ghi đè'}">${o.bot ? 'bot' : 'tay'}</span></span>`;
+    }).join('<br>')};
+  }
+  return SF[r.symbol] && SF[r.symbol].side === r.side
+    ? +SF[r.symbol].trigger.toPrecision(8)
+    : (r.ex ? {html: '<span class="neg" title="sàn không có lệnh dừng '
+        + 'an toàn cho mã này">chưa có</span>'} : '—');
 }
 
 function pnlOf(p) {
