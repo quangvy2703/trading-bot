@@ -89,6 +89,10 @@ def _start() -> None:
                     t.close()
             runner.safety_now()
         threading.Thread(target=_margin, daemon=True, name="margin").start()
+    # Vi the nguoi dung tu cat tren Binance: doi chieu moi 5 phut de trang
+    # quan li khop san, khong doi toi luot 00:05.
+    sched.add_job(_sync, "interval", minutes=5, id="sync",
+                  replace_existing=True, coalesce=True, max_instances=1)
     hh, _, mm = CFG.run_at_utc.partition(":")
     sched.add_job(_job, CronTrigger(hour=int(hh), minute=int(mm or 0)),
                   id="daily", replace_existing=True,
@@ -101,6 +105,15 @@ def _start() -> None:
 @app.on_event("shutdown")
 def _stop() -> None:
     sched.shutdown(wait=False)
+
+
+def _sync() -> None:
+    if not executor.live_ready()[0]:
+        return
+    try:
+        runner.reconcile_now()
+    except Exception as e:
+        db.log("error", f"đối chiếu sổ với sàn lỗi: {e}")
 
 
 def _job() -> None:
@@ -200,7 +213,7 @@ def state():
             "ORDER BY strategy, sleeve, symbol", m),
         "closed": _rows(
             "SELECT * FROM positions WHERE open=0 AND mode=? "
-            "ORDER BY exit_ts DESC LIMIT 60", m),
+            "ORDER BY exit_ts DESC LIMIT 500", m),
         "orders": _rows("SELECT * FROM orders ORDER BY id DESC LIMIT 80"),
         "runs": _rows("SELECT * FROM runs ORDER BY id DESC LIMIT 20"),
         "events": _rows("SELECT * FROM events ORDER BY id DESC LIMIT 60"),
@@ -316,6 +329,14 @@ def force(body: dict = Body(...)):
         raise HTTPException(400, "thiếu i / run_id")
     except RuntimeError as e:
         raise HTTPException(400, str(e))
+
+
+@app.post("/api/reconcile")
+def reconcile_api():
+    """Doi chieu so voi san ngay: chot so vi the san da het."""
+    if not executor.live_ready()[0]:
+        raise HTTPException(400, "chỉ dùng khi đang chạy thật")
+    return {"closed": runner.reconcile_now()}
 
 
 @app.post("/api/fetch")

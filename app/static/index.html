@@ -226,6 +226,8 @@ tr:hover td:first-child{background:#F3F0FB}
 #tflag td{white-space:nowrap}
 #tflag td:last-child{white-space:normal;min-width:260px;font-family:var(--ui)}
 #tflag a{color:var(--acc);text-decoration:none}
+a.sym{color:inherit;text-decoration:none;border-bottom:1px dotted currentColor}
+a.sym:hover{color:var(--acc)}
 #tflag a:hover{text-decoration:underline}
 #tev td:last-child{font-family:var(--ui);color:var(--ink2)}
 
@@ -668,6 +670,10 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
   </section>
 
   <section id="t-log">
+    <div class="panel" style="margin-bottom:12px">
+      <div class="ph"><h3>Giao dịch đã đóng</h3><span class="sub" id="trsum"></span></div>
+      <div class="tw" style="max-height:480px"><table id="ttr"></table></div>
+    </div>
     <div class="cols" style="margin-top:0">
       <div class="colA">
         <div class="panel"><div class="ph"><h3>Lệnh gần đây</h3></div>
@@ -729,6 +735,10 @@ function table(el, cols, rows, fmt) {
   }
 }
 
+/* Ten ma → chart hop dong vinh cuu tren Binance (bot chi giao dich perp). */
+const symA = s => s ? {html: `<a class="sym" href="https://www.binance.com/en/futures/`
+  + `${encodeURIComponent(s)}" target="_blank" rel="noopener" `
+  + `title="mở chart ${esc(s)} trên Binance">${esc(s)}</a>`} : '—';
 const sChip = s => ({html: `<span class="chip c-${s}">${s === 'rsi2' ? 'RSI(2)' : 'ĐỘNG LƯỢNG'}</span>`});
 const aChip = a => ({html: `<span class="chip c-${a === 'OPEN' ? 'open' : 'close'}">${a === 'OPEN' ? 'MỞ' : 'ĐÓNG'}</span>`});
 const sideTxt = d => d > 0 ? {html: '<span class="pos">MUA</span>'}
@@ -854,9 +864,12 @@ function render() {
   renderBlocked();
   stream(S.stream);
 
-  table($('tord'), ['lúc', 'mã', 'việc', 'bên', 'USD', 'trạng thái'],
-    S.orders, o => [when(o.ts), o.symbol, aChip(o.action), o.side,
+  renderTrades();
+
+  table($('tord'), ['lúc', 'mã', 'việc', 'bên', 'USD', 'giá khớp', 'trạng thái'],
+    S.orders, o => [when(o.ts), symA(o.symbol), aChip(o.action), o.side,
       o.notional ? o.notional.toFixed(2) : '—',
+      o.px ? +(+o.px).toPrecision(8) : '—',
       {html: o.status === 'lỗi' ? `<span class="neg">${o.status}</span>` : o.status}]);
 
   table($('tev'), ['lúc', 'mức', 'nội dung'], S.events,
@@ -951,7 +964,7 @@ function drawPos() {
   const live = k => ({html: `<span data-k="${k}" data-i="${i}">—</span>`});
   table($('tpos'), ['mã', 'chiến lược', 'sổ', 'chiều', 'cỡ USD', '1R', 'giá vào',
     'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'dừng sàn', 'mở từ'],
-    rows, r => [r.symbol,
+    rows, r => [symA(r.symbol),
       r.book.length
         ? {html: [...new Set(r.book.map(p => p.strategy))]
             .map(s => sChip(s).html).join(' ')}
@@ -1542,7 +1555,7 @@ function renderBt() {
   const px = v => Number(v).toPrecision(6).replace(/\.?0+$/, '').replace('.', ',');
   table($('btTr'), ['mã', 'chiến lược', 'chiều', 'vào', 'ra', 'giá vào', 'giá ra',
     'cỡ USD', 'lãi USD', 'R', 'lý do ra'], tr.slice(0, 300), t => [
-    t.sym, sChip(t.s), sideTxt(t.side), day(t.a), day(t.z), px(t.pin), px(t.pout),
+    symA(t.sym), sChip(t.s), sideTxt(t.side), day(t.a), day(t.z), px(t.pin), px(t.pout),
     usd(t.usd), {html: `<span class="${cls(t.pnl)}">${usd(t.pnl)}</span>`},
     t.r ? (t.pnl >= 0 ? '+' : '−') + pct(Math.abs(t.pnl / t.r), 2) : '—',
     {html: `<span class="mut" style="font-family:var(--ui)">${esc(t.why)}</span>`}]);
@@ -1732,7 +1745,7 @@ function renderBlocked() {
   const clash = a => (a.why || '').startsWith('đã có vị thế ngược chiều');
   table($('tblk'), ['mã', 'chiến lược', 'sổ', 'chiều', 'USD', 'lý do chặn', ''],
     items.map((a, i) => ({...a, _i: i})),
-    a => [a.symbol, sChip(a.strategy), a.sleeve ?? '—', sideTxt(a.side),
+    a => [symA(a.symbol), sChip(a.strategy), a.sleeve ?? '—', sideTxt(a.side),
       a.notional ? a.notional.toFixed(2) : '—',
       {html: `<span class="neg">${esc(a.why || '')}</span>`},
       a.forced ? {html: `<span class="pos">đã ép · ${when(a.forced)}`
@@ -1756,13 +1769,45 @@ $('tblk').onclick = async ev => {
     await refresh(); }
   catch (e) { msg(e.message, false); b.disabled = false; b.textContent = 'Ép vào'; } };
 
+/* Nhat ky giao dich: moi dong la mot vi the trong so da dong. Lai/lo USD =
+   co lenh × bps (bps da tru phi uoc tinh). Dong do «Dừng khẩn» cu khong ghi
+   bps → tinh lai tu gia vao/ra. */
+function renderTrades() {
+  const eqNow = S.equity.length ? S.equity.at(-1).value : 0;
+  const rows = (S.closed || []).map(p => {
+    const bps = p.pnl_bps ?? (p.exit_px && p.entry_px
+      ? (p.exit_px - p.entry_px) / p.entry_px * 1e4 * p.side - (S.fee_bps ?? 0) : null);
+    const n = p.notional || (p.weight || 0) * eqNow;
+    const usdv = bps == null ? null : n * bps / 1e4;
+    return {...p, bps, n, usdv, days: p.exit_ts && p.entry_ts
+      ? (p.exit_ts - p.entry_ts) / 864e5 : null};
+  });
+  const done = rows.filter(r => r.usdv != null);
+  const tot = done.reduce((a, r) => a + r.usdv, 0);
+  const win = done.filter(r => r.usdv > 0).length;
+  $('trsum').innerHTML = done.length
+    ? `${done.length} lệnh · thắng ${win}/${done.length} (${pct(win / done.length * 100, 0)}%) · `
+      + `tổng <b class="${cls(tot)}">${signed(tot, usd)} USD</b>` : '';
+  const px = v => v ? +(+v).toPrecision(8) : '—';
+  table($('ttr'), ['mã', 'chiến lược', 'sổ', 'chiều', 'vào lúc', 'giá vào', 'thoát lúc',
+    'giá thoát', 'giữ', 'cỡ USD', 'lãi/lỗ USD', '%', 'R', 'lý do thoát'], rows, r => [
+    symA(r.symbol), sChip(r.strategy), r.sleeve ?? '—', sideTxt(r.side),
+    when(r.entry_ts), px(r.entry_px), when(r.exit_ts), px(r.exit_px),
+    r.days == null ? '—' : r.days < 1 ? `${pct(r.days * 24, 1)} giờ` : `${pct(r.days, 1)} ngày`,
+    usd(r.n),
+    r.usdv == null ? '—' : {html: `<span class="${cls(r.usdv)}">${signed(r.usdv, usd)}</span>`},
+    r.bps == null ? '—' : {html: `<span class="${cls(r.bps)}">${signed(r.bps / 100, v => pct(v))}%</span>`},
+    r.usdv != null && r.r_usd ? signed(r.usdv / r.r_usd, v => pct(v)) : '—',
+    {html: `<span class="mut">${esc(r.exit_why || '')}</span>`}]);
+}
+
 function renderTodo(p) {
   PREV = p;
   $('todoWhen').textContent = p ? `nến ${day(p.day)} · vốn ${usd(p.equity)} USD` : '';
   const rows = p ? [...p.actions.map(a => ({...a, _b: null})),
                     ...p.blocked.map(a => ({...a, _b: a.why}))] : [];
   table($('todo'), ['mã', 'việc', 'chiến lược', 'sổ', 'chiều', 'USD', 'ghi chú'],
-    rows, a => [a.symbol, aChip(a.action), sChip(a.strategy), a.sleeve ?? '—',
+    rows, a => [symA(a.symbol), aChip(a.action), sChip(a.strategy), a.sleeve ?? '—',
       sideTxt(a.side), a.notional ? a.notional.toFixed(2) : '—',
       a._b ? {html: `<span class="neg">bị chặn: ${a._b}</span>`, cls: ''}
            : {html: `<span class="mut">${a.why || ''}</span>`}]);
@@ -1826,7 +1871,7 @@ function renderFlags() {
     : FLAGF === 'tag' ? x.tag_on : FLAGF === 'gone' ? !!(x.S || x.F) : (x.ban_until || x.tag_on);
   table($('tflag'), ['mã', 'trạng thái', 'thẻ Monitoring', 'gỡ spot', 'gỡ perp',
     'chặn mua tới', 'perp', 'đang giữ', 'thông báo'], R.filter(keep), x => [
-      x.symbol, flagState(x),
+      symA(x.symbol), flagState(x),
       x.tag_add ? day(x.tag_add) + (x.tag_remove && x.tag_remove > x.tag_add ? ' → bỏ ' + day(x.tag_remove) : '') : '—',
       x.S ? day(x.S) : '—', x.F ? day(x.F) : '—',
       x.ban_until ? day(x.ban_until) : '—',
@@ -1848,7 +1893,7 @@ function renderNews(N) {
     + (st.clock_off_ms != null ? ` · lệch đồng hồ ${st.clock_off_ms} ms` : '');
   table($('tnp'), ['tin lúc', 'loại', 'mã', 'trễ vào', 'giá bán', 'thấp nhất', 'hoà vốn?',
     'đóng', 'lý do', 'bps', `USD (${N.usd} USD)`], N.paper || [], r => [
-      when(r.t_pub), KIND[r.kind] || r.kind, r.symbol, sec((r.t_entry - r.t_pub) / 1000),
+      when(r.t_pub), KIND[r.kind] || r.kind, symA(r.symbol), sec((r.t_entry - r.t_pub) / 1000),
       r.entry_px, r.low, r.armed ? 'đã dời' : '—',
       r.open ? {html: '<span style="color:var(--acc)">đang mở</span>'} : when(r.t_exit),
       r.why || '—',

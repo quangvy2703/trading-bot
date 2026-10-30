@@ -193,6 +193,11 @@ class Trader:
     def algo_order(self, algo_id) -> dict:
         return self._call("GET", "/fapi/v1/algoOrder", algoId=algo_id)
 
+    def user_trades(self, symbol: str, start_ms: int) -> list:
+        """Lich su khop cua tai khoan tren mot ma (toi da 7 ngay tu start)."""
+        return self._call("GET", "/fapi/v1/userTrades", symbol=symbol,
+                          startTime=int(start_ms), limit=1000)
+
     def cancel_algo(self, algo_id) -> dict:
         return self._call("DELETE", "/fapi/v1/algoOrder", algoId=algo_id)
 

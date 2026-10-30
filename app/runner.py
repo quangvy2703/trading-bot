@@ -234,17 +234,46 @@ def reconcile(prices: dict, eq: float) -> float:
         ex = {p["symbol"]: float(p["positionAmt"]) for p in t.positions()}
         safe = db.kv_get("safety", {}) or {}
         realised = 0.0
-        for p in open_positions("live"):
+        book = open_positions("live")
+        fills: dict = {}
+
+        def closed_at(sym: str, side: int):
+            """Gia khop TB cua cac lenh dong (chieu nguoc) SAU lan vao cuoi
+            cung cua ma trong so — tuc gia nguoi dung tu cat tren san."""
+            if (sym, side) not in fills:
+                t0 = max(p["entry_ts"] for p in book
+                         if p["symbol"] == sym and p["side"] == side)
+                osd = "SELL" if side > 0 else "BUY"
+                try:
+                    tr = [x for x in t.user_trades(
+                              sym, max(t0, int(time.time() * 1000) - 7 * DAY + 60_000))
+                          if x.get("side") == osd and int(x.get("time", 0)) > t0]
+                except Exception:
+                    tr = []
+                q = sum(float(x["qty"]) for x in tr)
+                fills[(sym, side)] = (
+                    sum(float(x["price"]) * float(x["qty"]) for x in tr) / q
+                    if q > 0 else None,
+                    max((int(x["time"]) for x in tr), default=None))
+            return fills[(sym, side)]
+
+        for p in book:
             amt = ex.get(p["symbol"], 0.0)
             if amt != 0 and (amt > 0) == (p["side"] > 0):
                 continue
             px, why = prices.get(p["symbol"]), "sàn không còn vị thế"
+            ts = int(time.time() * 1000)
+            fpx, fts = closed_at(p["symbol"], p["side"])
+            if fpx:
+                px, why, ts = fpx, "đóng tay trên sàn", fts or ts
             s = safe.get(p["symbol"])
             if s and s.get("algoId"):
                 try:
                     a = t.algo_order(s["algoId"])
                     if float(a.get("actualPrice") or 0) > 0:
-                        px, why = float(a["actualPrice"]), "dừng an toàn trên sàn"
+                        px, why = float(a["actualPrice"]), (
+                            "dừng tay trên sàn" if s.get("src") == "tay"
+                            else "dừng an toàn trên sàn")
                 except Exception:
                     pass
             if not px:
@@ -256,12 +285,35 @@ def reconcile(prices: dict, eq: float) -> float:
             with db.tx() as cx:
                 cx.execute("UPDATE positions SET open=0, exit_px=?, exit_ts=?,"
                            " exit_why=?, pnl_bps=? WHERE id=?",
-                           (px, int(time.time() * 1000), why, bps, p["id"]))
+                           (px, ts, why, bps, p["id"]))
             db.log("warn", f"{p['symbol']}: {why} · chốt sổ ở {px:g} · "
                            f"{usd:+.2f} USD")
         return realised
     finally:
         t.close()
+
+
+def reconcile_now() -> int:
+    """Doi chieu so voi san NGOAI luot chay (dinh ky / bam tay), de vi the
+    nguoi dung tu cat bien khoi trang ngay. Lai/lo da chot cong don vao
+    `realised_pending`, luot chay ke tiep cong vao von. Tra so vi the da chot."""
+    if not RUN_LOCK.acquire(blocking=False):
+        return 0                          # luot chay dang lam viec nay roi
+    api = None
+    try:
+        before = len(open_positions("live"))
+        api = PublicApi()
+        r = reconcile(api.prices(), equity_now())
+        n = before - len(open_positions("live"))
+        if n:
+            db.kv_set("realised_pending",
+                      float(db.kv_get("realised_pending", 0) or 0) + r)
+            safety_now()
+        return n
+    finally:
+        if api is not None:
+            api.close()
+        RUN_LOCK.release()
 
 
 def safety_now(filt: dict | None = None) -> None:
@@ -413,6 +465,8 @@ def _run_once(force: bool = False) -> dict:
         eq = equity_now()
         if m == "live":
             eq += reconcile(prices, eq)
+            eq += float(db.kv_get("realised_pending", 0) or 0)
+            db.kv_set("realised_pending", 0.0)
         cur_pos = open_positions(m)
         target, note = build_target(P, rank, day, cur_pos)
         filt = data.filters(api) if m == "live" else {}
