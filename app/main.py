@@ -20,9 +20,12 @@ from .config import CFG, FEE_BPS
 
 PAGE = Path(__file__).parent / "static" / "index.html"
 
-# Hai ban dac ta da chot. Gan ../docs vao /docs CHI DOC trong compose, nen sua
-# tai lieu la trang thay ngay, khong phai dung lai anh.
-DOCS_DIR = Path(os.environ.get("DOCS_DIR", "/docs"))
+# Hai ban dac ta da chot. Gan ./docs vao /docs CHI DOC trong compose, nen sua
+# tai lieu la trang thay ngay, khong phai dung lai anh. Chay ngoai Docker (khong
+# co /docs) thi doc thang docs/ cua repo.
+DOCS_DIR = Path(os.environ.get("DOCS_DIR") or next(
+    (p for p in (Path("/docs"), Path(__file__).parent.parent / "docs") if p.is_dir()),
+    Path("/docs")))
 DOCS = [("rsi2-connors", "RSI(2) Connors v3.1"),
         ("xsmom-volnorm", "Động lượng cắt ngang"),
         ("money-management-r", "Quản lý vốn theo R"),

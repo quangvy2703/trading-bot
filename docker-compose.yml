@@ -145,8 +145,10 @@ services:
       # Thong bao Binance da tai san (161.json, 49.json, bodies.json) cho tab
       # «Mã gắn cờ» va luat chan mua. Chi doc, chi gieo mot lan.
       - ../reports/.cache/announce:/seedann:ro
-      # Cac tai lieu da chot, hien o tab «Phương pháp». Chi doc.
-      - ../docs:/docs:ro
+      # Cac tai lieu da chot, hien o tab «Phương pháp». Chi doc. Lay ./docs
+      # (nam trong repo nay) chu khong phai ../docs cua repo nghien cuu: may
+      # chi clone trading-bot se khong co ../docs va tab trong tron.
+      - ./docs:/docs:ro
     logging:
       driver: json-file
       options: {max-size: "10m", max-file: "5"}
