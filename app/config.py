@@ -48,7 +48,7 @@ class Config:
     # 1R = so USD mat khi cham diem cat lo. Co lenh = r_usd / rfrac, nen no
     # KHONG phu thuoc von: von chi quyet dinh mo duoc bao nhieu lenh cung luc.
     risk_r_usd: float = _f("RISK_R_USD", 2)
-    risk_max_open: int = _i("RISK_MAX_OPEN", 33)       # 28 dong luong + 5 RSI(2)
+    risk_max_open: int = _i("RISK_MAX_OPEN", 63)       # 28 dong luong + 5 RSI(2) + 30 TSVW/DSRM
     # Ma co thong bao huy niem yet trong N ngay gan nhat: khong mo lenh MUA
     # nao (RSI(2) va chan mua dong luong). 0 = tat. Xem app/delist.py.
     delist_ban_days: int = _i("DELIST_BAN_DAYS", 90)
@@ -56,6 +56,11 @@ class Config:
     # cho tin go spot / the Monitoring. Khong bao gio dat lenh that. 0 = tat.
     news_paper: bool = os.environ.get("NEWS_PAPER", "1") == "1"
     news_paper_usd: float = _f("NEWS_PAPER_USD", 100)
+    # So giay VSA 4H (app/vsa.py, docs/vsa-push-4h.md): "day qua vung cung"
+    # roi nen giam KL thap, giu 3 nen 4H. Khong bao gio dat lenh that. 0 = tat.
+    vsa_paper: bool = os.environ.get("VSA_PAPER", "1") == "1"
+    vsa_paper_usd: float = _f("VSA_PAPER_USD", 100)
+    vsa_topn: int = _i("VSA_TOPN", 50)
     # Khoa API RIENG, chi quyen doc, cho WebSocket thong bao. Thieu thi chi
     # doc API CMS moi 30 giay (du cho the Monitoring, cham cho tin go spot).
     news_api_key: str = os.environ.get("NEWS_API_KEY", "")
@@ -65,6 +70,11 @@ class Config:
     # RSI(2) = 8 — xem docs/money-management-r.md § Ghep hai chien luoc.
     alloc_rsi2: float = _f("ALLOC_RSI2", 8.0)
     alloc_xsmom: float = _f("ALLOC_XSMOM", 1.0)
+    # Hai chien luoc khung ngay tu dot YouTube 2 (app/swing.py, docs/tsvw-dsrm.md).
+    # 1 = 1R moi lenh. Bat chay that 03/11/2026 theo yeu cau van hanh; bang
+    # chung: qua 6/6 luat do ben nhung chon SAU 709 o — xem docs.
+    alloc_tsvw: float = _f("ALLOC_TSVW", 1.0)
+    alloc_dsrm: float = _f("ALLOC_DSRM", 1.0)
     start_equity: float = _f("START_EQUITY_USD", 500)
 
     # --- ky quy: app TU DAT, khong tin thiet lap san co tren tai khoan ---
@@ -156,4 +166,9 @@ XSMOM = {
     # chon van hanh, khong phai ket luan thong ke.
     "ma": 30,
 }
+# Hai chien luoc khung ngay (app/swing.py) — tham so CHOT theo
+# scripts/yt_deep2.py (o goc), khong mo sua tu UI: luoi dinh nghia quanh o goc
+# da dung de kiem do ben, chon lai o khac la tham so hoa lan hai.
+TSVW = {"topn": 50, "N": 50, "K": 10, "B": 10, "W": 20, "tp_r": 2.0, "hold": 200}
+DSRM = {"topn": 50, "W": 3, "lv": 20.0, "sw": 10, "tp_r": 1.5, "hold": 200}
 FEE_BPS = 10.0

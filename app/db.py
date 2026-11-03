@@ -39,6 +39,15 @@ CREATE TABLE IF NOT EXISTS news_paper(
   exit_px REAL, why TEXT, bps REAL, usd REAL, open INTEGER DEFAULT 1,
   UNIQUE(news_key, symbol, kind));
 
+-- So giay VSA 4H (app/vsa.py): moi tin hieu "day qua vung cung" + lenh mua
+-- GIA giu 3 nen. why='bỏ lỡ …' = tin hieu co nhung luot chay tre, khong vao.
+-- Khong bang nao o day dan toi lenh that.
+CREATE TABLE IF NOT EXISTS vsa_paper(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT, t_signal INTEGER,
+  t_entry INTEGER, entry_px REAL, t_exit INTEGER, exit_px REAL,
+  fund_bps REAL, bps REAL, usd REAL, why TEXT, detail TEXT,
+  open INTEGER DEFAULT 1, UNIQUE(symbol, t_signal));
+
 -- The Monitoring cua Binance (muc tin 49): moi lan them / bo the. Chi hien
 -- tren tab «Tin & cờ», khong chan lenh.
 CREATE TABLE IF NOT EXISTS monitor(
@@ -93,6 +102,8 @@ def _migrate(cx) -> None:
     """
     for tbl, col, typ in (("positions", "notional", "REAL"),
                           ("positions", "r_usd", "REAL"),
+                          # muc chot loi tuyet doi (TSVW / DSRM, app/swing.py)
+                          ("positions", "tp", "REAL"),
                           ("runs", "n_open", "INTEGER"),
                           ("runs", "gross", "REAL"),
                           ("delist", "code", "TEXT")):

@@ -177,3 +177,112 @@ thoát RSI}. Thước đo chính: **Sharpe R theo tháng** (bài học từ stop
   tới, rồi chạm stop.
 - Ô chọn theo luật (POC phía trên, bỏ RSI): Sharpe 1,12, hơn mốc 2/6 năm,
   kém ở 5/6 cách cắt ngày → **giữ mốc**.
+
+---
+
+# Luật thoát thay thế cho RSI(2) — 30/10/2026, GIỮ thoát RSI > 70
+
+Câu hỏi tiếp theo sau phần chốt lời theo giá: nếu chốt theo **mức giá** không
+được, thì thoát theo **trạng thái** (lợi thế đảo chiều đã hết) hoặc theo
+**thời gian** thì sao? Đây đúng là họ mà lý thuyết ủng hộ cho chiến lược đảo
+chiều. Script `scripts/rsi2_exit_alt.py` (luật trong docstring, viết trước khi
+chạy). Lệnh, stop HVN, top 10, 5 chỗ giống hệt mục trên.
+
+8 ô: thoát khi close > MA 3/5/10 (MA5 là luật gốc của Connors), nến tăng
+đầu tiên (close > close hôm qua), close > đỉnh hôm qua, và **RSI > 70 cộng
+time stop** 3/5/10 ngày. Thước đo chính: Sharpe R theo tháng.
+
+| Luật thoát | Lệnh | Thắng | Giữ TB | R/lệnh | R/năm | Sụt R | R/năm÷sụt | Sharpe tháng | 6 cắt TB | 6 cắt hơn mốc |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **RSI > 70 (mốc)** | 156 | 69% | 4,6 n | +0,206 | **+5,81** | 3,14 | 1,85 | 1,21 | 0,77 | — |
+| close > MA3 | 157 | 71% | 2,3 n | +0,147 | +4,17 | 2,72 | 1,53 | **1,28** | 0,80 | 4/6 |
+| close > MA5 (Connors) | 156 | 69% | 3,5 n | +0,164 | +4,64 | 3,48 | 1,33 | 1,12 | 0,68 | 3/6 |
+| close > MA10 | 156 | 69% | 5,5 n | +0,165 | +4,64 | 3,88 | 1,19 | 1,07 | 0,55 | 1/6 |
+| Nến tăng đầu tiên | 162 | 72% | 1,7 n | +0,104 | +3,06 | 2,91 | 1,05 | 1,20 | 0,57 | 3/6 |
+| close > đỉnh hôm qua | 156 | 67% | 4,3 n | +0,196 | +5,52 | 3,52 | 1,57 | 1,16 | 0,56 | 2/6 |
+| RSI > 70 + giữ tối đa 3 n | 159 | 62% | 2,6 n | +0,177 | +5,10 | 2,99 | 1,71 | 1,13 | 0,79 | 4/6 |
+| RSI > 70 + giữ tối đa 5 n | 156 | 67% | 3,5 n | +0,188 | +5,31 | **2,70** | **1,97** | 1,10 | 0,79 | 4/6 |
+| RSI > 70 + giữ tối đa 10 n | 156 | 69% | 4,4 n | +0,206 | +5,81 | 3,14 | 1,85 | 1,21 | 0,78 | 4/6 |
+
+(Sharpe mốc 1,21 ở đây so với 1,16 ở mục trên chỉ vì tập tháng khác — hai
+script lấy hợp các tháng có lệnh trên lưới của mình.)
+
+R theo năm:
+
+| | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|---|
+| RSI > 70 (mốc) | +4,0 | +1,1 | +9,0 | +12,0 | +3,7 | +2,4 |
+| close > MA3 | +2,8 | +1,4 | +8,3 | +6,7 | +2,1 | +1,8 |
+| close > MA5 | +2,4 | +0,7 | +10,9 | +5,2 | +3,8 | +2,7 |
+| RSI > 70 + giữ tối đa 5 n | +1,6 | +1,3 | +8,5 | +11,9 | +4,6 | +1,5 |
+
+Ô chọn theo luật (Sharpe làm trơn với lân cận cao nhất): **close > MA3**,
+Sharpe 1,28 so với 1,21. Nhưng chênh KTC 99,375% [−0,69 ; +0,65] (KTC95
+[−0,49 ; +0,47]), hơn mốc **1/6 năm**, lân cận MA5 kém mốc → **trượt cả bốn
+điều kiện, giữ RSI > 70**.
+
+- **Luật gốc của Connors (close > MA5) kém RSI > 70** trên bộ này: R/năm
+  −20%, sụt cao hơn, kém ở 3/6 cách cắt ngày.
+- **Thoát càng sớm thì lời càng mỏng.** MA3 và nến tăng đầu tiên ra sau
+  1,7–2,3 ngày, tỉ lệ thắng cao hơn nhưng R/lệnh giảm 30–50%. Cùng bài học
+  với chốt lời gần: tỉ lệ thắng tăng không phải lợi thế.
+- **Time stop 10 ngày không bao giờ kích hoạt** (trùng mốc từng con số):
+  RSI > 70 hoặc stop luôn đến trước.
+- **Time stop 5 ngày** cho R/năm÷sụt cao nhất lưới (1,97 so với 1,85), sụt
+  2,70R thay vì 3,14R. Nhưng Sharpe tháng thấp hơn mốc (1,10), thắng 3/6
+  năm, 6 cắt chỉ hơn 4/6. Đây là đọc số **sau khi nhìn**, không được dùng để
+  quyết; muốn thử thì phải là một ô mới trên dữ liệu chưa dùng.
+
+**Kết luận chung cho RSI(2):** cả chốt theo giá (22 ô) lẫn thoát theo trạng
+thái / thời gian (8 ô) đều không hơn RSI > 70. Luật thoát đang chạy đã gần
+tối ưu trong mọi họ hợp lý.
+
+---
+
+# MFE / MAE cho RSI(2) — 30/10/2026, GIỮ mốc
+
+MFE (đi thuận lớn nhất) và MAE (đi ngược lớn nhất) của mỗi lệnh, tính trên
+high / low nến ngày từ ngày vào tới ngày ra, đơn vị ATR lúc vào. Script
+`scripts/rsi2_mfe.py` (luật trong docstring, viết trước khi chạy). Lệnh và
+stop giống hệt mục trên.
+
+**Chẩn đoán** (156 lệnh của mốc, thắng 69%):
+
+| ATR | p25 | p50 | p75 | p90 | p95 | TB |
+|---|---|---|---|---|---|---|
+| MAE lệnh thắng | 0,18 | 0,41 | 0,73 | 0,90 | 1,29 | 0,49 |
+| MAE lệnh thua | 1,32 | 1,75 | 2,17 | 2,86 | 3,17 | 1,94 |
+| MFE lệnh thắng | 0,73 | 1,00 | 1,38 | 1,97 | 2,29 | 1,14 |
+| MFE lệnh thua | 0,11 | 0,37 | 0,53 | 0,82 | 1,08 | 0,39 |
+| Khoảng stop HVN | 1,61 | 2,77 | 5,16 | 6,00 | 6,00 | 3,21 |
+
+- **Lệnh thắng hầu như không đi ngược quá 1 ATR** (p90 0,90), trong khi stop
+  HVN cách giá vào trung vị 2,8 ATR. Chỉ 6% lệnh thua có MAE nằm trong vùng đó.
+  Phần lớn lệnh thua (69%) không chạm stop mà thoát RSI > 70 khi đang lỗ.
+- **Lệnh thua gần như chưa bao giờ có lời**: 6% từng lên ≥ 1 ATR, 0% lên
+  ≥ 2 ATR. Lệnh thắng giữ được 77% MFE (trung vị). Không có nhiều để vắt thêm.
+- **Tỷ số lợi thế** (MFE ÷ MAE trung bình, mọi tín hiệu, bỏ qua luật thoát)
+  lên đỉnh ở **ngày 4–5 (1,66)** rồi giảm dần. Lệnh mốc giữ trung bình 4,6
+  ngày: RSI > 70 thoát đúng lúc lợi thế hết.
+
+**Hai luật suy từ MFE / MAE**, ngưỡng tính walk-forward từ các lệnh đã ra
+trước ngày vào (cần ≥ 50 lệnh, nên năm 2021 chưa áp được). Stop HVN vẫn là 1R.
+
+| Luật | Thắng | R/lệnh | R/năm | Sụt R | R/năm÷sụt | Sharpe tháng | 6 cắt TB | 6 cắt hơn |
+|---|---|---|---|---|---|---|---|---|
+| **Mốc** | 69% | +0,206 | +5,81 | 3,14 | 1,85 | 1,24 | 0,77 | — |
+| Stop thêm ở p80 MAE lệnh thắng | 58% | +0,142 | +4,06 | 2,77 | 1,47 | 1,01 | 0,70 | 2/6 |
+| … p90 | 62% | +0,188 | +5,30 | 2,49 | 2,13 | 1,16 | 0,82 | 4/6 |
+| … p95 | 64% | +0,197 | +5,56 | 2,49 | 2,23 | 1,21 | 0,87 | 4/6 |
+| Hoà vốn khi chạm p50 MFE | 63% | +0,203 | +5,73 | 2,50 | 2,29 | **1,26** | 0,86 | **5/6** |
+| Hoà vốn khi chạm p75 MFE | 67% | +0,209 | +5,91 | 3,14 | 1,88 | 1,27 | 0,78 | 3/6 |
+
+Ô chọn: **hoà vốn khi chạm p50 MFE**, Sharpe 1,26 so với 1,24, chênh KTC 99%
+[−0,14 ; +0,23], hơn mốc **2/6 năm** → **trượt (1) và (2), giữ mốc**.
+
+Phần giảm sụt (3,14R → 2,5R) ở cả bốn ô đều đến từ **một đợt duy nhất**:
+đợt sụt của mốc là 06–10/2024, các luật cắt bớt đợt đó và đợt sụt lớn nhất
+của chúng chuyển về 08–10/2022. Một đợt thì không đủ làm bằng chứng, nhất là
+khi tổng R không tăng.
+
+

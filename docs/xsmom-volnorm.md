@@ -403,6 +403,138 @@ XRP(38), DOGE(38), ADA(31), ETH(29), BTC(27), SOL(22). XRP và DOGE xuất hiệ
 Xen vào đó là token mới đang nóng (LAB, AKE, PUMP, HYPE, SIREN): chúng lọt
 top 20 thanh khoản thật, vì khối lượng lúc mới niêm yết rất lớn.
 
+## MFE / MAE — 30/10/2026, LOẠI
+
+MFE / MAE của mỗi vị thế trong kỳ giữ 7 ngày, tính trên high / low nến ngày
+theo chiều chân, đơn vị R = σ30·√7 như bot. Script `scripts/xsmom_mfe.py`
+(luật trong docstring, viết trước khi chạy). Mốc tái tạo khớp số.
+
+**Chẩn đoán** (6.601 vị thế, thắng 50%):
+
+| R | p25 | p50 | p75 | p90 | p95 | TB |
+|---|---|---|---|---|---|---|
+| MAE vị thế thắng | 0,13 | 0,30 | 0,55 | 0,86 | 1,09 | 0,40 |
+| MAE vị thế thua | 0,63 | 0,99 | 1,48 | 2,19 | 2,88 | 1,24 |
+| MFE vị thế thắng | 0,70 | 1,13 | 1,83 | 2,97 | 3,92 | 1,51 |
+| MFE vị thế thua | 0,15 | 0,31 | 0,56 | 0,86 | 1,11 | 0,42 |
+| Lãi cuối | −0,54 | −0,01 | +0,58 | +1,38 | +1,99 | +0,06 |
+
+- Hình dạng đuôi phải: trung vị lãi cuối ≈ 0, trung bình +0,06R nhờ p90–p95.
+  MFE của vị thế thắng có đuôi dài (p95 3,9R).
+- Vị thế thắng chỉ giữ được 56% MFE (trung vị), và 30% vị thế thua từng lời
+  ≥ 0,5R. Nhìn qua thì tưởng có nhiều chỗ để chốt hoặc dời stop.
+- **Tỷ số lợi thế gần như phẳng** (1,13 ngày 1 → 1,17 ngày 7): lợi thế mỗi
+  ngày nhỏ và đều, không có ngày nào nên ra sớm.
+
+**Hai luật**, ngưỡng walk-forward từ vị thế đã thoát trước ngày vào:
+
+| Luật | Bị dừng | bps/kỳ | Vốn gộp | Sụt | CAGR/sụt | Sharpe | Hiệu (KTC 98,98%) | Năm + |
+|---|---|---|---|---|---|---|---|---|
+| **Mốc** | — | +143,3 | 26,79× | 44,1% | 1,61 | 1,15 | — | — |
+| Stop ở p80 MAE vị thế thắng | 46,6% | +101,0 | 9,57× | 41,8% | 1,07 | 0,83 | **−42,3 [−81,5 ; −1,9]** | 1/6 |
+| … p90 | 33,7% | +107,2 | 10,01× | 47,4% | 0,97 | 0,85 | −36,1 [−72,9 ; +1,5] | 2/6 |
+| … p95 | 23,4% | +120,1 | 12,78× | 42,4% | 1,22 | 0,95 | −23,2 [−57,3 ; +11,2] | 2/6 |
+| Hoà vốn khi chạm p50 MFE | 20,5% | +134,1 | 19,49× | 43,0% | 1,45 | 1,11 | −9,2 [−33,7 ; +15,4] | 1/6 |
+| Hoà vốn khi chạm p75 MFE | 4,0% | +140,5 | 23,73× | 43,3% | 1,57 | 1,15 | −2,8 [−17,2 ; +13,6] | 2/6 |
+
+**Cả năm ô âm → LOẠI.** Stop theo MAE (cách của Sweeney, cũng chính là «stop
+cố định cho từng vị thế» còn bỏ ngỏ) hại nặng nhất: ở p80 KTC loại 0 **về
+phía lỗ**. Stop không làm giảm sụt (42–47% so với 44%), chỉ cắt lãi. Cùng bài
+học với stop kéo theo: vị thế thua của động lượng thường đi ngược trước rồi
+mới quay lại, và vị thế thắng lớn cũng đi ngược trước khi chạy. Nghiên cứu
+Sadaqat & Butt (2023, 147 coin, tháng) thấy stop có lợi; trên mẫu này thì không.
+
+## Cắt chân bán khi thị trường hoảng loạn — 30/10/2026, LOẠI
+
+Ý (Daniel & Moskowitz 2016): trên cổ phiếu, động lượng sập khi thị trường
+đang **gấu** và **biến động cao** rồi bật lại, vì nhóm thua (chân bán) tăng
+vọt. Cách chữa là tắt chân bán trong trạng thái đó. Script
+`scripts/xsmom_panic.py` (luật trong docstring, viết trước khi chạy). Thị
+trường = BTC. Kỳ nào trạng thái bật thì sổ đó **không mở chân bán** (chỗ để
+trống, chân mua giữ nguyên). Mốc là bản chốt với kế toán phí cũ, tái tạo khớp
+số. 9 ô: ba định nghĩa trạng thái × L 90 / 180 / 365 ngày:
+
+- **B**: BTC L ngày < 0 (gấu)
+- **BV**: gấu VÀ σ30 của BTC > trung vị mở rộng của chính nó
+- **BR**: gấu VÀ BTC 7 ngày > 0 (đang bật lại)
+
+Kỳ không còn vị thế nào thì tính lợi suất 0, không bỏ kỳ đó đi.
+
+| Biến thể | % kỳ bật | Chân bán khi bật / tắt (bps/kỳ) | bps/kỳ | Vốn gộp | Sụt | CAGR/sụt | Sharpe | Hiệu (KTC 99,43%) |
+|---|---|---|---|---|---|---|---|---|
+| **Mốc** | — | — | +143,3 | 26,79× | 44,1% | 1,61 | 1,15 | — |
+| B 90 | 47,6% | +12 / +44 | +137,4 | 21,85× | 58,0% | 1,13 | 1,08 | −5,9 [−53,5 ; +41,5] |
+| B 180 | 40,5% | +16 / +38 | +136,7 | 21,20× | 63,5% | 1,02 | 1,10 | −6,6 [−53,1 ; +38,9] |
+| B 365 | 40,7% | +57 / +10 | +120,3 | 13,97× | 72,1% | 0,75 | 0,98 | −23,0 [−72,0 ; +21,5] |
+| BV 90 | 15,1% | +34 / +28 | +138,2 | 25,83× | 44,2% | 1,59 | 1,11 | −5,1 [−27,1 ; +15,5] |
+| BV 180 | 10,2% | +4 / +32 | +142,9 | 28,31× | 44,4% | 1,64 | 1,15 | −0,4 [−17,6 ; +18,6] |
+| BV 365 | 9,6% | **−18** / +34 | +145,0 | 29,85× | 43,0% | 1,73 | 1,16 | +1,7 [−12,3 ; +18,5] |
+| BR 90 | 21,1% | +28 / +29 | +137,4 | 25,47× | 53,7% | 1,30 | 1,09 | −5,9 [−33,1 ; +22,0] |
+| BR 180 | 18,8% | +41 / +26 | +135,7 | 21,93× | 54,4% | 1,21 | 1,09 | −7,6 [−30,7 ; +14,9] |
+| BR 365 | 19,2% | +83 / +16 | +127,4 | 17,79× | 60,3% | 1,00 | 1,02 | −15,8 [−37,3 ; +6,3] |
+
+Ô chọn theo luật: **BV 365**, Sharpe 1,16 so với 1,15, hiệu +1,7 bps/kỳ
+nhưng KTC chứa 0 và lân cận BV 180 âm → **trượt (2) và (4), giữ mốc**.
+
+- **Trên crypto, chân bán kiếm tiền chính trong thị trường gấu.** Tắt nó khi
+  BTC đang gấu làm sụt *tăng* từ 44% lên 58–72%, vì chân bán là thứ phòng hộ
+  danh mục trong năm 2022 (hiệu −57 … −113 bps/kỳ năm đó ở mọi ô B, BR).
+- **Cú sập kiểu Daniel–Moskowitz có xuất hiện, nhưng nhỏ và hiếm.** Chỉ ở
+  trạng thái hẹp nhất (gấu 365 ngày + biến động cao, 9,6% số kỳ), chân bán
+  mới lỗ trung bình (−18 bps/kỳ). Tắt nó ở đó gần như hoà vốn.
+- Khớp với bài học [money-management-r.md](money-management-r.md): động lượng
+  crypto kiếm tiền đúng lúc biến động cao. Các cách chữa lấy từ cổ phiếu
+  (nhắm biến động, tắt chân bán khi hoảng loạn) đều không chuyển sang được.
+
+## Vùng đệm hạng — 30/10/2026, LOẠI
+
+Ý (Novy-Marx & Velikov 2016): đến kỳ tái cân bằng, mã đang giữ **không bị
+đóng** nếu vẫn nằm trong K hạng đầu (chân mua) / K hạng cuối (chân bán) và vẫn
+qua lọc MA30. Chỗ còn lại lấy từ 2 mã đầu / cuối như bản chốt. Mục đích: bớt
+vòng quay, bớt phí. Script `scripts/xsmom_buffer.py` (luật trong docstring,
+viết trước khi chạy). Lưới K 3 / 4 / 6 / 8, toàn mẫu (nửa kiểm ≥ 2024-07 đã
+dùng hai lần), KTC Šidák 4 ô.
+
+Mốc phải sửa trước khi so: backtest cũ tính 10 bps cho **mọi** vị thế mỗi
+kỳ, kể cả khi mã đứng lại top 2 (42,9% số vị thế). Bot đối chiếu mục tiêu với
+vị thế đang có theo mã, nên vị thế giữ lại không trả phí. Mốc công bằng = K = 2
+có miễn phí đó.
+
+| Biến thể | Giữ lại | bps/kỳ | Vốn gộp | Sụt | CAGR | CAGR/sụt |
+|---|---|---|---|---|---|---|
+| Bản chốt, phí cũ (tái tạo khớp số) | — | +143,3 | 26,79× | 44,1% | 71,3% | 1,61 |
+| **K = 2, miễn phí vị thế giữ (mốc)** | 42,9% | **+146,8** | **29,62×** | 43,0% | **74,1%** | 1,73 |
+| K = 3 | 51,2% | +144,7 | 26,64× | 43,1% | 71,1% | 1,65 |
+| K = 4 | 56,4% | +141,3 | 25,42× | 41,5% | 69,8% | 1,68 |
+| K = 6 | 61,5% | +132,2 | 20,30× | 40,3% | 63,7% | 1,58 |
+| K = 8 | 64,5% | +134,9 | 21,31× | 36,8% | 65,0% | 1,76 |
+
+Hiệu so với mốc, bps/kỳ (KTC 98,73%) và theo năm:
+
+| K | Toàn mẫu | KTC | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|---|---|---|
+| 3 | −2,1 | [−32,2 ; +22,6] | −58,4 | −3,5 | +29,7 | −22,4 | −3,1 | +39,1 |
+| 4 | −5,5 | [−43,9 ; +27,9] | −66,5 | −4,7 | +21,7 | −45,1 | −4,1 | +64,2 |
+| 6 | −14,6 | [−68,4 ; +34,9] | −92,3 | −2,4 | +9,0 | −80,6 | −9,7 | +89,9 |
+| 8 | −11,9 | [−70,4 ; +38,4] | −52,8 | −1,6 | +16,6 | −102,3 | −9,6 | +89,0 |
+
+**Trượt cả bốn điều kiện → LOẠI.** Mọi K đều âm toàn mẫu, chỉ dương 2/6 năm.
+
+- **Phí tiết kiệm được quá nhỏ.** Giữ thêm 8–22% vị thế mỗi kỳ chỉ tiết kiệm
+  cỡ 0,7–1,8 bps/kỳ trên danh mục, trong khi mỗi chỗ bị mã cũ chiếm mất là
+  một chỗ không dành cho mã đang đứng đầu.
+- **Năm động lượng mạnh (2021, 2024) thiệt nhiều nhất.** Đúng bài học đuôi
+  phải: lợi thế nằm ở mã vừa vọt lên hạng #1, và vùng đệm nhường chỗ đó cho
+  mã đã nguội.
+- K = 8 cắt sụt 43% → 37% nhưng lãi giảm 12%; CAGR/sụt 1,76 nhỉnh hơn mốc
+  1,73 mà KTC hiệu chứa 0 và âm 4/6 năm — không đổi.
+
+**Phát hiện phụ về kế toán:** các con số đã công bố của động lượng (26,79×,
+CAGR 71%) hơi **thận trọng**. Nếu bot thật sự giữ nguyên vị thế khi mã đứng
+lại top 2 thì con số đúng là ~29,6×, CAGR ~74% (+3,5 bps/kỳ). Chưa kiểm
+executor có làm đúng vậy với vị thế cùng mã ở sổ khác không — không đổi gì
+trong bot vì việc này.
+
 ## Frog-in-the-pan — đã thử 27/10/2026, LOẠI
 
 Da, Gurun, Warachka (2014): động lượng đến từ **nhiều bước nhỏ đều** bền hơn
@@ -637,7 +769,12 @@ Hai đợt sàng lọc, **36 ô cắt ngang** cộng 6 ô theo-từng-lệnh:
 | Nhồi lệnh thuận / ngược trên động lượng, 28/10/2026 | **Không thay.** Thuận chỉ là phơi nhiễm lớn hơn; ngược tốt hơn ở 9/9 ô (Sharpe 0,91 → 1,14) nhưng KTC chứa 0 và một nửa là hiệu ứng cầm nhiều lớp hơn |
 | Lệnh nhồi có khung ±1 ATR sau khi giá đi đúng 1 ATR, 28/10/2026 | **Xác nhận cho sổ giấy.** +0,087R/lệnh TB 6 cách cắt ngày, phép giả −0,003; RSI(2) thì không có gì |
 | Bán khống sau tin huỷ niêm yết của Binance (gỡ spot, gỡ perp, thẻ Monitoring), 28/10/2026 | **Loại cả ba** (72 ô). Gỡ spot: +693 bps/lệnh, vượt phép giả, nhưng KTC chứa 0 — 7/67 lệnh lỗ > 50% do ép bán khống; phần rơi lớn nhất (−19%) nằm trong ngày thông báo. Bản nến 1 phút (96 ô): phút đầu sau tin đã rơi −11%, phần trôi 24 giờ còn +400 … +700 bps nhưng KTC vẫn chứa 0. Bản aggTrades (144 ô): **thẻ Monitoring đạt** (+650 bps, giữ 24 giờ, trễ không quan trọng) → ứng viên sổ giấy. Stop dời theo lời (108 ô): **tin gỡ spot đạt** nếu vào trong ~1 giây. Đổi lại: bot **chặn mua** mã có tin. Xem `huy-niem-yet.md` |
+| MFE / MAE: stop ở phân vị MAE vị thế thắng (Sweeney), hoà vốn ở phân vị MFE, walk-forward, 30/10/2026 | **Loại.** Cả 5 ô âm; stop p80 −42 bps/kỳ, KTC loại 0 về phía lỗ. Tỷ số lợi thế phẳng theo ngày |
+| Tắt chân bán khi BTC gấu / gấu + biến động cao / gấu + đang bật lại (Daniel & Moskowitz), 30/10/2026 | **Loại.** 8/9 ô âm; chân bán là thứ phòng hộ năm 2022, tắt nó làm sụt tăng lên 58–72%. Ô tốt nhất (gấu 365 ngày + biến động cao) +1,7 bps/kỳ, KTC chứa 0 |
+| Vùng đệm hạng (giữ mã còn trong top K = 3/4/6/8 thay vì thoát cứng sau 7 ngày), 30/10/2026 | **Loại.** −2 … −15 bps/kỳ, dương 2/6 năm; năm động lượng mạnh thiệt nhất. Phí tiết kiệm không bù được chỗ bị mã cũ chiếm |
 | Stop ở đỉnh/đáy cũ (pivot, Donchian, ZigZag, nổi bật) cho lệnh nhồi, lệnh gốc động lượng và RSI(2), 28/10/2026 | **Không hơn stop đang dùng ở cả ba chỗ** (96 ô). Volume profile (96 ô): stop HVN cho RSI(2) đạt luật nhưng phần lớn là cỡ lệnh to hơn, Sharpe chênh KTC chứa 0. Xem `stop-dinh-day.md` |
+| Họ phổ biến chưa có, 30/10/2026: TSMOM (8), breakout nến ngày có xác nhận khối lượng / squeeze / Larry Williams ngày (8), pairs đồng liên kết (8), HMM làm công tắc (2) | **Loại cả bốn.** TSMOM chỉ L30 dương (+51 bps/kỳ, KTC chứa 0), trộn 50/50 hạ Sharpe 1,15 → 1,05; breakout không hơn vào ngẫu nhiên; đồng liên kết lỗ ít hơn cặp ngẫu nhiên nhưng vẫn âm; tắt khi HMM báo biến động cao mất −9 … −18 bps/kỳ. Xem `chien-luoc-pho-bien.md` |
+| Hệ thống mẫu Superalgos (Keltner–Bollinger, Cointegration, WEMA, MADI, BB Top Bounce, Weak Hands Buster), 02/11/2026 | **Loại cả sáu** (10 ô). Chạy đúng điều kiện JS trong tệp bằng engine nhỏ. MADI trên 99 mã +14,6 bps/lệnh, vượt null thời điểm nhưng KTC chứa 0; hai hệ thống bán của BTC có ngưỡng USD cứng, lời 2021–22 rồi lỗ. Xem `superalgos.md` |
 
 **Quan trọng:** ba thứ *có* tín hiệu — chia biến động, động lượng 14 ngày (đảo
 dấu), sốc khối lượng (đảo dấu) — đều chỉ về **cùng một phía: mua cái vừa
@@ -757,6 +894,53 @@ Tổng lên **804 ô**. Ba script nhìn vào **cùng một mẫu sự kiện**: 
 Đây là mẫu sự kiện riêng (mỗi sự kiện là một thông báo), không dùng chung nửa
 kiểm với các ô cắt ngang.
 
+### Thêm ngày 30/10/2026 — vùng đệm hạng
+
+| Nhóm | Số ô | Kết quả |
+|---|---|---|
+| Vùng đệm hạng K = 3/4/6/8, toàn mẫu, Šidák 4 ô | 4 | **loại** — âm mọi K, dương 2/6 năm |
+| Đóng sớm lệnh mua đang giữ khi có tin huỷ niêm yết: 3 ô quyết + 15 ô mô tả (mẫu sự kiện, `huy-niem-yet.md`) | 18 | **không thêm** — trung vị dương nhưng đuôi ép giá kéo TB về 0; bot chưa từng cầm lệnh nào lúc có tin |
+| Tắt chân bán trong trạng thái hoảng loạn: 3 định nghĩa × L 90/180/365, Šidák 9 ô | 9 | **loại** — 8/9 ô âm, ô tốt nhất KTC chứa 0 |
+| MFE / MAE: stop p80/90/95 MAE thắng, hoà vốn p50/75 MFE, Šidák 5 ô | 5 | **loại** — cả 5 ô âm |
+| σ của điểm: Parkinson / Garman–Klass / Yang–Zhang thay close-to-close, Šidák 3 ô (`chi-so-giao-dich.md`) | 3 | **giữ close-to-close** — hiệu −0,4 … −7,5 bps/kỳ, KTC chứa 0 |
+
+Tổng lên **843 ô**.
+
+### Thêm ngày 30/10/2026 — các họ chiến lược phổ biến (`chien-luoc-pho-bien.md`)
+
+| Nhóm | Số ô | Kết quả |
+|---|---|---|
+| TSMOM: L 30/90/180/365 × top 20/50, Šidák 8 ô | 8 | **loại** — KTC chứa 0; chỉ L30 dương |
+| Breakout nến ngày: Donchian + khối lượng (4), squeeze (2), Larry Williams ngày (2) | 8 | **loại** — null max-over-grid p 0,995 |
+| Pairs đồng liên kết: W 90/180 × z 2/2,5 × top 50/100 | 8 | **loại** — âm mọi ô, W180 KTC loại 0 về phía âm |
+| HMM hai trạng thái làm công tắc động lượng, P > 0,5 / 0,8 | 2 | **giữ** — hiệu −18,5 / −9,7 bps/kỳ |
+
+Tổng lên **869 ô**.
+
+### Thêm ngày 02/11/2026 — hệ thống mẫu Superalgos (`superalgos.md`)
+
+| Nhóm | Số ô | Kết quả |
+|---|---|---|
+| Keltner–Bollinger, Cointegration, WEMA, MADI × {BTC, 99 mã} + BB Top Bounce, Weak Hands Buster × BTC; tham số gốc, null thời điểm, Šidák 10 ô | 10 | **loại cả mười** — MADI 99 mã vượt null (p 0,000) nhưng KTC chứa 0 |
+
+Tổng lên **879 ô**.
+
+### Thêm ngày 02/11/2026 — lưới tham số × khung cho Superalgos
+
+| Nhóm | Số ô | Kết quả |
+|---|---|---|
+| 6 hệ thống × tham số 3×3 × khung {1H, 4H, 1D×, 1D gộp} × {BTC, 99 mã}, null max-over-grid | 360 | **loại cả mười nhóm** — số lớn ở 1D là phần lời của việc cầm crypto lâu (null +285 … +865 bps) |
+
+Tổng lên **1.239 ô**.
+
+| Keltner–Bollinger 1D so với rổ top N cùng cửa sổ, 623 mã gồm mã chết: tham số 3×3 × {1D×, 1D gộp} × N {20, 50} | 36 | **loại** — +1.515 là thiên lệch sống sót (đúng thời điểm: −363); A dương nhưng bỏ 5 lệnh là âm mọi ô |
+
+Tổng lên **1.275 ô**.
+
+| Superalgos chỉ trên top 20 như động lượng: 4 hệ thống × 3×3 × khung {1H, 4H, 1D×, 1D gộp} (144) + chọn lại tham số × khung mỗi ngày L 90/180/365 (12) | 156 | **loại** — gần nhất WEMA 1D A +120 (z 2,13, p max 0,52); WFO không hơn bản cố định |
+
+Tổng lên **1.431 ô**.
+
 ## Điều này CHƯA chứng minh
 
 1. **Chưa có kiểm định ngoài mẫu sạch.** Bộ tham số được chọn trên toàn mẫu;
@@ -791,6 +975,13 @@ kiểm với các ô cắt ngang.
 | `scripts/xsmom_resid.py` | Động lượng phần dư — đã thử, **bị loại**. Dùng lại `blend` của script ếch |
 | `scripts/xsmom_detail.py` | Bóc từng năm, đường vốn đánh giá lại theo ngày |
 | `scripts/xsmom_add.py` | Nhồi lệnh thuận / ngược — không thay |
+| `scripts/xsmom_buffer.py` | Vùng đệm hạng — đã thử, **bị loại**. Dùng lại `blend` của script ếch |
+| `scripts/xsmom_panic.py` | Tắt chân bán khi hoảng loạn (Daniel & Moskowitz) — đã thử, **bị loại** |
+| `scripts/xsmom_mfe.py` | MFE / MAE: chẩn đoán + stop / hoà vốn walk-forward — **bị loại** |
+| `scripts/vol_estimators.py` | Dự báo của 6 ước lượng biến động + thay σ trong điểm — giữ close-to-close |
+| `scripts/superalgos_bt.py`, `scripts/superalgos/` | Hệ thống mẫu Superalgos chạy bằng engine nhỏ — loại cả sáu, xem `superalgos.md` |
+| `scripts/tsmom.py`, `breakout_daily.py`, `pairs_coint.py`, `hmm_regime.py`, `deflated_sharpe.py` | Các họ phổ biến chưa có + Deflated Sharpe — loại cả bốn, xem `chien-luoc-pho-bien.md` |
+| `scripts/trade_metrics.py` | Bộ chỉ số đầy đủ của bot (MFE/MAE/ETD, chạm trước, VaR/ES, Monte Carlo) — xem `chi-so-giao-dich.md` |
 | `scripts/add_bracket.py`, `add_bracket_confirm.py` | Lệnh nhồi có khung ±1 ATR: lưới rồi xác nhận 6 mốc cắt + phép giả |
 | `scripts/swing_stops.py`, `vp_stops.py` | Stop ở đỉnh/đáy cũ và volume profile (chỗ A, B) — loại |
 | `scripts/xsmom_page.py` | Dựng dữ liệu + trang UI |
