@@ -14,20 +14,24 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import backtest, data, db, delist, executor, news, runner, settings
+from . import backtest, data, db, delist, executor, news, runner, settings, vsa
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
 PAGE = Path(__file__).parent / "static" / "index.html"
 
-# Hai ban dac ta da chot. Gan ../docs vao /docs CHI DOC trong compose, nen sua
-# tai lieu la trang thay ngay, khong phai dung lai anh.
-DOCS_DIR = Path(os.environ.get("DOCS_DIR", "/docs"))
+# Hai ban dac ta da chot. Gan ./docs vao /docs CHI DOC trong compose, nen sua
+# tai lieu la trang thay ngay, khong phai dung lai anh. Chay ngoai Docker (khong
+# co /docs) thi doc thang docs/ cua repo.
+DOCS_DIR = Path(os.environ.get("DOCS_DIR") or next(
+    (p for p in (Path("/docs"), Path(__file__).parent.parent / "docs") if p.is_dir()),
+    Path("/docs")))
 DOCS = [("rsi2-connors", "RSI(2) Connors v3.1"),
         ("xsmom-volnorm", "Động lượng cắt ngang"),
         ("money-management-r", "Quản lý vốn theo R"),
         ("stop-dinh-day", "Cắt lỗ HVN · chốt lời"),
-        ("huy-niem-yet", "Tin huỷ niêm yết")]
+        ("huy-niem-yet", "Tin huỷ niêm yết"),
+        ("vsa-push-4h", "VSA 4H (sổ giấy)")]
 NAME_OK = re.compile(r"^[a-z0-9][a-z0-9.-]{0,63}$")
 CONFIRM = "TÔI ĐỒNG Ý CHẠY THẬT"
 
@@ -97,6 +101,11 @@ def _start() -> None:
     sched.add_job(_job, CronTrigger(hour=int(hh), minute=int(mm or 0)),
                   id="daily", replace_existing=True,
                   misfire_grace_time=3600, coalesce=True)
+    if CFG.vsa_paper:
+        # Nen 4H dong luc 00/04/08/12/16/20 UTC; chay 2 phut sau de Binance chot nen.
+        sched.add_job(_vsa_job, CronTrigger(hour="*/4", minute=2),
+                      id="vsa4h", replace_existing=True,
+                      misfire_grace_time=600, coalesce=True)
     sched.start()
     db.log("info", f"khởi động · lịch chạy {CFG.run_at_utc} UTC · "
                    f"chạy thật ở tầng mã: {'MỞ' if CFG.live_enabled_env else 'KHOÁ'}")
@@ -121,6 +130,13 @@ def _job() -> None:
         runner.run_once()
     except Exception:
         db.log("error", "lượt chạy theo lịch hỏng:\n" + traceback.format_exc()[-800:])
+
+
+def _vsa_job() -> None:
+    try:
+        vsa.run_once()
+    except Exception:
+        db.log("error", "sổ giấy VSA 4H hỏng:\n" + traceback.format_exc()[-800:])
 
 
 @app.get("/healthz")
@@ -177,6 +193,12 @@ def news_state():
     return news.summary()
 
 
+@app.get("/api/vsa")
+def vsa_state():
+    """So giay VSA 4H: tin hieu, lenh gia, so voi backtest."""
+    return vsa.summary()
+
+
 @app.get("/api/state")
 def state():
     ready, why = executor.live_ready()
@@ -203,7 +225,9 @@ def state():
         "data": {"bars": nbars, "symbols": nsym, "last_bar": last_bar,
                  "seeded": db.kv_get("seeded")},
         "sched": {"at": CFG.run_at_utc,
-                  "next": nxt.next_run_time.isoformat() if nxt and nxt.next_run_time else None},
+                  "next": nxt.next_run_time.isoformat() if nxt and nxt.next_run_time else None,
+                  "vsa_next": (j.next_run_time.isoformat()
+                               if (j := sched.get_job("vsa4h")) and j.next_run_time else None)},
         "last_run": db.kv_get("last_run"),
         "safety": db.kv_get("safety", {}) or {},
         "blocked": db.kv_get("blocked"),

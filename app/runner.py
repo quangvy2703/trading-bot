@@ -12,7 +12,7 @@ import time
 
 import numpy as np
 
-from . import db, data, delist as DL, executor, settings, strategies as ST, volprofile as VP
+from . import db, data, delist as DL, executor, settings, strategies as ST, swing as SW, volprofile as VP
 from .binance import DAY, PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -201,6 +201,48 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
             "vị thế mới": len(new or []),
             "sổ khác giữ nguyên": len(cur_x) - sum(
                 1 for p in cur_x if p["sleeve"] == sl)}
+
+    # ---- TSVW / DSRM (app/swing.py): stop + chot co dinh, giu toi da 200 ngay ----
+    for sname in ("tsvw", "dsrm"):
+        r_s = K["r_usd"] * float(A.get(sname, 0.0))
+        cur_s = [p for p in cur if p["strategy"] == sname]
+        if r_s <= 0:
+            note[sname] = {"tắt": True, "vị thế sẽ đóng": len(cur_s)}
+            continue
+        ex_s = {id(p): why for p, why in SW.exits(P, day, cur_s)}
+        held = set()
+        for p in cur_s:
+            if id(p) in ex_s:
+                continue
+            held.add(p["symbol"])
+            target.append({"strategy": sname, "sleeve": None, "symbol": p["symbol"],
+                           "side": p["side"], "stop": p["stop"], "tp": p.get("tp"),
+                           **keep_of(p)})
+        # Ma vua thoat hom nay khong vao lai cung luot: nghien cuu (mot lenh
+        # mot luc) chi xet tin hieu tu nen SAU nen thoat.
+        held |= {p["symbol"] for p in cur_s if id(p) in ex_s}
+        try:
+            sig = SW.signals_today(sname, P, rank, day, held, nobuy)
+        except Exception as e:
+            sig = []
+            db.log("error", f"{SW.NAME[sname]}: tính tín hiệu lỗi: {e}")
+        tp_r = float(SW.PARAMS[sname]["tp_r"])
+        for x in sig:
+            r_use, notional = r_s, r_s / x["rf"]
+            if K["order"] > 0 and notional > K["order"]:
+                notional = K["order"]
+                r_use = notional * x["rf"]
+            target.append({"strategy": sname, "sleeve": None, "symbol": x["symbol"],
+                           "side": x["side"], "stop": x["stop"], "tp_r": tp_r,
+                           "r_usd": r_use, "notional": notional,
+                           "why": f"{SW.NAME[sname]} {'MUA' if x['side'] > 0 else 'BÁN'}"
+                                  f" · hạng TK #{x['rank']} · R {x['rf']*100:.1f}%"
+                                  f" · chốt {tp_r:g}R"
+                                  + (f" · thu về trần {K['order']:.0f} USD = {r_use / r_s:.2f}R"
+                                     if r_use < r_s else "")})
+        note[sname] = {"giữ": len(cur_s) - len(ex_s), "thoát": len(ex_s),
+                       "tín hiệu": len(sig),
+                       "lý do thoát": sorted({w for w in ex_s.values()})}
     return target, note
 
 
@@ -361,18 +403,22 @@ RUN_LOCK = threading.Lock()
 
 
 def _book_open(cx, a: dict, m: str) -> None:
+    # TSVW / DSRM: muc chot tinh tu GIA KHOP (nghien cuu: e + k·(e − stop)).
+    tp = a.get("tp")
+    if a.get("tp_r") and a.get("stop") and a.get("px"):
+        tp = a["px"] + a["side"] * float(a["tp_r"]) * abs(a["px"] - a["stop"])
     cx.execute(
         "INSERT INTO positions(strategy,sleeve,symbol,side,qty,"
-        "weight,notional,r_usd,entry_px,entry_ts,stop,mode,open)"
-        " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1)",
+        "weight,notional,r_usd,entry_px,entry_ts,stop,tp,mode,open)"
+        " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1)",
         (a["strategy"], a.get("sleeve"), a["symbol"], a["side"],
          a.get("qty", 0.0), a.get("weight"),
          a.get("notional"), a.get("r_usd"), a["px"],
-         int(time.time() * 1000), a.get("stop"), m))
+         int(time.time() * 1000), a.get("stop"), tp, m))
 
 
-_KEEP = ("strategy", "sleeve", "symbol", "side", "stop", "notional", "r_usd",
-         "weight", "why")
+_KEEP = ("strategy", "sleeve", "symbol", "side", "stop", "tp", "tp_r", "notional",
+         "r_usd", "weight", "why")
 
 
 def _save_blocked(run_id: int, day: int, m: str, blocked: list) -> None:

@@ -216,6 +216,15 @@ chặn 31 lần mua động lượng (7 lệnh REEF năm 2024) và không lần 
 vốn cuối 2.098,8 → 2.101,5 USD. Bán khống theo tin thì đã thử và **loại** —
 xem `docs/huy-niem-yet.md`.
 
+### Sổ giấy VSA 4H — `VSA_PAPER` (chỉ ghi, không đặt lệnh)
+
+`app/vsa.py` chạy **2 phút sau mỗi nến 4H** (00:02, 04:02, … UTC). Với mỗi mã
+top 50, bot tải 150 nến 4H công khai, tìm tín hiệu *đẩy qua vùng cung rồi nến
+giảm khối lượng thấp* (Tom Williams, VSA), rồi ghi một lệnh mua giả ở open
+nến kế và đóng ở close nến thứ 3. Module này không dùng `Trader`. Lượt chạy
+trễ quá 15 phút thì ghi "bỏ lỡ". Kết quả ở tab «VSA 4H (giấy)», so với
+backtest +38,7 bps/lệnh — xem `docs/vsa-push-4h.md`.
+
 ### Sổ giấy theo tin — `NEWS_PAPER` (chỉ ghi, không đặt lệnh)
 
 Một luồng riêng trong app (`app/news.py`) nghe thông báo của Binance và **không

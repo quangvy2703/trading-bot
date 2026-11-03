@@ -23,6 +23,8 @@ SPEC = {
     # dem trung lenh, xem muc SUA o do).
     "alloc_rsi2":      ("alloc", float, 0.0, 50.0, "hệ số 1R cho RSI(2) — 0 là tắt"),
     "alloc_xsmom":     ("alloc", float, 0.0, 50.0, "hệ số 1R cho động lượng — 0 là tắt"),
+    "alloc_tsvw":      ("alloc", float, 0.0, 50.0, "hệ số 1R cho TSVW (đáy V + AVWAP) — 0 là tắt"),
+    "alloc_dsrm":      ("alloc", float, 0.0, 50.0, "hệ số 1R cho DSRM (Stoch+RSI+MACD) — 0 là tắt"),
     # --- RSI(2) ---
     "rsi2.topn":       ("rsi2", int, 1, 200, "vũ trụ top N thanh khoản"),
     "rsi2.slots":      ("rsi2", int, 1, 50, "số chỗ (N)"),
@@ -63,6 +65,7 @@ SPEC = {
 def locked() -> dict:
     """Bo DA CHOT theo docs — moc so sanh, khong bao gio doi tu UI."""
     d = {"alloc_rsi2": CFG.alloc_rsi2, "alloc_xsmom": CFG.alloc_xsmom,
+         "alloc_tsvw": CFG.alloc_tsvw, "alloc_dsrm": CFG.alloc_dsrm,
          "max_gross_usd": CFG.max_gross_usd, "max_gross_x": CFG.max_gross_x,
          "max_order_usd": CFG.max_order_usd,
          "max_orders_per_run": CFG.max_orders_per_run,
@@ -110,7 +113,8 @@ def risk() -> dict:
 
 def alloc() -> dict:
     e = effective()
-    return {"rsi2": e["alloc_rsi2"], "xsmom": e["alloc_xsmom"]}
+    return {"rsi2": e["alloc_rsi2"], "xsmom": e["alloc_xsmom"],
+            "tsvw": e["alloc_tsvw"], "dsrm": e["alloc_dsrm"]}
 
 
 def validate(patch: dict) -> dict:
@@ -129,8 +133,8 @@ def validate(patch: dict) -> dict:
             raise ValueError(f"«{desc}» phải nằm trong [{lo}, {hi}], nhận {v}")
         out[k] = v
     merged = {**effective(), **out}
-    if merged["alloc_rsi2"] <= 0 and merged["alloc_xsmom"] <= 0:
-        raise ValueError("tắt cả hai chiến lược thì không còn gì để chạy — "
+    if all(merged[k] <= 0 for k in ("alloc_rsi2", "alloc_xsmom", "alloc_tsvw", "alloc_dsrm")):
+        raise ValueError("tắt tất cả chiến lược thì không còn gì để chạy — "
                          "để ít nhất một hệ số 1R lớn hơn 0")
     if merged["xsmom.sleeves"] != merged["xsmom.hold"]:
         raise ValueError("số sổ phải bằng số ngày giữ, nếu không các sổ sẽ "

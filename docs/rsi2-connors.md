@@ -28,7 +28,8 @@ Phần vận hành lệch khỏi bản đặc tả ở năm chỗ, đều do ng�
 
 Đã thử và **giữ nguyên**: chốt lời theo R / ATR / HVN / POC / đỉnh cũ (22 ô,
 không ô nào hơn thoát RSI > 70 — [stop-dinh-day.md](stop-dinh-day.md) § Điểm
-chốt lời), stop ở đáy cũ (24 ô, không hơn), khung 4H / 1H (không qua luật), lưới
+chốt lời), thoát theo trạng thái / thời gian — close > MA3/5/10, nến tăng đầu,
+time stop (8 ô, không hơn; § Luật thoát thay thế), stop ở đáy cũ (24 ô, không hơn), khung 4H / 1H (không qua luật), lưới
 tham số nến D (giữ bộ cũ).
 
 Tab «Tính lịch sử» với cấu hình đang chạy (500 USD, 1R = 2, 2021-04 →
@@ -575,7 +576,12 @@ trên ở phía stop, còn luật thoát thì đã gần tối ưu:
 | Phép thử | Kết quả |
 |---|---|
 | **Stop ở đáy cũ** (pivot, Donchian, ZigZag, nổi bật; 24 ô) | không hơn 6×ATR. Đáy cũ gần nhất nằm trong vùng nhiễu nên cắt nhầm lệnh tốt |
+| **Bollinger / z-score reversion** (36 ô, 30/10/2026) | thua RSI(2) ở mọi ô: ô chọn −0,02R/lệnh so với +0,21R; không lọc xu hướng thì âm 18/18 ô. Không trùng lệnh nào với RSI(2). Xem `chien-luoc-pho-bien.md` |
+| **HMM làm công tắc** (2 ô, 30/10/2026) | RSI(2) lời gần như nhau ở cả hai trạng thái (+0,200R / +0,208R); bỏ tín hiệu hạ Sharpe tháng 1,24 → 1,06–1,09 |
+| **Chọn lại tham số mỗi ngày (walk-forward)** từ lưới 81 ô trên 90/180/365 ngày trước (6 ô meta, 02/11/2026, `scripts/wfo_rsi2.py`) | **Thua bộ cố định ở mọi cách.** L180 tổng R: −0,013 R/lệnh, R/năm÷sụt −0,06 so với 0,86; chênh Sharpe tháng −1,21, KTC 97,5% [−2,31 ; −0,25], tức **tệ hơn có ý nghĩa**. Đổi ô 66 lần; ô thắng 180 ngày trước là ô vừa gặp may, rồi hồi về. Bộ đang chạy (2,10,70,20) cũng là ô tốt nhất toàn mẫu của lưới |
 | **Stop ở HVN của volume profile** (48 ô) | **đạt luật** (R/năm÷sụt 0,86 → 1,85, hơn 6/6 năm). Phần lớn cải thiện đến từ lệnh to hơn; Sharpe tháng 1,11 → 1,22, KTC chứa 0. Đã bật trong bot |
+| **MFE / MAE** — stop ở phân vị MAE lệnh thắng (Sweeney), hoà vốn ở phân vị MFE, ngưỡng walk-forward (5 ô, 30/10/2026) | không hơn. Lệnh thắng hiếm khi đi ngược > 0,9 ATR; tỷ số lợi thế đỉnh ở ngày 4–5, trùng lúc RSI > 70 thoát. Luật hoà vốn cắt sụt 3,14 → 2,50R nhưng chỉ nhờ một đợt (2024), hơn mốc 2/6 năm |
+| **Luật thoát thay thế** close > MA 3/5/10, nến tăng đầu, close > đỉnh hôm qua, RSI > 70 + time stop 3/5/10 (8 ô, 30/10/2026) | không hơn. MA5 của Connors −20% R/năm; thoát sớm thắng nhiều hơn nhưng R/lệnh giảm 30–50%; time stop 10 ngày không bao giờ kích hoạt |
 | **Chốt lời** R / ATR / HVN / POC / đỉnh cũ, có và không có thoát RSI (22 ô) | không hơn. Chốt xa trùng mốc vì RSI > 70 chạm trước; chốt gần cắt bớt lệnh thắng; bỏ thoát RSI làm sụt tăng 3–6 lần |
 
 Chi tiết ở [stop-dinh-day.md](stop-dinh-day.md).
@@ -611,7 +617,12 @@ Chi tiết ở [stop-dinh-day.md](stop-dinh-day.md).
 | Stop ở đáy cũ: 12 cách × 2 đệm (28/10/2026) | 24 |
 | Stop / chốt lời ở volume profile (28/10/2026) | 48 |
 | Chốt lời với stop HVN: 11 mức × có/không thoát RSI (28/10/2026) | 22 |
-| **Tổng** | **≈ 418** |
+| Luật thoát thay thế: close > MA 3/5/10, nến tăng đầu, close > đỉnh hôm qua, time stop 3/5/10 (30/10/2026) | 8 |
+| MFE / MAE: stop thêm ở p80/90/95 MAE lệnh thắng, hoà vốn ở p50/75 MFE, walk-forward (30/10/2026) | 5 |
+| Bollinger / z-score: N 5/10/20 × k 1,5/2/2,5 × ra z>0/+1 × lọc SMA50 (30/10/2026, `chien-luoc-pho-bien.md`) | 36 |
+| HMM hai trạng thái bỏ tín hiệu khi P_xấu > 0,5 / 0,8 (30/10/2026) | 2 |
+| Walk-forward: L 90/180/365 × điểm tổng R / R TB (02/11/2026) | 6 |
+| **Tổng** | **≈ 475** |
 
 Đây là ô tốt trong khoảng 90 ô. Bằng chứng mạnh nhất chống lại lo ngại này:
 
@@ -718,6 +729,10 @@ Ba script còn giữ luật cũ và **chưa được dùng lại**: `rsi2_best.p
 | `scripts/swing_stops.py` | Stop ở đỉnh/đáy cũ, bốn cách xác định |
 | `scripts/vp_stops.py` | Stop / chốt lời ở volume profile — nguồn của stop HVN trong bot |
 | `scripts/rsi2_tp.py` | Điểm chốt lời với stop HVN |
+| `scripts/rsi2_exit_alt.py` | Luật thoát thay thế: MA, nến tăng, time stop |
+| `scripts/rsi2_mfe.py` | MFE / MAE: chẩn đoán + stop / hoà vốn walk-forward |
+| `scripts/wfo_rsi2.py` | Chọn lại tham số mỗi ngày từ L ngày trước — thua bộ cố định |
+| `scripts/bb_revert.py`, `hmm_regime.py` | Bollinger / z-score và HMM — loại, xem `chien-luoc-pho-bien.md` |
 | `scripts/rsi2_deploy.py` | Lưới trần stop (30/35/40%) |
 | `scripts/rsi2_ma20_stop.py` | Lưới MA20 × 6 độ rộng stop |
 | `scripts/rsi2_trendma.py` | Lưới 7 độ dài MA + null vào lệnh ngẫu nhiên |

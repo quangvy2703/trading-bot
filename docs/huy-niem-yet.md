@@ -312,12 +312,64 @@ hiếm khi chứa mã sắp bị gỡ. Đây là một **chốt an toàn**, khô
 nó chặn một kịch bản hiếm nhưng đắt, khi mã trong top đột ngột bị gỡ. Lịch sử
 thông báo chỉ có từ 2022-02, nên trước mốc đó luật không có tác dụng.
 
+## Đóng sớm lệnh MUA đang giữ khi tin ra — 30/10/2026, KHÔNG THÊM
+
+Bot chỉ chặn *mở mới* lệnh mua trên mã có tin. Câu hỏi: nếu đang cầm lệnh mua
+lúc tin ra thì đóng ngay có hơn giữ tiếp không? Script `scripts/delist_exit.py`
+(luật trong docstring, viết trước khi chạy). Khác với bán khống: đóng sớm
+**không tốn thêm phí** (phí thoát trả đúng một lần dù đóng lúc nào) và không
+có rủi ro bị ép của một lệnh mới. Thước đo là phần tiết kiệm của người cầm lệnh
+mua: (1 − giá lúc giữ xong ÷ giá lúc đóng) cộng funding lệnh mua phải trả, đơn
+vị bps.
+
+Hai cách đóng: **ngay** (open nến 1 phút thứ hai sau tin, trễ 60–120 giây) và
+**lượt chạy** (open ngày hôm sau, bot chạy 00:05). Giữ đến close ngày d + 1 /
+3 / 7. Ô quyết chỉ định trước cho mỗi loại: lượt chạy · H 3 (cài được ngay).
+
+| Loại | Đóng | H 1 | H 3 | H 7 | Trung vị H 3 | Giữ lợi nhất (H 7) |
+|---|---|---|---|---|---|---|
+| S gỡ spot | ngay | +468 | +618 | −3.966 | +2.062 | ALPACA ×42 |
+| S | lượt chạy | −94 | **+182** | −1.193 | +902 | ALPACA ×17 |
+| F gỡ perp | ngay | +802 | +1.024 (KTC95 [+32 ; +1.691]) | +892 | +739 | PUMPBTC +267% |
+| F | lượt chạy | +203 | **+422** | +293 | +308 | PUMPBTC +381% |
+| M Monitoring | ngay | +505 (KTC95 [+82 ; +921]) | +394 | +541 | +830 | DEGO +262% |
+| M | lượt chạy | −54 | **−152** | +14 | +278 | DEGO +283% |
+
+Ô quyết, KTC Bonferroni 3 loại (98,33%):
+
+| Loại | TB | KTC | Năm | Kết luận |
+|---|---|---|---|---|
+| S | +182 | [−974 ; +1.072] | 2024 +755 · 2025 −98 · 2026 +115 | không đủ ✗✓✗ |
+| F | +422 | [−224 ; +1.016] | 2022 −3 · 2024 +169 · 2025 +1.062 · 2026 +167 | không đủ ✗✓✓ |
+| M | −152 | [−938 ; +565] | 2024 +712 · 2025 +309 · 2026 −556 | không đủ ✗✓✗ |
+
+**Không loại nào đạt.** Đọc ra:
+
+- **Trung vị luôn dương** (+300 … +2.000 bps): lệnh điển hình đóng sớm thì
+  đỡ lỗ. Nhưng **trung bình bị đuôi ép giá kéo về 0**: ALPACA tăng 17–42 lần
+  sau tin gỡ spot, PUMPBTC +381%, DEGO +262%. Với người cầm lệnh mua, đuôi
+  đó là **lời**. Đóng sớm là bán đi tấm vé số đó. Đây là cùng một đuôi đã làm
+  bán khống trượt luật, chỉ nhìn từ phía ngược lại.
+- Đóng **ngay** tốt hơn chờ lượt chạy, vì phần lớn cú rơi nằm trong ngày
+  thông báo. Hai ô ngay có KTC95 loại 0 (F · H 3, M · H 1) là ô **mô tả**
+  trong 18 ô, đọc sau khi nhìn. Không dùng để quyết.
+
+**Lịch sử của bot** (engine «Tính lịch sử», cấu hình đang chạy, 3.854 lệnh
+2020-09 → 2026-10): **không có lệnh nào đang mở lúc có tin S / F / M**, kể cả
+khi tắt chặn mua. Lần gần nhất là LUNA (RSI(2) đóng 19/04/2022, tin gỡ perp
+12/05/2022). Vũ trụ top 10 / top 20 thanh khoản gần như không bao giờ chứa mã
+sắp bị gỡ, và luật chặn mua 90 ngày đã lo phần mở mới.
+
+**Kết luận: không thêm luật.** Bằng chứng thống kê không đủ, và trong 6 năm
+luật này không chạm vào lệnh nào của bot. Nếu sau này mở rộng vũ trụ ra ngoài
+top 20 thì phải đo lại.
+
 ## Chưa làm
 
 - **Thẻ Monitoring (M)** chưa được đưa vào luật chặn. Sau khi gắn thẻ, giá cũng
   trôi xuống (bán khống TB +292 bps), nên đây là ứng viên thêm vào nếu muốn
   chặn rộng hơn.
-- **Đóng sớm vị thế đang giữ** khi tin ra: chưa đo.
+- ~~**Đóng sớm vị thế đang giữ** khi tin ra~~: đã đo 30/10/2026, không thêm (xem mục trên).
 - **Sổ giấy đã chạy từ 29/10/2026** (`trading-bot/app/news.py`, tab «Tin &
   cờ» → «Sổ giấy theo tin»). Cùng tab có bảng mọi mã bị gắn cờ (gỡ spot, gỡ
   perp, thẻ Monitoring), cho biết mã nào đang bị chặn mua. Nó chỉ ghi, không đặt lệnh: đo độ trễ nhận tin của
@@ -343,4 +395,5 @@ thông báo chỉ có từ 2022-02, nên trước mốc đó luật không có t
 | `scripts/delist_stop.py` | stop 1–10% xét từng giao dịch, 108 ô (theo yêu cầu, không đăng ký trước) |
 | `scripts/delist_trail.py` | stop dời theo lời (hoà vốn / trail), 108 ô — tin gỡ spot đạt |
 | `reports/.cache/announce/` | `161.json`, `49.json`, `bodies.json` |
+| `scripts/delist_exit.py` | đóng sớm lệnh mua đang giữ khi có tin, 3 ô quyết + 15 ô mô tả, kèm lịch sử bot |
 | `trading-bot/app/delist.py` | luật chặn mua trong bot |

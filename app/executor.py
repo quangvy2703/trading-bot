@@ -293,10 +293,10 @@ def _fill_market(trader: Trader, j: dict) -> None:
 def safety_level(p: dict) -> float | None:
     """Gia kich hoat dung an toan cua MOT vi the trong so.
 
-    RSI(2): dung muc cat lo cua no. Dong luong: SAFETY_R lan R tinh tu gia
-    vao, voi R = r_usd / co lenh (chinh la sigma x sqrt(so ngay giu)).
+    RSI(2), TSVW, DSRM: dung muc cat lo cua no. Dong luong: SAFETY_R lan R
+    tinh tu gia vao, voi R = r_usd / co lenh (chinh la sigma x sqrt(so ngay giu)).
     """
-    if p["strategy"] == "rsi2" and p.get("stop"):
+    if p["strategy"] in ("rsi2", "tsvw", "dsrm") and p.get("stop"):
         return float(p["stop"])
     n, r, e = p.get("notional"), p.get("r_usd"), p.get("entry_px")
     if not (n and r and e):

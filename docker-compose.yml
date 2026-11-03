@@ -68,9 +68,11 @@ services:
       #              phoi nhiem trung vi 354 USD, dinh 896 USD = 1,79x don bay
       #   Ha xuong 1R = 1 thi het don bay nhung 24,5% lenh bi san tu choi.
       RISK_R_USD: "${RISK_R_USD:-2}"
-      # 7 so lech ngay x (2 mua + 2 ban) = 28, cong 5 cho cua RSI(2) = 33.
+      # 7 so lech ngay x (2 mua + 2 ban) = 28, cong 5 cho cua RSI(2) = 33,
+      # cong 30 cho TSVW + DSRM (03/11/2026: backtest mo dong thoi TB 12,7,
+      # p95 27, dinh 43 — o 30 thi ~5% so ngay co lenh moi bi chan).
       # Tran nay DUNG CHUNG: de 28 thi dong luong day so la RSI(2) het cho.
-      RISK_MAX_OPEN: "${RISK_MAX_OPEN:-33}"
+      RISK_MAX_OPEN: "${RISK_MAX_OPEN:-63}"
       # ---- bat/tat tung chien luoc: he so nhan cho 1R, 0 = TAT ----
       # Tat thi vi the dang mo cua chien luoc do bi DONG o luot ke tiep.
       # RSI(2) = 8: o cung 1R, RSI(2) gan nhu vang mat khoi danh muc. Do bang
@@ -79,6 +81,11 @@ services:
       # § Ghep hai chien luoc, muc SUA — so 32 cu dem trung lenh RSI(2).
       ALLOC_RSI2: "${ALLOC_RSI2:-8.0}"        # chi RSI(2)
       ALLOC_XSMOM: "${ALLOC_XSMOM:-1.0}"      # chi dong luong cat ngang
+      # TSVW (day V + AVWAP) va DSRM (Stoch+RSI+MACD), khung ngay, app/swing.py,
+      # docs/tsvw-dsrm.md. Bat chay that 03/11/2026 theo yeu cau van hanh, 1R
+      # moi lenh. Bang chung: 6/6 luat do ben nhung chon sau 709 o YouTube.
+      ALLOC_TSVW: "${ALLOC_TSVW:-1.0}"
+      ALLOC_DSRM: "${ALLOC_DSRM:-1.0}"
       # ---- RSI(2) mua them: so lop toi da moi ma (1 = khong mua them, 1..5) ----
       # Dang giu ma ma RSI(2) lai < 10 thi mo them mot lop, moi lop 1R va mot
       # cho rieng. Bang chung yeu (26 lenh lop 2, chua ngoai mau) — xem
@@ -103,6 +110,11 @@ services:
       # stop ve hoa von) va the Monitoring (giu 24 gio). 0 = tat.
       NEWS_PAPER: "${NEWS_PAPER:-1}"
       NEWS_PAPER_USD: "${NEWS_PAPER_USD:-100}"
+      # ---- so giay VSA 4H (app/vsa.py, docs/vsa-push-4h.md) — CHI GHI ----
+      # "Day qua vung cung" roi nen giam KL thap, giu 3 nen 4H. 0 = tat.
+      VSA_PAPER: "${VSA_PAPER:-1}"
+      VSA_PAPER_USD: "${VSA_PAPER_USD:-100}"
+      VSA_TOPN: "${VSA_TOPN:-50}"
       # Khoa RIENG chi quyen doc cho WebSocket thong bao (khoa giao dich bi san
       # tu choi o day). De trong thi chi doc API CMS moi 30 giay.
       NEWS_API_KEY: "${NEWS_API_KEY:-}"
@@ -133,8 +145,10 @@ services:
       # Thong bao Binance da tai san (161.json, 49.json, bodies.json) cho tab
       # «Mã gắn cờ» va luat chan mua. Chi doc, chi gieo mot lan.
       - ../reports/.cache/announce:/seedann:ro
-      # Cac tai lieu da chot, hien o tab «Phương pháp». Chi doc.
-      - ../docs:/docs:ro
+      # Cac tai lieu da chot, hien o tab «Phương pháp». Chi doc. Lay ./docs
+      # (nam trong repo nay) chu khong phai ../docs cua repo nghien cuu: may
+      # chi clone trading-bot se khong co ../docs va tab trong tron.
+      - ./docs:/docs:ro
     logging:
       driver: json-file
       options: {max-size: "10m", max-file: "5"}

@@ -220,6 +220,8 @@ tr:hover td:first-child{background:#F3F0FB}
 .c-close{background:var(--dnsoft);color:var(--dnink)}
 .c-rsi2{background:var(--accsoft);color:#5342B8}
 .c-xsmom{background:var(--infosoft);color:#215876}
+.c-tsvw{background:#E3F2E8;color:#1E6B3A}
+.c-dsrm{background:#FBEFD9;color:#7A4A06}
 .c-ban{background:var(--dnsoft);color:var(--dnink)}
 .c-tag{background:#FBEFD9;color:#7A4A06}
 .c-gone{background:rgba(42,35,64,.08);color:var(--ink2)}
@@ -402,6 +404,7 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
     <button data-tab="cfg">Cấu hình<span class="pill" id="driftPill" style="display:none"></span></button>
     <button data-tab="flag">Mã gắn cờ<span class="pill" id="flagPill" style="display:none"></span></button>
     <button data-tab="news">Đánh theo tin</button>
+    <button data-tab="vsa">VSA 4H (giấy)</button>
     <button data-tab="bt">Tính lịch sử</button>
     <button data-tab="doc">Phương pháp</button>
     <button data-tab="log">Nhật ký</button>
@@ -577,6 +580,21 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
       <div class="tw" style="max-height:330px"><table id="tnews"></table></div></div>
   </section>
 
+  <section id="t-vsa">
+    <div class="panel" style="margin-bottom:12px"><div class="pb" style="padding-top:14px">
+      <p class="sub" style="margin:0">
+        <b>Sổ giấy — chỉ ghi, không đặt lệnh.</b> Ô duy nhất trong 324 ô VSA (sách <i>Master the Markets</i>)
+        sống qua kiểm độ bền (docs/vsa-push-4h.md): trong 10 nến 4H trước có nến <b>đẩy qua vùng cung</b>
+        (tăng, biên độ rộng, khối lượng cao, đóng gần đỉnh, vượt đỉnh 20 nến), có dấu hiệu mạnh trong 20 nến
+        trước, rồi một <b>nến giảm khối lượng thấp</b> → mua ở open nến sau, giữ 3 nến (12 giờ).
+        Ô được chọn sau khi nhìn lưới, nên sổ này là phép thử ngoài mẫu: so trung bình bps/lệnh với backtest.
+      </p></div></div>
+    <div class="panel"><div class="ph"><h3>Sổ giấy VSA 4H</h3>
+      <span class="sub" id="vsaSub">—</span></div>
+      <p class="mut" id="vsaSt" style="margin:0 0 10px">—</p>
+      <div class="tw" style="max-height:560px"><table id="tvsa"></table></div></div>
+  </section>
+
   <section id="t-bt">
     <div class="panel" style="margin-bottom:12px">
       <div class="ph"><h3>Thiết lập</h3>
@@ -740,7 +758,8 @@ function table(el, cols, rows, fmt) {
 const symA = s => s ? {html: `<a class="sym" href="https://www.binance.com/en/futures/`
   + `${encodeURIComponent(s)}" target="_blank" rel="noopener" `
   + `title="mở chart ${esc(s)} trên Binance">${esc(s)}</a>`} : '—';
-const sChip = s => ({html: `<span class="chip c-${s}">${s === 'rsi2' ? 'RSI(2)' : 'ĐỘNG LƯỢNG'}</span>`});
+const SLABEL = {rsi2: 'RSI(2)', xsmom: 'ĐỘNG LƯỢNG', tsvw: 'TSVW', dsrm: 'DSRM'};
+const sChip = s => ({html: `<span class="chip c-${s}">${SLABEL[s] || s}</span>`});
 const aChip = a => ({html: `<span class="chip c-${a === 'OPEN' ? 'open' : 'close'}">${a === 'OPEN' ? 'MỞ' : 'ĐÓNG'}</span>`});
 const sideTxt = d => d > 0 ? {html: '<span class="pos">MUA</span>'}
                            : {html: '<span class="neg">BÁN</span>'};
@@ -794,7 +813,7 @@ function render() {
   const byS = {};
   for (const p of S.positions) byS[p.strategy] = (byS[p.strategy] || 0) + 1;
   $('npsub').textContent = (Object.entries(byS)
-    .map(([k, v]) => `${k === 'rsi2' ? 'RSI(2)' : 'động lượng'} ${v}`).join(' · ') || '—')
+    .map(([k, v]) => `${({rsi2: 'RSI(2)', xsmom: 'động lượng', tsvw: 'TSVW', dsrm: 'DSRM'})[k] || k} ${v}`).join(' · ') || '—')
     + ` · phơi nhiễm ${usd(gross)} USD`;
 
   const lr = S.last_run;
@@ -857,7 +876,13 @@ function render() {
     + (S.params.xsmom.ma
         ? `<br>lọc <b>MA${S.params.xsmom.ma}</b>: chỉ mua trên MA, chỉ bán dưới MA`
           + ` — ứng viên không qua bị bỏ hẳn (~18%/kỳ)`
-        : `<br><span class="neg">lọc MA đang TẮT</span>`);
+        : `<br><span class="neg">lọc MA đang TẮT</span>`)
+    + (S.alloc.tsvw > 0
+        ? `<br>TSVW <b>1R×${S.alloc.tsvw}</b> — top 50, đáy/đỉnh V + VWAP neo, stop dưới AVWAP, chốt 2R, giữ ≤ 200 ngày`
+        : `<br><span class="neg">TSVW ĐANG TẮT</span>`)
+    + (S.alloc.dsrm > 0
+        ? `<br>DSRM <b>1R×${S.alloc.dsrm}</b> — top 50, Stoch&lt;20 → RSI&gt;50 + MACD cắt lên (bán đối xứng), stop đáy/đỉnh 10 nến, chốt 1,5R, giữ ≤ 200 ngày`
+        : `<br><span class="neg">DSRM ĐANG TẮT</span>`);
 
   FEE = S.fee_bps ?? 0;
   POSKEY = null;
@@ -1858,6 +1883,7 @@ async function refresh() {
   S = await (await fetch('/api/state')).json();
   render();
   try { renderNews(await (await fetch('/api/news')).json()); } catch (e) {}
+  try { renderVsa(await (await fetch('/api/vsa')).json()); } catch (e) {}
   try { FLAGS = await (await fetch('/api/flags')).json(); renderFlags(); } catch (e) {}
 }
 
@@ -1922,6 +1948,24 @@ function renderNews(N) {
   table($('tnews'), ['đăng lúc', 'nhận qua', 'trễ', 'tiêu đề', 'phân loại'], N.news || [],
     n => [when(n.t_pub), n.src, sec((n.t_recv - n.t_pub) / 1000), n.title,
       n.kinds ? n.kinds.split(',').map(x => (KIND[x.split(':')[0]] || x) + ' ' + x.split(':')[1]).join(', ') : '—']);
+}
+function renderVsa(V) {
+  const st = V.status || {}, k = V.stats || {}, b = V.backtest || {};
+  const f = (x, d = 1) => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(d);
+  $('vsaSub').textContent = `top ${V.topn} · ${V.usd_per_trade} USD mỗi lệnh · chạy 2 phút sau mỗi nến 4H`;
+  $('vsaSt').innerHTML = `Lượt cuối: ${st.t ? when(st.t) : 'chưa chạy'}`
+    + (st.t ? ` · quét ${st.scanned} mã · ${st.signals} tín hiệu · mở ${st.opened} · bỏ lỡ ${st.missed} · đóng ${st.closed}` : '')
+    + (st.errors && st.errors.length ? ` · <span class="neg">${st.errors.length} lỗi tải nến</span>` : '')
+    + `<br>Sổ giấy: <b>${k.n}</b> lệnh đã đóng · TB <b>${f(k.mean)}</b> bps · trung vị ${f(k.median)} · thắng `
+    + `${k.win == null ? '—' : Math.round(k.win * 100) + '%'} · lãi ${usd(k.usd)} · bỏ lỡ ${k.missed}`
+    + ` — backtest 2021–26: TB ${f(b.mean)} bps, trung vị ${f(b.median)}, thắng ${Math.round(b.win * 100)}%, ~${b.per_day} lệnh/ngày`;
+  table($('tvsa'), ['tín hiệu (nến)', 'mã', 'vào lúc', 'giá vào', 'ra lúc', 'giá ra', 'funding bps', 'bps', 'USD', 'ghi chú'],
+    V.rows || [], r => [
+      when(r.t_signal), r.symbol, r.entry_px == null ? '—' : when(r.t_entry), r.entry_px,
+      r.open ? {html: '<span style="color:var(--acc)">đang mở</span>'} : (r.t_exit ? when(r.t_exit) : '—'),
+      r.exit_px, r.fund_bps == null ? '—' : r.fund_bps.toFixed(1),
+      r.bps == null ? '—' : {html: `<span class="${r.bps >= 0 ? 'pos' : 'neg'}">${r.bps >= 0 ? '+' : ''}${Math.round(r.bps)}</span>`},
+      r.usd == null ? '—' : usd(r.usd), r.why || '—']);
 }
 function busy(b) { for (const id of ['btnFetch','btnPrev','btnRun','btnFlat'])
   $(id).disabled = b; }
