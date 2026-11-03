@@ -464,8 +464,9 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
           <div class="tw"><table id="tblk"></table></div>
           <div class="pb sub">
             «Ép vào» đặt đúng lệnh đó ngay, <b>bỏ qua mọi trần rủi ro</b>, cỡ
-            lệnh theo USD đã tính lúc chặn. Không ép được lệnh ngược chiều vị
-            thế đang giữ (sàn một chiều) hay vị thế đã có. Lượt chạy kế tiếp
+            lệnh theo USD đã tính lúc chặn. Không ép được lệnh ngược chiều với
+            lệnh vừa mở cùng lượt (sàn một chiều) hay vị thế đã có. Lệnh ngược
+            chiều vị thế đang giữ thì không bị chặn: bot đóng chiều cũ rồi mở. Lượt chạy kế tiếp
             thay danh sách này.</div>
         </div>
       </div>
@@ -963,7 +964,8 @@ function drawPos() {
   let i = 0;
   const live = k => ({html: `<span data-k="${k}" data-i="${i}">—</span>`});
   table($('tpos'), ['mã', 'chiến lược', 'sổ', 'chiều', 'cỡ USD', '1R', 'giá vào',
-    'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'dừng sàn', 'mở từ'],
+    'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'dừng sàn', 'mở từ',
+    'chốt dự kiến'],
     rows, r => [symA(r.symbol),
       r.book.length
         ? {html: [...new Set(r.book.map(p => p.strategy))]
@@ -979,7 +981,8 @@ function drawPos() {
       live('px'), live('usd'), live('pc'), live('r'),
       r.stop ? r.stop.toPrecision(6) : '—',
       stopCell(r, A, SF),
-      (i++, r.entry_ts ? day(r.entry_ts) : '—')]);
+      r.entry_ts ? when(r.entry_ts) : '—',
+      (i++, exitCell(r))]);
   paintPnl();
 }
 
@@ -1010,6 +1013,23 @@ function stopCell(r, A, SF) {
     ? +SF[r.symbol].trigger.toPrecision(8)
     : (r.ex ? {html: '<span class="neg" title="sàn không có lệnh dừng '
         + 'an toàn cho mã này">chưa có</span>'} : '—');
+}
+
+/* Gio chot du kien theo tung so (may chu tinh, `exit_plan`): luot chay ma
+   so do den luot tai can bang. Van duoc chon cung chieu thi giu tiep. RSI(2)
+   khong co moc gio. */
+function exitCell(r) {
+  const ln = r.book.map(p => {
+    if (p.strategy === 'rsi2')
+      return `<span class="mut" title="thoát khi RSI(2) > ${S.params?.rsi2?.rsi_out ?? 70} hoặc chạm cắt lỗ">RSI&gt;${S.params?.rsi2?.rsi_out ?? 70} / stop</span>`;
+    if (!p.exit_plan) return '—';
+    const left = (p.exit_plan - Date.now()) / 864e5;
+    return (r.book.length > 1 ? `<span class="mut">sổ ${p.sleeve}:</span> ` : '')
+      + `<span title="lượt tái cân bằng sổ ${p.sleeve} — nếu mã vẫn được chọn cùng chiều thì giữ tiếp">`
+      + `${when(p.exit_plan)}</span> <span class="mut">(${left < 1
+        ? pct(Math.max(0, left * 24), 0) + ' giờ' : pct(left, 1) + ' ngày'})</span>`;
+  });
+  return ln.length ? {html: ln.join('<br>')} : '—';
 }
 
 function pnlOf(p) {
@@ -1742,7 +1762,7 @@ function renderBlocked() {
   if (!items.length) return;
   $('blkWhen').textContent = `lượt #${B.run_id} · nến ${day(B.day)} · ${when(B.ts)}`
     + (B.mode !== S.mode ? ` · chặn ở chế độ ${B.mode}` : '');
-  const clash = a => (a.why || '').startsWith('đã có vị thế ngược chiều');
+  const clash = a => (a.why || '').startsWith('lượt này đã mở chiều ngược lại');
   table($('tblk'), ['mã', 'chiến lược', 'sổ', 'chiều', 'USD', 'lý do chặn', ''],
     items.map((a, i) => ({...a, _i: i})),
     a => [symA(a.symbol), sChip(a.strategy), a.sleeve ?? '—', sideTxt(a.side),

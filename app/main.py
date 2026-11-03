@@ -208,9 +208,9 @@ def state():
         "safety": db.kv_get("safety", {}) or {},
         "blocked": db.kv_get("blocked"),
         "equity": _rows("SELECT ts, value FROM equity WHERE mode=? ORDER BY ts", m),
-        "positions": _rows(
+        "positions": [{**p, "exit_plan": runner.planned_exit(p)} for p in _rows(
             "SELECT * FROM positions WHERE open=1 AND mode=? "
-            "ORDER BY strategy, sleeve, symbol", m),
+            "ORDER BY strategy, sleeve, symbol", m)],
         "closed": _rows(
             "SELECT * FROM positions WHERE open=0 AND mode=? "
             "ORDER BY exit_ts DESC LIMIT 500", m),
@@ -305,6 +305,9 @@ def preview():
         allowed, blocked = executor.apply_caps(
             actions, runner.equity_now(), api.prices(), len(cur),
             sum(float(p.get("notional") or 0.0) for p in cur))
+        if runner.mode() == "live":     # dung thu tu nhu run_once
+            allowed, clash = executor.one_way(allowed, cur)
+            blocked += clash
         return {"day": day, "note": note, "target": target,
                 "actions": allowed, "blocked": blocked,
                 "equity": runner.equity_now()}
