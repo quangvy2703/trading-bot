@@ -50,6 +50,28 @@ def _epoch(P: dict) -> int:
     return int(e)
 
 
+def planned_exit(p: dict) -> int | None:
+    """Gio CHOT du kien (ms UTC) cua mot vi the dong luong: luot chay ke tiep
+    ma so cua no den luot tai can bang. Neu luc do ma van duoc chon cung
+    chieu thi vi the duoc GIU sang ky moi chu khong dong. RSI(2) khong co
+    moc gio — thoat khi RSI > nguong hoac cham stop — tra None."""
+    if p.get("strategy") != "xsmom" or p.get("sleeve") is None:
+        return None
+    e = db.kv_get("xsmom_epoch")
+    if e is None:
+        return None
+    _, X = settings.strat()
+    lr = db.kv_get("last_run") or {}
+    d = int(lr.get("day") or (p["entry_ts"] // DAY * DAY - DAY)) + DAY
+    for _ in range(X["sleeves"] + 1):
+        if ST.xsmom_sleeve_of(d, int(e)) == p["sleeve"]:
+            break
+        d += DAY
+    hh, _, mm = CFG.run_at_utc.partition(":")
+    # nen ngay d dong luc d + 1 ngay; luot chay luc RUN_AT cua ngay do
+    return d + DAY + (int(hh) * 60 + int(mm or 0)) * 60_000
+
+
 def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
     """So MUC TIEU cho hom nay + giai thich tung dong."""
     R, X = settings.strat()
@@ -518,13 +540,13 @@ def _run_once(force: bool = False) -> dict:
         filt = data.filters(api) if m == "live" else {}
 
         actions = executor.plan(target, cur_pos)
-        clash = []
-        if m == "live":          # so giay giu nguyen hanh vi nhu backtest
-            actions, clash = executor.one_way(actions, cur_pos)
         allowed, blocked = executor.apply_caps(
             actions, eq, prices, len(cur_pos),
             sum(float(p.get("notional") or 0.0) for p in cur_pos))
-        blocked += clash
+        if m == "live":          # so giay giu nguyen hanh vi nhu backtest
+            # SAU tran: lenh mo bi chan thi khong dong oan vi the nguoc chieu
+            allowed, clash = executor.one_way(allowed, cur_pos)
+            blocked += clash
         done = executor.execute(run_id, allowed, eq, prices, filt, m)
 
         # ---- cap nhat so sach ----
@@ -553,7 +575,8 @@ def _run_once(force: bool = False) -> dict:
                     cx.execute(
                         "UPDATE positions SET open=0, exit_px=?, exit_ts=?,"
                         " exit_why=?, pnl_bps=? WHERE id=?",
-                        (a["px"], int(time.time() * 1000), "mục tiêu đổi",
+                        (a["px"], int(time.time() * 1000),
+                         a.get("exit_why") or "mục tiêu đổi",
                          bps, p["id"]))
                 else:
                     _book_open(cx, a, m)

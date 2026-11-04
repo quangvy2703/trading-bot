@@ -440,20 +440,6 @@ def _run(p: dict) -> dict:
         # ---- tran: dung thu tu executor.plan() + apply_caps() ----
         cids = {id(q) for q, _ in closes}
         opens.sort(key=lambda a: syms[a["si"]])
-        if p["one_way"]:
-            side_of: dict = {}
-            for q in pos:
-                if id(q) not in cids:
-                    side_of.setdefault(q["si"], q["side"])
-            ok1 = []
-            for a in opens:
-                h_ = side_of.get(a["si"])
-                if h_ is not None and h_ != a["side"]:
-                    block(a, "ngược chiều trên cùng mã (sàn một chiều)")
-                    continue
-                side_of.setdefault(a["si"], a["side"])
-                ok1.append(a)
-            opens = ok1
         live = len(pos) - len(closes)
         gross_run = 0.0
         n_run = 0
@@ -492,6 +478,26 @@ def _run(p: dict) -> dict:
             if a.get("base") is not None:
                 a["base"]["nadd"] = a["base"].get("nadd", 0) + 1
                 a["base"]["last_px"] = float(px)
+
+        # ---- san mot chieu: SAU tran, nhu executor.one_way ----
+        # Lenh mo nguoc chieu vi the dang giu → dong vi the do (dao chieu);
+        # nguoc chieu lenh vua mo cung luot → chan lenh sau.
+        if p["one_way"]:
+            new_side: dict = {}
+            ok3 = []
+            for a in ok2:
+                si = a["si"]
+                if new_side.get(si, a["side"]) != a["side"]:
+                    block(a, "ngược chiều lệnh mở cùng lượt (sàn một chiều)")
+                    held_g -= a["notional"]
+                    continue
+                for q in pos:
+                    if q["si"] == si and q["side"] != a["side"] and id(q) not in cids:
+                        closes.append((q, "đóng để mở ngược chiều"))
+                        cids.add(id(q))
+                new_side[si] = a["side"]
+                ok3.append(a)
+            ok2 = ok3
 
         # ---- khop o open j+1 ----
         for q, why in closes:

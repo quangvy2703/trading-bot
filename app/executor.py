@@ -59,40 +59,56 @@ def plan(target: list, actual: list) -> list:
     return out
 
 
+FLIP_WHY = "đóng để mở ngược chiều"
+
+
 def one_way(actions: list, actual: list) -> tuple[list, list]:
-    """Chan mo vi the NGUOC CHIEU voi vi the dang co tren cung mot ma.
+    """San mot chieu: lenh MO nguoc chieu vi the dang giu tren cung ma thi
+    DONG cac vi the do truoc roi moi mo (dao chieu).
 
     San chay che do mot chieu: moi ma chi co MOT vi the rong. Hai so lech
     ngay cua dong luong co the vua mua vua ban cung mot ma — trong so noi bo
-    do la hai vi the, tren san chung bu tru nhau. Hau qua that su nam o luc
-    dong: reduceOnly tren mot vi the da bi bu tru bang 0 se bi san tu choi,
-    va vi the do ket lai trong so mai mai.
+    do la hai vi the, tren san chung bu tru nhau, va reduceOnly tren mot vi
+    the da bi bu tru bang 0 se bi san tu choi. Nen khong bao gio de hai chieu
+    cung song: lenh moi thang, cac so cu nguoc chieu tren ma do bi dong som
+    (exit_why = FLIP_WHY). `execute` dong chung xong moi mo.
 
-    Cung chieu thi khong chan: san gop khoi luong lai, va lenh dong kem
-    reduceOnly co ghi ro khoi luong nen van tru dung phan cua tung so.
+    Hai lenh MO nguoc chieu nhau trong CUNG mot luot thi van chan lenh sau —
+    khong co gi de dong. Cung chieu thi khong dung toi: san gop khoi luong,
+    reduceOnly co ghi khoi luong nen van tru dung phan cua tung so.
 
+    Goi SAU apply_caps: lenh mo bi tran chan thi khong dong oan vi the cu.
     Chi goi o che do that. So giay van chay dung nhu backtest.
     """
     closing = {(a["strategy"], a.get("sleeve"), a["symbol"], a["side"])
                for a in actions if a["action"] == "CLOSE"}
-    side_of: dict = {}
+    held: dict = {}
     for p in actual:
         if (p["strategy"], p.get("sleeve"), p["symbol"], p["side"]) in closing:
             continue                            # luot nay dong, khong tinh nua
-        side_of.setdefault(p["symbol"], p["side"])
-    ok, blocked = [], []
+        held.setdefault(p["symbol"], []).append(p)
+    ok, blocked, flip = [], [], []
+    new_side: dict = {}
     for a in actions:
         if a["action"] == "CLOSE":
             ok.append(a)                        # dong khong bao gio bi chan
             continue
-        held = side_of.get(a["symbol"])
-        if held is not None and held != a["side"]:
-            blocked.append({**a, "why": "đã có vị thế ngược chiều trên mã này "
-                                        "(sàn chạy chế độ một chiều)"})
+        sym = a["symbol"]
+        if new_side.get(sym, a["side"]) != a["side"]:
+            blocked.append({**a, "why": "lượt này đã mở chiều ngược lại trên mã "
+                                        "này (sàn chạy chế độ một chiều)"})
             continue
-        side_of.setdefault(a["symbol"], a["side"])
+        opp = [p for p in held.get(sym, []) if p["side"] != a["side"]]
+        if opp:
+            flip += [{"action": "CLOSE", **p, "exit_why": FLIP_WHY,
+                      "why": FLIP_WHY, "flip": True}
+                     for p in opp]
+            held[sym] = [p for p in held[sym] if p["side"] == a["side"]]
+        new_side[sym] = a["side"]
         ok.append(a)
-    return ok, blocked
+    out = flip + ok
+    out.sort(key=lambda x: (x["action"] != "CLOSE", x["symbol"]))
+    return out, blocked
 
 
 def apply_caps(actions: list, equity: float, prices: dict,
@@ -393,7 +409,33 @@ def sync_safety(trader: Trader, book: list, filt: dict) -> dict:
 
 def execute(run_id: int, actions: list, equity: float, prices: dict,
             filt: dict, mode: str) -> list:
-    """mode = 'paper' | 'live'. Tra ve danh sach lenh da ghi."""
+    """mode = 'paper' | 'live'. Tra ve danh sach lenh da ghi.
+
+    Co dao chieu (lenh DONG mang co `flip`) thi chay HAI dot: dong truoc, mo
+    sau. Cung mot dot, lenh mo khop truoc se lat vi the sang chieu moi va
+    reduceOnly cua lenh dong bi san tu choi — vi the cuoi thieu dung bang
+    phan dong. Ma nao dong chua het thi KHONG mo chieu moi.
+    """
+    if mode != "live" or not any(a.get("flip") for a in actions):
+        return _execute(run_id, actions, equity, prices, filt, mode)
+    flips = {a["symbol"] for a in actions if a.get("flip")}
+    first = [a for a in actions if a["action"] == "CLOSE" and a["symbol"] in flips]
+    rest = [a for a in actions if not (a["action"] == "CLOSE" and a["symbol"] in flips)]
+    done = _execute(run_id, first, equity, prices, filt, mode)
+    bad = {d["symbol"] for d in done if d.get("status") != "khớp"}
+    go, skip = [], []
+    for a in rest:
+        (skip if a["action"] == "OPEN" and a["symbol"] in bad else go).append(a)
+    for a in skip:
+        db.log("error", f"{a['symbol']}: đóng chiều cũ chưa khớp hết — KHÔNG mở "
+                        f"chiều mới {'MUA' if a['side'] > 0 else 'BÁN'}")
+    done += _execute(run_id, go, equity, prices, filt, mode)
+    return done + [{**a, "px": prices.get(a["symbol"]) or 0.0, "qty": 0.0,
+                    "status": "bỏ qua"} for a in skip]
+
+
+def _execute(run_id: int, actions: list, equity: float, prices: dict,
+             filt: dict, mode: str) -> list:
     trader = None
     if mode == "live":
         ready, why = live_ready()
