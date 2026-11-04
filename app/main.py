@@ -14,7 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import backtest, data, db, delist, executor, news, runner, settings, vsa
+from . import backtest, crash, data, db, delist, executor, news, runner, settings, vsa
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -31,7 +31,8 @@ DOCS = [("rsi2-connors", "RSI(2) Connors v3.1"),
         ("money-management-r", "Quản lý vốn theo R"),
         ("stop-dinh-day", "Cắt lỗ HVN · chốt lời"),
         ("huy-niem-yet", "Tin huỷ niêm yết"),
-        ("vsa-push-4h", "VSA 4H (sổ giấy)")]
+        ("vsa-push-4h", "VSA 4H (sổ giấy)"),
+        ("btc-sap-pp1", "BTC sập → cắt chân mua (sổ giấy)")]
 NAME_OK = re.compile(r"^[a-z0-9][a-z0-9.-]{0,63}$")
 CONFIRM = "TÔI ĐỒNG Ý CHẠY THẬT"
 
@@ -130,6 +131,17 @@ def _job() -> None:
         runner.run_once()
     except Exception:
         db.log("error", "lượt chạy theo lịch hỏng:\n" + traceback.format_exc()[-800:])
+    _crash_job()
+
+
+def _crash_job() -> None:
+    """So giay BTC sap (app/crash.py) — doc so vi the SAU luot chay, khong dat lenh."""
+    if not CFG.crash_paper:
+        return
+    try:
+        crash.run_once()
+    except Exception:
+        db.log("error", "sổ giấy BTC sập hỏng:\n" + traceback.format_exc()[-800:])
 
 
 def _vsa_job() -> None:
@@ -191,6 +203,12 @@ def flags():
 def news_state():
     """So giay theo tin: trang thai nguon, do tre, lenh gia, tin gan day."""
     return news.summary()
+
+
+@app.get("/api/crash")
+def crash_state():
+    """So giay BTC sap → cat chan mua dong luong: su kien, vi the bi dung, chenh USD."""
+    return crash.summary()
 
 
 @app.get("/api/vsa")
@@ -339,9 +357,11 @@ def preview():
 @app.post("/api/run")
 def run_now():
     try:
-        return runner.run_once()
+        out = runner.run_once()
     except Exception as e:
         raise HTTPException(500, str(e))
+    _crash_job()
+    return out
 
 
 @app.post("/api/force")

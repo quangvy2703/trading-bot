@@ -405,6 +405,7 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
     <button data-tab="flag">Mã gắn cờ<span class="pill" id="flagPill" style="display:none"></span></button>
     <button data-tab="news">Đánh theo tin</button>
     <button data-tab="vsa">VSA 4H (giấy)</button>
+    <button data-tab="crash">BTC sập (giấy)</button>
     <button data-tab="bt">Tính lịch sử</button>
     <button data-tab="doc">Phương pháp</button>
     <button data-tab="log">Nhật ký</button>
@@ -592,6 +593,23 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
       <span class="sub" id="vsaSub">—</span></div>
       <p class="mut" id="vsaSt" style="margin:0 0 10px">—</p>
       <div class="tw" style="max-height:560px"><table id="tvsa"></table></div></div>
+  </section>
+
+  <section id="t-crash">
+    <div class="panel" style="margin-bottom:12px"><div class="pb" style="padding-top:14px">
+      <p class="sub" style="margin:0">
+        <b>Sổ giấy — chỉ ghi, không đặt lệnh, không đổi gì trong bot.</b> Khi BTC <b>đóng cửa ngày giảm ≥ 5%</b>,
+        sổ ghi lại điều gì xảy ra nếu bot <b>đóng mọi lệnh mua của động lượng</b> và <b>không mở lệnh mua động lượng
+        trong 7 lượt</b> (docs/btc-sap-pp1.md). RSI(2), TSVW, DSRM và chân bán không bị đụng tới.
+        Mỗi dòng là một vị thế thật của bot: <b>cắt</b> = đang giữ lúc kích hoạt, <b>bỏ qua</b> = bot mở trong lúc chặn.
+        Chênh USD dương = luật lẽ ra giúp bot.
+      </p></div></div>
+    <div class="panel" style="margin-bottom:12px"><div class="ph"><h3>Lần kích hoạt</h3>
+      <span class="sub" id="crSub">—</span></div>
+      <p class="mut" id="crSt" style="margin:0 0 10px">—</p>
+      <div class="tw" style="max-height:260px"><table id="tcrE"></table></div></div>
+    <div class="panel"><div class="ph"><h3>Vị thế bị luật đụng tới</h3></div>
+      <div class="tw" style="max-height:560px"><table id="tcrR"></table></div></div>
   </section>
 
   <section id="t-bt">
@@ -1864,6 +1882,7 @@ async function refresh() {
   render();
   try { renderNews(await (await fetch('/api/news')).json()); } catch (e) {}
   try { renderVsa(await (await fetch('/api/vsa')).json()); } catch (e) {}
+  try { renderCrash(await (await fetch('/api/crash')).json()); } catch (e) {}
   try { FLAGS = await (await fetch('/api/flags')).json(); renderFlags(); } catch (e) {}
 }
 
@@ -1946,6 +1965,28 @@ function renderVsa(V) {
       r.exit_px, r.fund_bps == null ? '—' : r.fund_bps.toFixed(1),
       r.bps == null ? '—' : {html: `<span class="${r.bps >= 0 ? 'pos' : 'neg'}">${r.bps >= 0 ? '+' : ''}${Math.round(r.bps)}</span>`},
       r.usd == null ? '—' : usd(r.usd), r.why || '—']);
+}
+function renderCrash(V) {
+  const st = V.status || {}, k = V.stats || {}, b = V.backtest || {};
+  const day = t => new Date(t).toISOString().slice(0, 10);
+  const sg = (x, d = 2) => x == null ? '—' : {html: `<span class="${x >= 0 ? 'pos' : 'neg'}">${x >= 0 ? '+' : ''}${x.toFixed(d)}</span>`};
+  $('crSub').textContent = `ngưỡng BTC −${Math.round(V.rule.drop * 100)}% · chặn ${V.rule.cool} lượt · sổ ${V.mode}`
+    + (V.blocking ? ' · ĐANG CHẶN' : '');
+  $('crSt').innerHTML = `Lượt cuối: ${st.t ? when(st.t) : 'chưa chạy'} · ${k.events} lần kích hoạt · ${k.rows} vị thế`
+    + ` (${k.done} đã kết thúc) · chênh <b>${usd(k.usd || 0)}</b> = <b>${(k.r || 0) >= 0 ? '+' : ''}${(k.r || 0).toFixed(2)} R</b>`
+    + (k.r_per_event == null ? '' : ` · ${k.r_per_event.toFixed(2)} R/lần`)
+    + `<br>Backtest 2021–26: ${b.triggers} lần trong ${b.years} năm, +${b.pp1_r} R ở động lượng ≈ +${b.r_per_trigger} R/lần;`
+    + ` KTC chênh Sharpe [${b.ci_dsharpe[0]}; +${b.ci_dsharpe[1]}] chứa 0 — vì vậy mới ghi sổ giấy. Xét lại sau ≥ 12 lần kích hoạt.`;
+  table($('tcrE'), ['ngày BTC đóng', 'BTC', 'chặn đến hết', 'ghi chú'], V.events || [], e => [
+    day(e.t_day), sg(e.btc_ret * 100, 1), day(e.block_end), e.late ? 'phát hiện trễ' : '—']);
+  table($('tcrR'), ['loại', 'mã', 'sổ', 'giá vào', 'giá luật', 'kết thúc', 'giá cuối', 'chênh USD', 'chênh R', 'ghi chú'],
+    V.rows || [], r => [
+      r.kind, r.symbol, r.sleeve, r.entry_px, r.kind === 'cắt' ? r.ref_px : '— (không mở)',
+      r.open ? {html: '<span style="color:var(--acc)">đang theo dõi</span>'} : (r.end_ts ? when(r.end_ts) : '—'),
+      r.end_px == null ? '—' : r.end_px,
+      r.open ? (r.d_now == null ? '—' : {html: `<span class="mut">tạm ${r.d_now >= 0 ? '+' : ''}${r.d_now.toFixed(2)}</span>`}) : sg(r.d_usd),
+      r.open || !r.r_usd ? '—' : sg(r.d_usd / r.r_usd),
+      r.end_why || '—']);
 }
 function busy(b) { for (const id of ['btnFetch','btnPrev','btnRun','btnFlat'])
   $(id).disabled = b; }

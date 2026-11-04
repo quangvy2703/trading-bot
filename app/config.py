@@ -61,6 +61,10 @@ class Config:
     vsa_paper: bool = os.environ.get("VSA_PAPER", "1") == "1"
     vsa_paper_usd: float = _f("VSA_PAPER_USD", 100)
     vsa_topn: int = _i("VSA_TOPN", 50)
+    # So giay BTC sap (app/crash.py, docs/btc-sap-pp1.md): BTC dong cua −5% thi
+    # ghi lai phan chenh neu cat chan MUA dong luong + chan mua 7 luot. Chi doc
+    # so vi the cua bot, khong bao gio dat lenh. 0 = tat.
+    crash_paper: bool = os.environ.get("CRASH_PAPER", "0") == "1"
     # Khoa API RIENG, chi quyen doc, cho WebSocket thong bao. Thieu thi chi
     # doc API CMS moi 30 giay (du cho the Monitoring, cham cho tin go spot).
     news_api_key: str = os.environ.get("NEWS_API_KEY", "")

@@ -115,6 +115,9 @@ services:
       VSA_PAPER: "${VSA_PAPER:-1}"
       VSA_PAPER_USD: "${VSA_PAPER_USD:-100}"
       VSA_TOPN: "${VSA_TOPN:-50}"
+      # ---- so giay BTC sap (app/crash.py, docs/btc-sap-pp1.md) — CHI GHI ----
+      # BTC dong cua −5%: ghi chenh lech neu cat chan mua dong luong 7 luot. 0 = tat.
+      CRASH_PAPER: "${CRASH_PAPER:-0}"
       # Khoa RIENG chi quyen doc cho WebSocket thong bao (khoa giao dich bi san
       # tu choi o day). De trong thi chi doc API CMS moi 30 giay.
       NEWS_API_KEY: "${NEWS_API_KEY:-}"
