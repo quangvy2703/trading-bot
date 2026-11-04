@@ -65,6 +65,28 @@ class Config:
     # ghi lai phan chenh neu cat chan MUA dong luong + chan mua 7 luot. Chi doc
     # so vi the cua bot, khong bao gio dat lenh. 0 = tat.
     crash_paper: bool = os.environ.get("CRASH_PAPER", "0") == "1"
+    # Hai luat phu cho dong luong (app/pp1x.py, docs/pp1-kase-funding.md).
+    # Cong tac 1/0 la gia tri DA CHOT; bat/tat luc chay o tab «Cấu hình».
+    #   XSMOM_KASE      dong chan MUA khi close < muc Kase (K, n ben duoi)
+    #   XSMOM_FUND_VETO khong mo lenh BAN khi funding toan thi truong
+    #                   <= phan vi XSMOM_FUND_PCT trong XSMOM_FUND_HOLD ngay
+    xsmom_kase: int = _i("XSMOM_KASE", 0)
+    xsmom_kase_k: float = _f("XSMOM_KASE_K", 2.2)
+    xsmom_kase_n: int = _i("XSMOM_KASE_N", 30)
+    xsmom_fund_veto: int = _i("XSMOM_FUND_VETO", 0)
+    xsmom_fund_pct: float = _f("XSMOM_FUND_PCT", 0.10)
+    xsmom_fund_hold: int = _i("XSMOM_FUND_HOLD", 3)
+    #   XSMOM_BSADF     khong mo lenh BAN khi BSADF cua ma > nguong 95% (W, w0, CV)
+    xsmom_bsadf: int = _i("XSMOM_BSADF", 0)
+    xsmom_bsadf_w: int = _i("XSMOM_BSADF_W", 90)
+    xsmom_bsadf_w0: int = _i("XSMOM_BSADF_W0", 30)
+    xsmom_bsadf_cv: float = _f("XSMOM_BSADF_CV", 0.531)
+    # So giay C13 (app/c13.py, docs/c13-limit-sau.md): lenh mua limit sau k×ATR duoi close,
+    # ban o close ngay khop. Chi ghi, khong dat lenh. 0 = tat.
+    c13_paper: bool = os.environ.get("C13_PAPER", "0") == "1"
+    c13_k: float = _f("C13_K", 2.0)
+    c13_topn: int = _i("C13_TOPN", 50)
+    c13_r_usd: float = _f("C13_R_USD", 2.0)
     # Khoa API RIENG, chi quyen doc, cho WebSocket thong bao. Thieu thi chi
     # doc API CMS moi 30 giay (du cho the Monitoring, cham cho tin go spot).
     news_api_key: str = os.environ.get("NEWS_API_KEY", "")
@@ -72,13 +94,26 @@ class Config:
 
     # He so nhan cho 1R, khong phai ty trong von. 0 = tat chien luoc.
     # RSI(2) = 8 — xem docs/money-management-r.md § Ghep hai chien luoc.
+    # Bo mac dinh 5/8/5/5/5/5 (PP1..PP6) chot 04/11/2026 theo yeu cau, giong
+    # docker-compose. Can ~2.300 USD von (MAX_GROSS_X 2) de 95% so ngay khong bi
+    # chan — tab «Cấu hình» bang «Cần để KHÔNG bị chặn».
     alloc_rsi2: float = _f("ALLOC_RSI2", 8.0)
-    alloc_xsmom: float = _f("ALLOC_XSMOM", 1.0)
+    alloc_xsmom: float = _f("ALLOC_XSMOM", 5.0)
     # Hai chien luoc khung ngay tu dot YouTube 2 (app/swing.py, docs/tsvw-dsrm.md).
     # 1 = 1R moi lenh. Bat chay that 03/11/2026 theo yeu cau van hanh; bang
     # chung: qua 6/6 luat do ben nhung chon SAU 709 o — xem docs.
-    alloc_tsvw: float = _f("ALLOC_TSVW", 1.0)
-    alloc_dsrm: float = _f("ALLOC_DSRM", 1.0)
+    alloc_tsvw: float = _f("ALLOC_TSVW", 5.0)
+    alloc_dsrm: float = _f("ALLOC_DSRM", 5.0)
+    # C13 (app/c13.py): mua limit sau close − K×ATR14, ban o close ngay khop. 0 = tat.
+    alloc_c13: float = _f("ALLOC_C13", 5.0)
+    c13_max_orders: int = _i("C13_MAX_ORDERS", 50)
+    c13_max_gross_usd: float = _f("C13_MAX_GROSS_USD", 1000)
+    # PP6 VSA 4H (app/vsa.py, docs/vsa-push-4h.md): chien luoc that tu 04/11/2026.
+    # Khong co stop → 1R quy uoc = gia di VSA_R_FRAC (10%): co lenh = 1R / 0,10.
+    # Mac dinh ALLOC_VSA 5 × 1R 2 USD = 100 USD/lenh, dung co cua so giay.
+    alloc_vsa: float = _f("ALLOC_VSA", 5.0)
+    vsa_r_frac: float = _f("VSA_R_FRAC", 0.10)
+    vsa_max_open: int = _i("VSA_MAX_OPEN", 20)
     start_equity: float = _f("START_EQUITY_USD", 500)
 
     # --- ky quy: app TU DAT, khong tin thiet lap san co tren tai khoan ---

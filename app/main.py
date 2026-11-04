@@ -1,6 +1,7 @@
 """Ung dung web + lich chay nen. Mot tien trinh, mot o dia, mot trang."""
 from __future__ import annotations
 
+import json
 import math
 import os
 import re
@@ -14,7 +15,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import backtest, crash, data, db, delist, executor, news, runner, settings, vsa
+from . import backtest, c13, crash, data, db, delist, executor, news, runner, settings, vsa, vsbt as VB
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -31,8 +32,10 @@ DOCS = [("rsi2-connors", "RSI(2) Connors v3.1"),
         ("money-management-r", "Quản lý vốn theo R"),
         ("stop-dinh-day", "Cắt lỗ HVN · chốt lời"),
         ("huy-niem-yet", "Tin huỷ niêm yết"),
-        ("vsa-push-4h", "VSA 4H (sổ giấy)"),
-        ("btc-sap-pp1", "BTC sập → cắt chân mua (sổ giấy)")]
+        ("vsa-push-4h", "PP6 · VSA 4H đẩy qua vùng cung"),
+        ("btc-sap-pp1", "BTC sập → cắt chân mua (sổ giấy)"),
+        ("pp1-kase-funding", "Động lượng: Kase + chặn bán (funding, BSADF)"),
+        ("c13-limit-sau", "PP5 · C13 limit sâu 2 ATR")]
 NAME_OK = re.compile(r"^[a-z0-9][a-z0-9.-]{0,63}$")
 CONFIRM = "TÔI ĐỒNG Ý CHẠY THẬT"
 
@@ -102,11 +105,12 @@ def _start() -> None:
     sched.add_job(_job, CronTrigger(hour=int(hh), minute=int(mm or 0)),
                   id="daily", replace_existing=True,
                   misfire_grace_time=3600, coalesce=True)
-    if CFG.vsa_paper:
-        # Nen 4H dong luc 00/04/08/12/16/20 UTC; chay 2 phut sau de Binance chot nen.
-        sched.add_job(_vsa_job, CronTrigger(hour="*/4", minute=2),
-                      id="vsa4h", replace_existing=True,
-                      misfire_grace_time=600, coalesce=True)
+    # Nen 4H dong luc 00/04/08/12/16/20 UTC; chay 2 phut sau de Binance chot nen.
+    # Luon dat lich: so giay VSA (VSA_PAPER) va PP6 that (alloc_vsa, bat/tat luc
+    # chay o tab «Cấu hình») dung chung lich nay; ca hai tat thi lich khong lam gi.
+    sched.add_job(_vsa_job, CronTrigger(hour="*/4", minute=2),
+                  id="vsa4h", replace_existing=True,
+                  misfire_grace_time=600, coalesce=True)
     sched.start()
     db.log("info", f"khởi động · lịch chạy {CFG.run_at_utc} UTC · "
                    f"chạy thật ở tầng mã: {'MỞ' if CFG.live_enabled_env else 'KHOÁ'}")
@@ -148,7 +152,7 @@ def _vsa_job() -> None:
     try:
         vsa.run_once()
     except Exception:
-        db.log("error", "sổ giấy VSA 4H hỏng:\n" + traceback.format_exc()[-800:])
+        db.log("error", "lịch VSA 4H (PP6 + sổ giấy) hỏng:\n" + traceback.format_exc()[-800:])
 
 
 @app.get("/healthz")
@@ -211,10 +215,166 @@ def crash_state():
     return crash.summary()
 
 
+@app.get("/api/c13")
+def c13_state():
+    """So giay C13 lenh limit sau (app/c13.py) — khong dat lenh."""
+    return c13.summary()
+
+
 @app.get("/api/vsa")
 def vsa_state():
     """So giay VSA 4H: tin hieu, lenh gia, so voi backtest."""
     return vsa.summary()
+
+
+# Chuoi lai/lo NGAY theo backtest cua tung phuong phap — tep tinh dung san bang
+# scripts/build_methods_overview.py (repo nghien cuu). Don vi R voi he so 1;
+# trang tu nhan theo 1R va he so dang chay.
+OVERVIEW = Path(__file__).parent / "methods_bt.json"
+_OV: dict = {"mtime": None, "v": None}
+
+
+@app.get("/api/overview")
+def overview():
+    """Tab «Tổng quan»: backtest theo phuong phap + cau hinh dang chay + lai/lo
+    thuc te theo thang (vi the da dong cua so hien hanh, ca PP6 VSA)."""
+    if not OVERVIEW.is_file():
+        raise HTTPException(404, f"thiếu tệp {OVERVIEW.name} — chạy build_methods_overview.py")
+    mt = OVERVIEW.stat().st_mtime
+    if _OV["mtime"] != mt:
+        _OV.update(mtime=mt, v=json.loads(OVERVIEW.read_text(encoding="utf-8")))
+    m = runner.mode()
+    act: dict = {}
+
+    def add(month: str, key: str, usd: float) -> None:
+        x = act.setdefault(month, {}).setdefault(key, [0.0, 0, 0])
+        x[0] += usd
+        x[1] += 1
+        x[2] += usd > 0
+
+    ym = lambda ms: time.strftime("%Y-%m", time.gmtime(ms / 1000))
+    for p in _rows("SELECT strategy, exit_ts, notional, pnl_bps FROM positions "
+                   "WHERE open=0 AND mode=? AND exit_ts IS NOT NULL "
+                   "AND pnl_bps IS NOT NULL", m):
+        add(ym(p["exit_ts"]), p["strategy"], (p["notional"] or 0.0) * p["pnl_bps"] / 1e4)
+    return {"bt": _OV["v"], "mode": m,
+            "cfg": {"r_usd": settings.risk()["r_usd"], "equity": CFG.start_equity,
+                    "equity_now": runner.equity_now(),
+                    "alloc": settings.alloc(), "pp1x": settings.pp1x(),
+                    "vsa_paper": CFG.vsa_paper, "vsa_usd": CFG.vsa_paper_usd, "vsa_r_frac": CFG.vsa_r_frac,
+                    "crash_paper": CFG.crash_paper, "c13_paper": CFG.c13_paper, "caps": settings.risk()},
+            "actual": act}
+
+
+def _ov_bt() -> dict | None:
+    if not OVERVIEW.is_file():
+        return None
+    mt = OVERVIEW.stat().st_mtime
+    if _OV["mtime"] != mt:
+        _OV.update(mtime=mt, v=json.loads(OVERVIEW.read_text(encoding="utf-8")))
+    return _OV["v"]
+
+
+VSBT_K = ("xsmom", "rsi2", "tsvw", "dsrm", "c13", "vsa")
+
+
+@app.get("/api/vsbt")
+def actual_vs_backtest():
+    """Bang dieu khien: lenh THUC TE (vi the da dong cua che do hien hanh) so voi
+    BACKTEST (methods_bt.json, cung nguon tab «Tổng quan») tung chien luoc.
+
+    Backtest quy ve he so dang chay: USD/ngay = R/ngay × 1R × he so; so lenh/ngay,
+    ti le thang, R TB/lenh lay tren toan giai doan 2021–26. Cua so thuc te: tu luot
+    chay dau tien cua che do nay (hoac lenh dau tien) toi bay gio."""
+    bt = _ov_bt()
+    m = runner.mode()
+    al, ru = settings.alloc(), float(settings.risk()["r_usd"])
+    F = settings.pp1x()
+    ck = ("k" if F["kase"] else "") + ("f" if F["fund_veto"] else "") + ("b" if F["bsadf_veto"] else "")
+    first = _rows("SELECT MIN(ts) AS t FROM runs WHERE mode=?", m)[0]["t"]
+    rows = _rows("SELECT strategy, entry_ts, exit_ts, notional, r_usd, pnl_bps FROM positions "
+                 "WHERE mode=? AND open=0 AND pnl_bps IS NOT NULL", m)
+    nopen = {r["strategy"]: r["n"] for r in _rows(
+        "SELECT strategy, COUNT(*) AS n FROM positions WHERE mode=? AND open=1 GROUP BY strategy", m)}
+    t0 = min([x for x in [first] + [r["entry_ts"] for r in rows] if x] or [int(time.time() * 1000)])
+    days = max(0.0, (time.time() * 1000 - t0) / 86_400_000)
+    out = {}
+    for k in VSBT_K:
+        rs = [r for r in rows if r["strategy"] == k]
+        usd = [(r["notional"] or 0) * r["pnl_bps"] / 1e4 for r in rs]
+        rr = [u / r["r_usd"] for u, r in zip(usd, rs) if r["r_usd"]]
+        act = {"n": len(rs), "open": nopen.get(k, 0), "usd": float(sum(usd)),
+               "win": (sum(u > 0 for u in usd) / len(usd)) if usd else None,
+               "r_per": (sum(rr) / len(rr)) if rr else None,
+               "bps": (sum(r["pnl_bps"] for r in rs) / len(rs)) if rs else None}
+        b = None
+        if bt and k in bt.get("series", {}):
+            s = list(bt["series"][k])
+            if k == "xsmom" and ck and ck in bt.get("pp1x_combo", {}):
+                s = [a + c for a, c in zip(s, bt["pp1x_combo"][ck])]
+            if k == "vsa":                 # tep luu USD cho lenh 100 USD → R (1R = gia di VSA_R_FRAC)
+                s = [x / (100 * CFG.vsa_r_frac) for x in s]
+            n_d = len(s)
+            tr = bt.get("trades", {}).get(k) or []
+            nt, nw = sum(x[0] for x in tr), sum(x[1] for x in tr)
+            a = float(al.get(k, 0.0))
+            mu_ = sum(s) / n_d
+            sd_ = (sum((x - mu_) ** 2 for x in s) / n_d) ** 0.5 * ru * a
+            b = {"per_day_usd": mu_ * ru * a, "trades_per_day": nt / n_d, "sd_day_usd": sd_,
+                 "win": nw / nt if nt else None, "r_per": sum(s) / nt if nt else None,
+                 "exp_n": nt / n_d * days, "exp_usd": sum(s) / n_d * ru * a * days}
+        if b and days >= 1:
+            act["per_year"] = act["usd"] / days * 365
+            act["z"] = ((act["usd"] - b["exp_usd"]) / (b["sd_day_usd"] * days ** 0.5)) if b["sd_day_usd"] else None
+        out[k] = {"alloc": float(al.get(k, 0.0)), "act": act, "bt": b}
+    agg = None
+    if bt and bt.get("gross"):
+        n = bt["n"]; caps = settings.risk(); cap = float(caps["gross_x"]) * float(CFG.start_equity)
+        d = [0.0] * n; g = [0.0] * n; npos = [0] * n
+        for k in VSBT_K:
+            a = float(al.get(k, 0.0))
+            if a <= 0 or k not in bt["series"]:
+                continue
+            s_ = list(bt["series"][k])
+            if k == "xsmom" and ck and ck in bt.get("pp1x_combo", {}):
+                s_ = [x + c for x, c in zip(s_, bt["pp1x_combo"][ck])]
+            if k == "vsa":
+                s_ = [x / (100 * CFG.vsa_r_frac) for x in s_]
+            G = bt["gross"].get(k) or [0.0] * n; NP = bt["npos"].get(k) or [0] * n
+            for i in range(n):
+                d[i] += s_[i] * ru * a; g[i] += G[i] * ru * a; npos[i] += NP[i]
+        dc = [x * min(1.0, cap / gi) if gi > 0 else x for x, gi in zip(d, g)]
+
+        def st(x):
+            mu = sum(x) / n; sd = (sum((v - mu) ** 2 for v in x) / n) ** 0.5
+            c = pk = dd = 0.0; mon = {}
+            for i, v in enumerate(x):
+                c += v; pk = max(pk, c); dd = max(dd, pk - c)
+                mk = time.strftime("%Y-%m", time.gmtime((bt["start"] + i * 86_400_000) / 1000))
+                mon[mk] = mon.get(mk, 0.0) + v
+            return {"tot": c, "per_day": c / n, "sd_day": sd, "dd": dd, "pos": sum(v > 0 for v in mon.values()), "nm": len(mon)}
+        q = lambda a, p: sorted(a)[min(len(a) - 1, int(p * len(a)))]
+        tpd = sum((r["bt"] or {}).get("trades_per_day", 0) for k, r in out.items() if r["alloc"] > 0)
+        agg = {"cap": st(dc), "raw": st(d), "npos_mean": sum(npos) / n, "npos_p95": q(npos, .95),
+               "gross_p95": q(g, .95), "trades_per_day": tpd, "cap_usd": cap,
+               "over": sum(gi > cap for gi in g) / n, "start_equity": CFG.start_equity}
+    eqr = _rows("SELECT ts, value FROM equity WHERE mode=? ORDER BY ts", m)
+    cmpx = None
+    if bt and bt.get("r_stats"):
+        vals = [float(r["value"]) for r in eqr]
+        dx = [v - p for v, p in zip(vals, [float(CFG.start_equity)] + vals[:-1])]
+        rr = _rows("SELECT gross, n_open FROM runs WHERE mode=? AND status='xong' ORDER BY ts", m)
+        L = len(dx) if dx else max(1, int(round(days)))
+        caps_ = settings.risk()
+        key = (tuple(sorted(al.items())), ru, ck, CFG.vsa_r_frac, float(caps_["gross_x"]) * float(CFG.start_equity), _OV["mtime"])
+        cmpx = VB.compare(bt, key, al, ru, ck, CFG.vsa_r_frac, key[4],
+                          {"d": dx, "g": [float(r["gross"] or 0) for r in rr], "npos": [int(r["n_open"] or 0) for r in rr]},
+                          L, {k: out[k]["act"] for k in out})
+    e_now = runner.equity_now()
+    total = {"closed_usd": float(sum(r["act"]["usd"] for r in out.values())),
+             "mtm_usd": float(e_now - CFG.start_equity), "equity": e_now, "n_eq": len(eqr)}
+    return {"mode": m, "since": t0, "days": days, "r_usd": ru, "rows": out, "agg": agg, "total": total, "cmp": cmpx,
+            "bt_range": [bt["start"], bt["start"] + (bt["n"] - 1) * 86_400_000] if bt else None}
 
 
 @app.get("/api/state")

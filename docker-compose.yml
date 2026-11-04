@@ -79,6 +79,9 @@ services:
       # tab «Tinh lich su» (1R = 100, khong tran): 1 → 8 lai +12%, sut khong
       # doi; tu ~16 tro len sut bat dau tang. Xem docs/money-management-r.md
       # § Ghep hai chien luoc, muc SUA — so 32 cu dem trung lenh RSI(2).
+      # Bo he so mac dinh PP1..PP6 = 5/8/5/5/5/5, chot 04/11/2026 (luoi he so: giu ti le
+      # dang chay, chon co theo von). Can ~2.300 USD von voi MAX_GROSS_X 2 de 95% so ngay
+      # khong bi chan (3.950 USD cho moi ngay); von 500 thi bot chan ~3/4 lenh mo.
       ALLOC_RSI2: "${ALLOC_RSI2:-8.0}"        # chi RSI(2)
       ALLOC_XSMOM: "${ALLOC_XSMOM:-5.0}"      # chi dong luong cat ngang
       # TSVW (day V + AVWAP) va DSRM (Stoch+RSI+MACD), khung ngay, app/swing.py,
@@ -86,6 +89,28 @@ services:
       # moi lenh. Bang chung: 6/6 luat do ben nhung chon sau 709 o YouTube.
       ALLOC_TSVW: "${ALLOC_TSVW:-5.0}"
       ALLOC_DSRM: "${ALLOC_DSRM:-5.0}"
+      # C13 (app/c13.py, docs/c13-limit-sau.md): moi luot treo lenh MUA limit GTD o
+      # close − C13_K×ATR14 cho top C13_TOPN, het han sau 1 ngay; khop thi luot sau
+      # ban o gia thi truong (~ close ngay khop). Dua vao bot 04/11/2026 theo yeu cau.
+      # Rui ro: loi tap trung o ngay sap (10/10/2025: −43,7R). Tran: so lenh treo va
+      # tong gia tri treo; bo ma bot dang giu vi the (san mot chieu).
+      # He so 5 tu 04/11/2026 (theo yeu cau): 1R = 10 USD/lenh. Replay 2021–26 voi
+      # tran 1000 USD treo/ngay: ~16 lenh dau bang (khong con du 50), lai ≈ 1.000 USD
+      # (khong tran: ≈ 2.900, ngay te −437 USD). Tran tong phoi nhiem cua bot
+      # (MAX_GROSS_X × von) con chan chat hon khi cac PP khac dang giu vi the.
+      ALLOC_C13: "${ALLOC_C13:-5.0}"
+      C13_MAX_ORDERS: "${C13_MAX_ORDERS:-50}"
+      C13_MAX_GROSS_USD: "${C13_MAX_GROSS_USD:-1000}"
+      # PP6 VSA 4H (app/vsa.py, docs/vsa-push-4h.md): moi nen 4H (00:02, 04:02, … UTC)
+      # "day qua vung cung" roi nen giam KL thap → MUA thi truong o open nen ke,
+      # BAN o close nen thu 3 (giu 12 gio). Dua vao bot 04/11/2026 theo yeu cau —
+      # TRUOC moc ">= 300 lenh giay" trong docs. Khong stop: 1R quy uoc = gia di
+      # VSA_R_FRAC, co lenh = 1R / VSA_R_FRAC (5 × 2 USD / 0,10 = 100 USD).
+      # Dung an toan tren san o SAFETY_R × 1R = −30%. Tran: VSA_MAX_OPEN lenh
+      # cung luc + cac tran chung (trần lệnh, tổng phơi nhiễm, số lệnh mở).
+      ALLOC_VSA: "${ALLOC_VSA:-5.0}"
+      VSA_R_FRAC: "${VSA_R_FRAC:-0.10}"
+      VSA_MAX_OPEN: "${VSA_MAX_OPEN:-20}"
       # ---- RSI(2) mua them: so lop toi da moi ma (1 = khong mua them, 1..5) ----
       # Dang giu ma ma RSI(2) lai < 10 thi mo them mot lop, moi lop 1R va mot
       # cho rieng. Bang chung yeu (26 lenh lop 2, chua ngoai mau) — xem
@@ -112,12 +137,41 @@ services:
       NEWS_PAPER_USD: "${NEWS_PAPER_USD:-100}"
       # ---- so giay VSA 4H (app/vsa.py, docs/vsa-push-4h.md) — CHI GHI ----
       # "Day qua vung cung" roi nen giam KL thap, giu 3 nen 4H. 0 = tat.
+      # Chay song song voi PP6 that (ALLOC_VSA) de doi chieu khop ly tuong.
       VSA_PAPER: "${VSA_PAPER:-1}"
       VSA_PAPER_USD: "${VSA_PAPER_USD:-100}"
       VSA_TOPN: "${VSA_TOPN:-50}"
       # ---- so giay BTC sap (app/crash.py, docs/btc-sap-pp1.md) — CHI GHI ----
       # BTC dong cua −5%: ghi chenh lech neu cat chan mua dong luong 7 luot. 0 = tat.
       CRASH_PAPER: "${CRASH_PAPER:-0}"
+      # ---- hai luat phu cho dong luong (app/pp1x.py, docs/pp1-kase-funding.md) ----
+      # Cong tac 1 = bat, 0 = tat; bat/tat luc chay o tab «Cấu hình» (nhom «Luật phụ
+      # động lượng»), gia tri o day la gia tri DA CHOT. Bat chay that 04/11/2026
+      # theo yeu cau; bang chung: engine +362 USD, Sharpe 1,52 → 1,90, nhung KTC
+      # Šidák chua 0 va hai luat chon SAU khi nhin luoi — theo doi sat.
+      #   Kase: dong chan MUA khi close < dinh tu ngay vao − (TB + K·σ bien do 2 nen, n nen)
+      XSMOM_KASE: "${XSMOM_KASE:-1}"
+      XSMOM_KASE_K: "${XSMOM_KASE_K:-2.2}"
+      XSMOM_KASE_N: "${XSMOM_KASE_N:-30}"
+      #   funding: khong mo lenh BAN khi trung vi funding top 50 (TB 3 ngay) <= phan vi
+      #   XSMOM_FUND_PCT cua toan bo lich su, bat ky ngay nao trong XSMOM_FUND_HOLD ngay
+      #   TAT 04/11/2026 theo yeu cau: khong on dinh (2022 −60 USD, ket qua 100…215 USD tuy cach tinh
+      #   phan vi, trung ~1/2 so lenh chan voi BSADF). Giu code de bat lai: dat 1.
+      XSMOM_FUND_VETO: "${XSMOM_FUND_VETO:-0}"
+      XSMOM_FUND_PCT: "${XSMOM_FUND_PCT:-0.10}"
+      XSMOM_FUND_HOLD: "${XSMOM_FUND_HOLD:-3}"
+      #   BSADF: khong mo lenh BAN khi BSADF (W ngay, cua so ngan nhat W0) cua ma > CV (95% Monte Carlo).
+      #   Them 04/11/2026: engine +189 USD mot minh (6/6 nam), them vao Kase+funding +83 USD.
+      XSMOM_BSADF: "${XSMOM_BSADF:-1}"
+      XSMOM_BSADF_W: "${XSMOM_BSADF_W:-90}"
+      XSMOM_BSADF_W0: "${XSMOM_BSADF_W0:-30}"
+      XSMOM_BSADF_CV: "${XSMOM_BSADF_CV:-0.531}"
+      # ---- so giay C13 (app/c13.py) — CHI GHI, KHONG DAT LENH; khop ly tuong de doi chieu
+      # voi C13 chay trong bot (ALLOC_C13). C13_K / C13_TOPN dung chung cho ca hai. 0 = tat.
+      C13_PAPER: "${C13_PAPER:-1}"
+      C13_K: "${C13_K:-2.0}"
+      C13_TOPN: "${C13_TOPN:-50}"
+      C13_R_USD: "${C13_R_USD:-2}"
       # Khoa RIENG chi quyen doc cho WebSocket thong bao (khoa giao dich bi san
       # tu choi o day). De trong thi chi doc API CMS moi 30 giay.
       NEWS_API_KEY: "${NEWS_API_KEY:-}"

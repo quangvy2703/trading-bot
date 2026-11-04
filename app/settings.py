@@ -25,6 +25,8 @@ SPEC = {
     "alloc_xsmom":     ("alloc", float, 0.0, 50.0, "hệ số 1R cho động lượng — 0 là tắt"),
     "alloc_tsvw":      ("alloc", float, 0.0, 50.0, "hệ số 1R cho TSVW (đáy V + AVWAP) — 0 là tắt"),
     "alloc_dsrm":      ("alloc", float, 0.0, 50.0, "hệ số 1R cho DSRM (Stoch+RSI+MACD) — 0 là tắt"),
+    "alloc_c13":       ("alloc", float, 0.0, 50.0, "hệ số 1R cho C13 (limit sâu 2 ATR) — 0 là tắt"),
+    "alloc_vsa":       ("alloc", float, 0.0, 50.0, "hệ số 1R cho VSA 4H (1R = giá đi 10%) — 0 là tắt"),
     # --- RSI(2) ---
     "rsi2.topn":       ("rsi2", int, 1, 200, "vũ trụ top N thanh khoản"),
     "rsi2.slots":      ("rsi2", int, 1, 50, "số chỗ (N)"),
@@ -59,18 +61,25 @@ SPEC = {
     "risk_max_open":   ("risk", int, 1, 500, "số lệnh mở tối đa cùng lúc"),
     # --- thong bao huy niem yet: chan lenh MUA moi (app/delist.py) ---
     "delist_ban_days": ("risk", int, 0, 365, "chặn mua sau thông báo huỷ niêm yết (ngày) — 0 là tắt"),
+    # --- hai luat phu cho dong luong (app/pp1x.py) — cong tac 1 = bat, 0 = tat ---
+    "xsmom_kase":      ("pp1x", int, 0, 1, "Kase: đóng chân MUA động lượng khi close < đỉnh − (TB + K·σ biên độ 2 nến) — 1 bật, 0 tắt"),
+    "xsmom_fund_veto": ("pp1x", int, 0, 1, "funding: không mở lệnh BÁN động lượng khi funding toàn thị trường cực thấp — 1 bật, 0 tắt"),
+    "xsmom_bsadf_veto": ("pp1x", int, 0, 1, "BSADF: không mở lệnh BÁN động lượng khi mã đang 'nổ' (BSADF > ngưỡng 95%) — 1 bật, 0 tắt"),
 }
 
 
 def locked() -> dict:
     """Bo DA CHOT theo docs — moc so sanh, khong bao gio doi tu UI."""
     d = {"alloc_rsi2": CFG.alloc_rsi2, "alloc_xsmom": CFG.alloc_xsmom,
-         "alloc_tsvw": CFG.alloc_tsvw, "alloc_dsrm": CFG.alloc_dsrm,
+         "alloc_tsvw": CFG.alloc_tsvw, "alloc_dsrm": CFG.alloc_dsrm, "alloc_c13": CFG.alloc_c13,
+         "alloc_vsa": CFG.alloc_vsa,
          "max_gross_usd": CFG.max_gross_usd, "max_gross_x": CFG.max_gross_x,
          "max_order_usd": CFG.max_order_usd,
          "max_orders_per_run": CFG.max_orders_per_run,
          "risk_r_usd": CFG.risk_r_usd, "risk_max_open": CFG.risk_max_open,
-         "delist_ban_days": CFG.delist_ban_days}
+         "delist_ban_days": CFG.delist_ban_days,
+         "xsmom_kase": CFG.xsmom_kase, "xsmom_fund_veto": CFG.xsmom_fund_veto,
+         "xsmom_bsadf_veto": CFG.xsmom_bsadf}
     for k, v in LOCK_RSI2.items():
         d[f"rsi2.{k}"] = v
     for k, v in LOCK_XSMOM.items():
@@ -111,10 +120,18 @@ def risk() -> dict:
             "ban_days": int(e["delist_ban_days"])}
 
 
+def pp1x() -> dict:
+    """Cong tac hai luat phu cho dong luong."""
+    e = effective()
+    return {"kase": bool(e["xsmom_kase"]), "fund_veto": bool(e["xsmom_fund_veto"]),
+            "bsadf_veto": bool(e["xsmom_bsadf_veto"])}
+
+
 def alloc() -> dict:
     e = effective()
     return {"rsi2": e["alloc_rsi2"], "xsmom": e["alloc_xsmom"],
-            "tsvw": e["alloc_tsvw"], "dsrm": e["alloc_dsrm"]}
+            "tsvw": e["alloc_tsvw"], "dsrm": e["alloc_dsrm"], "c13": e["alloc_c13"],
+            "vsa": e["alloc_vsa"]}
 
 
 def validate(patch: dict) -> dict:
@@ -133,7 +150,8 @@ def validate(patch: dict) -> dict:
             raise ValueError(f"«{desc}» phải nằm trong [{lo}, {hi}], nhận {v}")
         out[k] = v
     merged = {**effective(), **out}
-    if all(merged[k] <= 0 for k in ("alloc_rsi2", "alloc_xsmom", "alloc_tsvw", "alloc_dsrm")):
+    if all(merged[k] <= 0 for k in ("alloc_rsi2", "alloc_xsmom", "alloc_tsvw", "alloc_dsrm", "alloc_c13",
+                                      "alloc_vsa")):
         raise ValueError("tắt tất cả chiến lược thì không còn gì để chạy — "
                          "để ít nhất một hệ số 1R lớn hơn 0")
     if merged["xsmom.sleeves"] != merged["xsmom.hold"]:

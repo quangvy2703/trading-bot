@@ -222,6 +222,15 @@ tr:hover td:first-child{background:#F3F0FB}
 .c-xsmom{background:var(--infosoft);color:#215876}
 .c-tsvw{background:#E3F2E8;color:#1E6B3A}
 .c-dsrm{background:#FBEFD9;color:#7A4A06}
+.c-c13{background:#F1EEDA;color:#5A4E00}
+.c-vsa{background:#FBE6EE;color:#8A2D55}
+.ovcap{margin:10px 2px 0;font-size:12.5px;color:var(--ink2);line-height:1.55}
+.ovcap b.neg{color:var(--dnink)}
+.cfgneed td,.cfgneed th{padding:3px 10px 3px 0;text-align:left;font-size:12.5px;font-weight:normal}
+.cfgneed th{color:var(--ink3)}
+.capbar{display:inline-block;vertical-align:middle;width:120px;height:7px;border-radius:4px;background:rgba(42,35,64,.1);margin:0 6px;position:relative;overflow:hidden}
+.capbar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--acc)}
+.capbar i.over{background:var(--dnink)}
 .c-ban{background:var(--dnsoft);color:var(--dnink)}
 .c-tag{background:#FBEFD9;color:#7A4A06}
 .c-gone{background:rgba(42,35,64,.08);color:var(--ink2)}
@@ -351,6 +360,91 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
 #btRes{display:none}#btRes.on{display:block}
 #btRes.stale{opacity:.5;transition:opacity .2s}
 
+/* ============ tab tong quan ============ */
+.ovtop{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;padding:14px 16px}
+.ovtop h2{margin:0;font-size:16px;font-weight:650;letter-spacing:-.3px}
+.ovtop .sub{flex:1 1 280px}
+.seg{display:inline-flex;gap:2px;background:rgba(42,35,64,.055);border-radius:12px;padding:3px}
+.seg button{min-height:28px;padding:0 11px;font-size:11.5px;border:0;background:none;
+  box-shadow:none;color:var(--dim);border-radius:9px}
+.seg button:hover:not(:disabled){box-shadow:none;color:var(--ink)}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(42,35,64,.1)}
+.dchip{display:inline-block;margin-top:7px;font-size:10.5px;font-weight:650;
+  border-radius:20px;padding:2px 9px;white-space:nowrap}
+.dchip.up{background:var(--upsoft);color:var(--upink)}
+.dchip.dn{background:var(--dnsoft);color:var(--dnink)}
+.dchip.eq{background:rgba(42,35,64,.06);color:var(--dim)}
+.ovhero{background:linear-gradient(160deg,rgba(255,255,255,.82),rgba(237,233,252,.7))}
+.ovchg{display:none;margin-top:11px;padding:11px 15px;border-radius:var(--r);
+  background:rgba(237,233,252,.85);border:1px solid rgba(109,91,208,.22);color:#3F3290;
+  font-size:12.5px;line-height:1.6;box-shadow:var(--sh)}
+.ovchg.on{display:block}
+.ovchg b{font-family:var(--mono);font-weight:650}
+.ovchg .tg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.ovchg .tg{display:inline-block;border-radius:7px;padding:0 7px;margin:0 2px;
+  font-size:11px;font-weight:650;background:#fff}
+.mgh{display:flex;align-items:baseline;gap:10px;margin:18px 2px 0;flex-wrap:wrap}
+.mgh h4{margin:0;font-size:12px;font-weight:650;color:var(--ink);letter-spacing:.1px}
+.mgrid{display:grid;gap:11px;margin-top:9px;
+  grid-template-columns:repeat(auto-fill,minmax(258px,1fr))}
+.mcard{background:var(--glass);border:1px solid var(--rim);border-radius:var(--r);
+  box-shadow:var(--sh);padding:13px 14px 11px;display:flex;flex-direction:column;
+  gap:9px;min-width:0;transition:opacity .18s,box-shadow .18s,background .18s}
+.mcard.off{opacity:.66;background:rgba(255,255,255,.3);border-style:dashed;
+  border-color:rgba(42,35,64,.16)}
+.mcard.chg{box-shadow:0 0 0 2px rgba(109,91,208,.5),var(--sh)}
+.mhead{display:flex;align-items:flex-start;gap:9px}
+.mdot{width:11px;height:11px;border-radius:4px;margin-top:3px;flex:0 0 11px}
+.mtag{display:flex;gap:6px;align-items:center;font-family:var(--mono);font-size:10px;
+  color:var(--dim);flex-wrap:wrap}
+.mname{font-weight:650;font-size:13px;line-height:1.3;margin-top:3px}
+.sw{margin-left:auto;position:relative;width:38px;height:22px;flex:0 0 38px}
+.sw input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:11px;background:#D6D1E4;
+  transition:background .18s}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(42,35,64,.28);
+  transition:transform .18s}
+.sw input:checked+span{background:var(--acc)}
+.sw input:checked+span::after{transform:translateX(16px)}
+.sw input:focus-visible+span{outline:2px solid var(--acc);outline-offset:2px}
+.sw input:disabled{cursor:not-allowed}.sw input:disabled+span{opacity:.45}
+.mdesc{color:var(--ink2);font-size:11.5px;line-height:1.5}
+.mstats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mstats div{background:rgba(255,255,255,.6);border-radius:10px;padding:5px 8px;min-width:0}
+.mstats b{display:block;font-family:var(--mono);font-size:12.5px;font-weight:650;
+  color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mstats span{font-size:10px;color:var(--dim);white-space:nowrap}
+.mspark{display:block;width:100%;height:36px}
+.mfoot{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);
+  border-top:1px solid var(--edge);padding-top:8px;min-height:39px}
+.mfoot input{background:#fff;color:var(--ink);border:1px solid var(--rim);border-radius:9px;
+  padding:4px 8px;font:inherit;font-family:var(--mono);font-size:12px;width:70px;
+  text-align:right;box-shadow:inset 0 1px 2px rgba(42,35,64,.04)}
+.mfoot input:hover{border-color:var(--acc2)}
+.mfoot input.chg{border-color:var(--acc);color:var(--acc)}
+.mfoot .eqv{margin-left:auto;font-family:var(--mono);color:var(--ink2)}
+.c-run{background:var(--upsoft);color:var(--upink)}
+.c-paper{background:var(--accsoft);color:#5342B8}
+.c-cand{background:var(--warnsoft);color:var(--warn)}
+.c-offs{background:rgba(42,35,64,.08);color:var(--ink2)}
+.c-rule{background:var(--infosoft);color:#215876}
+#ovBar{display:block;width:100%;height:clamp(210px,24vw,300px);padding:0 6px}
+#ovCum{display:block;width:100%;height:clamp(190px,20vw,250px);padding:0 6px}
+#ovBar .hit{cursor:crosshair}
+.ovleg{display:inline-flex;gap:14px;flex-wrap:wrap;color:var(--ink2);align-items:center}
+.ovleg i{display:inline-block;width:10px;height:10px;border-radius:3px;
+  vertical-align:-1px;margin-right:6px}
+.ovleg i.tick{width:14px;height:2px;border-radius:1px;background:#2A2340;opacity:.6;
+  vertical-align:middle}
+.tip .row{display:flex;gap:8px;justify-content:space-between}
+.tip .sep{border-top:1px solid var(--edge);margin:5px 0 4px}
+table.heat td{text-align:center;padding:8px 6px;min-width:58px;font-size:11px}
+table.heat th{text-align:center}
+table.heat td.tot{font-weight:650;border-left:1px solid var(--edge)}
+table.heat td.na{color:#C3BED2}
+#ovNote p{margin:0 0 9px}
+
 /* ============ ket qua thu API ============ */
 #testout{margin-top:10px;display:none;border:1px solid var(--edge);
   border-radius:12px;overflow:hidden}
@@ -377,6 +471,51 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
   #msg{animation:up .22s cubic-bezier(.16,1,.3,1)}
   @keyframes up{from{opacity:0;transform:translate(-50%,10px)}}
 }
+/* ============ tooltip + icon (refactor 04/11: it chu, chi tiet nam trong tooltip) ============ */
+.info{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+  border-radius:50%;border:0;padding:0;background:transparent;color:var(--dim);cursor:help;
+  vertical-align:-4px;margin-left:3px;transition:color .15s,background .15s}
+.info:hover,.info:focus-visible{color:var(--acc);background:var(--accsoft);outline:none}
+.info svg{width:15px;height:15px}
+#tipbox{position:fixed;z-index:80;max-width:min(420px,calc(100vw - 20px));padding:9px 12px;border-radius:12px;
+  background:rgba(36,29,56,.95);color:#EEEAF8;font-size:12px;line-height:1.55;white-space:pre-line;
+  pointer-events:none;opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s;
+  box-shadow:0 12px 32px rgba(30,20,60,.28);left:0;top:0}
+#tipbox.on{opacity:1;transform:none}
+#tipbox b{color:#fff;font-weight:650}#tipbox p{margin:0 0 6px}#tipbox p:last-child{margin:0}
+#tipbox .pos{color:#8FE0B5}#tipbox .neg{color:#FFA49E}#tipbox .mut{color:#B9B2D3}
+#tipbox code{font-family:var(--mono);font-size:11px;color:#D9D2F5}
+nav.tabs button{display:inline-flex;align-items:center;gap:7px}
+nav.tabs button svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:1100px){nav.tabs button:not(.on) .tl{display:none}nav.tabs button{padding:0 11px}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.schip{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:10px;
+  background:rgba(255,255,255,.72);border:1px solid var(--edge);font-size:12px;cursor:help;white-space:nowrap}
+.schip b{font-family:var(--mono);font-weight:650}
+.schip i{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+.schip.off{opacity:.45}
+.schip.bad{border-color:rgba(194,54,47,.35);background:var(--dnsoft);color:var(--dnink)}
+.schip.good{border-color:rgba(39,128,90,.3)}
+.btl{margin-top:9px;padding-top:8px;border-top:1px dashed var(--edge);font-size:11.5px;color:var(--ink2);
+  display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;cursor:help}
+.btl:empty{display:none}
+.btl .bt{font:650 9.5px/1 var(--ui);letter-spacing:.5px;color:var(--acc);background:var(--accsoft);
+  border-radius:5px;padding:3px 5px;align-self:center}
+.btl b{font-family:var(--mono);font-weight:650;color:var(--ink)}
+.btl .bt.act{color:var(--info);background:var(--infosoft)}
+.verd{font-size:11px;border-radius:6px;padding:1px 6px;background:rgba(42,35,64,.06)}
+.verd.ok{background:var(--upsoft);color:var(--upink)}.verd.lo{background:var(--dnsoft);color:var(--dnink)}
+.verd.hi{background:var(--infosoft);color:var(--info)}
+.mgrid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;padding:0 16px 12px}
+.mrow{background:rgba(255,255,255,.62);border:1px solid var(--edge);border-radius:12px;padding:9px 11px;cursor:help}
+.mrow .t{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:11.5px;color:var(--ink2)}
+.mrow .a{font:650 15px/1.2 var(--mono);margin-top:3px}
+.mrow .rb{position:relative;height:6px;border-radius:3px;background:rgba(42,35,64,.08);margin:7px 0 3px}
+.mrow .rb .band{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--acc2);opacity:.45}
+.mrow .rb .med{position:absolute;top:-2px;width:2px;height:10px;background:var(--acc);border-radius:1px}
+.mrow .rb .me{position:absolute;top:-3px;width:10px;height:12px;margin-left:-5px;border-radius:3px;background:var(--ink);box-shadow:0 0 0 2px #fff}
+.mrow .s{font-size:10.5px;color:var(--dim);display:flex;justify-content:space-between}
 </style>
 
 <div class="app">
@@ -400,15 +539,17 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
 
 <div class="shell">
   <nav class="tabs">
-    <button data-tab="dash" class="on">Bảng điều khiển</button>
-    <button data-tab="cfg">Cấu hình<span class="pill" id="driftPill" style="display:none"></span></button>
-    <button data-tab="flag">Mã gắn cờ<span class="pill" id="flagPill" style="display:none"></span></button>
-    <button data-tab="news">Đánh theo tin</button>
-    <button data-tab="vsa">VSA 4H (giấy)</button>
-    <button data-tab="crash">BTC sập (giấy)</button>
-    <button data-tab="bt">Tính lịch sử</button>
-    <button data-tab="doc">Phương pháp</button>
-    <button data-tab="log">Nhật ký</button>
+    <button data-tab="dash" class="on" title="Bảng điều khiển: vốn, vị thế, lượt chạy, công tắc chạy thật"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1.6"/><rect x="11" y="3" width="6" height="4" rx="1.4"/><rect x="11" y="9" width="6" height="8" rx="1.6"/><rect x="3" y="11" width="6" height="6" rx="1.6"/></svg><span class="tl">Điều khiển</span></button>
+    <button data-tab="ov" title="Tổng quan phương pháp: lãi/lỗ backtest theo tháng, bật/tắt từng phương pháp"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 17h14"/><path d="M5.5 14V9"/><path d="M10 14V5"/><path d="M14.5 14v-3"/></svg><span class="tl">Tổng quan</span></button>
+    <button data-tab="cfg" title="Cấu hình chạy thật: hệ số 1R, tham số, trần rủi ro"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h7M15 6h1M4 14h1M9 14h7"/><circle cx="13" cy="6" r="2"/><circle cx="7" cy="14" r="2"/></svg><span class="tl">Cấu hình</span><span class="pill" id="driftPill" style="display:none"></span></button>
+    <button data-tab="flag" title="Mã gắn cờ: thông báo huỷ niêm yết và thẻ Monitoring của Binance"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 17V3.5"/><path d="M5 4h9l-2 3.5 2 3.5H5"/></svg><span class="tl">Gắn cờ</span><span class="pill" id="flagPill" style="display:none"></span></button>
+    <button data-tab="news" title="Đánh theo tin (sổ giấy): tin gỡ spot, thẻ Monitoring"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 8.5v3a1 1 0 0 0 1 1h2l5 3.5v-12L7 7.5H5a1 1 0 0 0-1 1Z"/><path d="M15 7.5a3.5 3.5 0 0 1 0 5"/></svg><span class="tl">Tin</span></button>
+    <button data-tab="vsa" title="PP6 · VSA 4H đẩy qua vùng cung — chạy trong bot + sổ giấy đối chiếu"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16V9M8 16V5M12 16v-6M16 16V7"/></svg><span class="tl">VSA 4H</span></button>
+    <button data-tab="crash" title="BTC sập → cắt chân mua PP1 (sổ giấy)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5l5 5 3-3 6 7"/><path d="M17 10v4h-4"/></svg><span class="tl">BTC sập</span></button>
+    <button data-tab="c13" title="PP5 · C13 limit sâu 2 ATR (sổ giấy đối chiếu)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9"/><path d="M6.5 8.5 10 12l3.5-3.5"/><path d="M4 16h12"/></svg><span class="tl">Limit sâu</span></button>
+    <button data-tab="bt" title="Tính lịch sử: backtest theo cách bot chạy"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/><path d="M10 6.5V10l2.5 1.5"/></svg><span class="tl">Lịch sử</span></button>
+    <button data-tab="doc" title="Tài liệu phương pháp (docs/)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16v12H5.5A1.5 1.5 0 0 0 4 16.5Z"/><path d="M4 16.5A1.5 1.5 0 0 0 5.5 18H16"/></svg><span class="tl">Tài liệu</span></button>
+    <button data-tab="log" title="Nhật ký: giao dịch đã đóng, lệnh, sự kiện, lượt chạy"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5h9M7 10h9M7 15h9"/><circle cx="4" cy="5" r=".8"/><circle cx="4" cy="10" r=".8"/><circle cx="4" cy="15" r=".8"/></svg><span class="tl">Nhật ký</span></button>
   </nav>
 
   <section id="t-dash" class="on">
@@ -421,20 +562,22 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
           <span class="delta" id="eqpc">—</span>
           <span class="sub" id="eqsub">—</span>
         </div>
+        <div class="btl" id="bt-eq"></div>
+        <div class="btl" id="act-yr"></div>
       </div>
       <div class="lat">
         <div class="tile"><span class="ic"><svg viewBox="0 0 21 21"><path d="M3.4 6.3 8.4 11l2.9-2.6 6.3 5.8"/><path d="M17.6 10v4.4h-4.4"/></svg></span>
           <div class="lbl">Sụt khỏi đỉnh</div>
-          <div class="val" id="dd">—</div><div class="sub" id="ddsub">—</div></div>
+          <div class="val" id="dd">—</div><div class="sub" id="ddsub">—</div><div class="btl" id="bt-dd"></div></div>
         <div class="tile"><span class="ic"><svg viewBox="0 0 21 21"><path d="M10.5 2.9 18.6 6.8l-8.1 3.9L2.4 6.8l8.1-3.9Z"/><path d="M2.9 11.4 10.5 15l7.6-3.6"/><path d="M2.9 15.3 10.5 18.9l7.6-3.6"/></svg></span>
           <div class="lbl">Vị thế đang mở</div>
-          <div class="val" id="np">—</div><div class="sub" id="npsub">—</div></div>
+          <div class="val" id="np">—</div><div class="sub" id="npsub">—</div><div class="btl" id="bt-np"></div></div>
         <div class="tile"><span class="ic"><svg viewBox="0 0 21 21"><path d="M11.9 2.4 4.6 11.6h4.8l-1.2 7 7.3-9.3h-4.8l1.2-6.9Z"/></svg></span>
           <div class="lbl">Lượt chạy gần nhất</div>
-          <div class="val" id="lr">—</div><div class="sub" id="lrsub">—</div></div>
+          <div class="val" id="lr">—</div><div class="sub" id="lrsub">—</div><div class="btl" id="bt-lr"></div></div>
         <div class="tile"><span class="ic"><svg viewBox="0 0 21 21"><ellipse cx="10.5" cy="5.6" rx="6.9" ry="2.8"/><path d="M3.6 5.6v4.9c0 1.6 3.1 2.8 6.9 2.8s6.9-1.2 6.9-2.8V5.6"/><path d="M3.6 10.5v4.9c0 1.6 3.1 2.8 6.9 2.8s6.9-1.2 6.9-2.8v-4.9"/></svg></span>
           <div class="lbl">Dữ liệu</div>
-          <div class="val" id="dt">—</div><div class="sub" id="dtsub">—</div></div>
+          <div class="val" id="dt">—</div><div class="sub" id="dtsub">—</div><div class="btl" id="bt-dt"></div></div>
       </div>
     </div>
 
@@ -450,35 +593,35 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
       <div class="tw"><table id="tpos"></table></div>
     </div>
 
+    <div class="panel" style="margin-top:12px">
+      <div class="ph"><h3>Thực tế so với backtest</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Ô chỉ số&lt;/b&gt;: thực tế (số to, chấm đen) so với &lt;b&gt;mọi cửa sổ cùng số ngày&lt;/b&gt; trong backtest 2021–26 ở hệ số đang chạy — dải tím là 95% các cửa sổ, vạch là trung vị. Ngoài dải thì gắn nhãn lệch. Có trần / không trần theo nút ở tab Tổng quan. Sharpe hiện khi đã chạy ≥ 7 ngày.&lt;br&gt;&lt;b&gt;Bảng&lt;/b&gt;: thực tế / backtest từng chiến lược. ≈ trong vùng 95%, ↑ ↓ lệch: số lệnh theo cửa sổ cùng số ngày; tỉ lệ thắng và R/lệnh theo khoảng tin cậy với đúng số lệnh thực tế.&lt;br&gt;Thực tế: vị thế đã đóng + đường vốn của chế độ đang chạy (giấy hoặc thật), từ lượt chạy đầu tiên. Backtest không có phí trượt giá thật và không bị chặn lệnh." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
+        <span class="sub" id="vsbtSub"></span></div>
+      <div class="mgrid2" id="vsbtM"></div>
+      <div class="tw"><table id="tvsbt"></table></div>
+    </div>
+
     <div class="cols">
       <div class="colA">
         <div class="panel">
-          <div class="ph"><h3>Việc cần làm</h3>
+          <div class="ph"><h3>Việc cần làm</h3><button class="info" type="button" data-tip-html="1" data-tip="«Xem trước» tính sổ mục tiêu cho nến vừa đóng. &lt;b&gt;Không đặt lệnh&lt;/b&gt; nào cho tới khi bấm «Chạy ngay»." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
             <span class="sub" id="todoWhen"></span></div>
           <div class="tw"><table id="todo"></table></div>
           <div class="pb sub" id="todoNote">
-            Bấm «Xem trước» để tính sổ mục tiêu cho nến vừa đóng. Không có lệnh
-            nào được đặt cho tới khi bấm «Chạy ngay».</div>
+            Bấm «Xem trước» để tính.</div>
         </div>
 
         <!-- An khi luot gan nhat khong chan lenh nao. -->
         <div class="panel" id="blkPanel" style="margin-top:12px;display:none">
-          <div class="ph"><h3>Lệnh bị chặn</h3>
+          <div class="ph"><h3>Lệnh bị chặn</h3><button class="info" type="button" data-tip-html="1" data-tip="«Ép vào» đặt đúng lệnh đó ngay, &lt;b&gt;bỏ qua mọi trần rủi ro&lt;/b&gt;, cỡ lệnh theo USD đã tính lúc chặn.&lt;br&gt;Không ép được lệnh ngược chiều lệnh vừa mở cùng lượt (sàn một chiều) hay vị thế đã có. Lệnh ngược chiều vị thế đang giữ thì không bị chặn: bot đóng chiều cũ rồi mở.&lt;br&gt;Lượt chạy kế tiếp thay danh sách này." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
             <span class="sub" id="blkWhen"></span></div>
           <div class="tw"><table id="tblk"></table></div>
-          <div class="pb sub">
-            «Ép vào» đặt đúng lệnh đó ngay, <b>bỏ qua mọi trần rủi ro</b>, cỡ
-            lệnh theo USD đã tính lúc chặn. Không ép được lệnh ngược chiều với
-            lệnh vừa mở cùng lượt (sàn một chiều) hay vị thế đã có. Lệnh ngược
-            chiều vị thế đang giữ thì không bị chặn: bot đóng chiều cũ rồi mở. Lượt chạy kế tiếp
-            thay danh sách này.</div>
         </div>
       </div>
 
       <div class="colB">
         <div class="panel panel--arm">
           <div class="ph"><h3>Công tắc chạy thật</h3>
-            <span class="sub">hai lớp khoá</span></div>
+            <span class="sub" title="lớp 1: biến môi trường LIVE_ENABLED + khoá API · lớp 2: câu xác nhận trong UI">2 lớp khoá</span></div>
           <div class="pb">
             <div class="lock"><span class="dot" id="l1"></span><span id="l1t"></span></div>
             <div class="lock"><span class="dot" id="l2"></span><span id="l2t"></span></div>
@@ -490,9 +633,8 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
             </div>
             <div class="sub" style="margin-top:8px" id="armhint"></div>
             <div class="row" style="margin-top:10px">
-              <button id="btnTest">Thử khoá API</button>
-              <span class="sub" id="testhint">đặt một lệnh giới hạn ở
-                giá bằng nửa thị trường rồi huỷ ngay — không thể khớp</span>
+              <button id="btnTest" title="đặt một lệnh giới hạn ở giá bằng nửa thị trường rồi huỷ ngay — không thể khớp">Thử khoá API</button>
+              <span class="sub" id="testhint"></span>
             </div>
             <div id="testout"></div>
           </div>
@@ -502,23 +644,101 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
           <div class="ph"><h3>Thao tác</h3></div>
           <div class="pb">
             <div class="row">
-              <button id="btnFetch">Tải dữ liệu</button>
-              <button id="btnPrev">Xem trước</button>
-              <button class="warn" id="btnRun">Chạy ngay</button>
-              <button class="danger" id="btnFlat">Dừng khẩn</button>
+              <button id="btnFetch" title="tải nến mới từ Binance">Tải dữ liệu</button>
+              <button id="btnPrev" title="chỉ tính sổ mục tiêu, không đặt lệnh">Xem trước</button>
+              <button class="warn" id="btnRun" title="chạy lượt ngay: tính sổ và đặt lệnh (chế độ hiện hành)">Chạy ngay</button>
+              <button class="danger" id="btnFlat" title="tắt công tắc chạy thật rồi đóng sạch vị thế">Dừng khẩn</button>
             </div>
-            <div class="sub" style="margin-top:9px">
-              «Xem trước» chỉ tính sổ mục tiêu, <b>không đặt lệnh</b>.
-              «Dừng khẩn» tắt công tắc rồi đóng sạch vị thế.
-            </div>
-            <div class="sub" style="margin-top:7px" id="caps"></div>
+            <div class="chips" style="margin-top:11px" id="caps"></div>
           </div>
         </div>
 
         <div class="panel">
-          <div class="ph"><h3>Phân bổ &amp; tham số</h3></div>
-          <div class="pb sub" id="alloc"></div>
+          <div class="ph"><h3>Chiến lược</h3><button class="info" type="button" data-tip-html="1" data-tip="Cỡ lệnh = &lt;b&gt;1R ÷ khoảng cách tới điểm thua&lt;/b&gt;, không phụ thuộc vốn. Hệ số ×N nhân 1R của chiến lược đó; 0 là tắt.&lt;br&gt;Rê chuột lên từng chiến lược để xem luật." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button></div>
+          <div class="pb chips" id="alloc"></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-ov">
+    <div class="panel ovtop">
+      <h2>Phương pháp &amp; lãi/lỗ theo tháng <button class="info" type="button" id="ovInfo" data-tip-html="1" data-tip="—" aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button></h2>
+      <span class="sub" id="ovSub">—</span>
+      <span class="seg" id="ovRange">
+        <button data-r="all" class="on">Toàn bộ</button>
+        <button data-r="36">3 năm</button>
+        <button data-r="12">12 tháng</button>
+      </span>
+      <span class="row">
+        <button id="ovRun" title="bật đúng các phương pháp và hệ số bot đang dùng">Cấu hình đang chạy</button>
+        <button id="ovAll" title="bật thêm mọi ứng viên và sổ giấy">Thêm tất cả</button>
+        <button id="ovCore" title="chỉ 6 phương pháp chính (PP1–PP6), không luật phụ">Chỉ PP1–PP6</button>
+      </span>
+      <span class="seg" id="ovCapSeg" title="Có trần: ngày tổ hợp cần phơi nhiễm vượt trần tổng (MAX_GROSS_X × vốn đầu) thì lãi/lỗ ngày đó nhân theo tỉ lệ trần ÷ phơi nhiễm — bot chặn lệnh mở theo thứ tự mã, coi như chặn ngẫu nhiên">
+        <button data-c="1">Có trần</button>
+        <button data-c="0">Không trần</button>
+      </span>
+    </div>
+
+    <div class="hero" style="margin-top:11px">
+      <div class="tile ovhero">
+        <span class="ic"><svg viewBox="0 0 21 21"><path d="M3.4 14.7 8.4 10l2.9 2.6 6.3-5.8"/><path d="M17.6 11V6.6h-4.4"/></svg></span>
+        <div class="lbl" id="ovK0l">Tổng lãi</div>
+        <div class="kpi" id="ovK0">—</div>
+        <div class="hero-meta"><span class="delta" id="ovK0p">—</span>
+          <span class="sub" id="ovK0s">—</span></div>
+        <div id="ovK0d"></div>
+      </div>
+      <div class="lat" id="ovKpi"></div>
+    </div>
+    <div class="ovcap" id="ovCapLine"></div>
+    <div class="ovchg" id="ovChg"></div>
+
+    <div class="mgh"><h4 title="tắt bớt để xem bot sẽ ra sao nếu thiếu phương pháp đó">Đang chạy trong bot</h4></div>
+    <div class="mgrid" id="ovRunG"></div>
+    <div class="mgh"><h4 title="sổ giấy · ứng viên · luật đang tắt — bật lên để xem lãi/lỗ đổi thế nào">Có thể thêm</h4></div>
+    <div class="mgrid" id="ovAddG"></div>
+
+    <div class="panel" style="margin-top:14px">
+      <div class="ph"><h3>Lãi/lỗ từng tháng</h3>
+        <span class="sub ovleg" id="ovBarLeg"></span></div>
+      <div style="position:relative">
+        <svg id="ovBar" role="img" aria-label="Lãi lỗ từng tháng của tổ hợp đang chọn"></svg>
+        <div class="tip" id="ovTip"></div></div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <div class="ph"><h3>Bảng tháng</h3>
+        <span class="seg" id="ovHeatSeg" style="margin-left:auto">
+          <button data-h="val" class="on">Lãi/lỗ USD</button>
+          <button data-h="diff">Chênh so với đang chạy</button>
+        </span></div>
+      <div class="tw" style="max-height:none"><table class="heat" id="ovHeat"></table></div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <div class="ph"><h3>Lãi luỹ kế</h3>
+        <span class="sub ovleg" id="ovCumLeg"></span></div>
+      <div style="position:relative">
+        <svg id="ovCum" role="img" aria-label="Lãi luỹ kế theo ngày"></svg>
+        <div class="tip" id="ovTip2"></div></div>
+    </div>
+
+    <div class="cols">
+      <div class="colA">
+        <div class="panel"><div class="ph"><h3>Từng phương pháp</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Tính trên trang này&lt;/b&gt; (chuỗi lãi/lỗ NGÀY của backtest, nhân 1R × hệ số trên thẻ; bảng này không áp trần — số tổng phía trên áp trần khi bật «Có trần»):&lt;br&gt; · &lt;b&gt;lãi USD / USD/năm&lt;/b&gt;: tổng lãi trong khoảng đang xem, và chia cho số năm.&lt;br&gt; · &lt;b&gt;Sharpe&lt;/b&gt; = trung bình lãi ngày ÷ độ lệch chuẩn lãi ngày × √365.&lt;br&gt; · &lt;b&gt;Sortino&lt;/b&gt;: như Sharpe nhưng mẫu số chỉ tính những ngày lỗ — không phạt biến động phía lãi.&lt;br&gt; · &lt;b&gt;sụt lớn nhất&lt;/b&gt;: khoảng tụt lớn nhất của đường vốn (vốn khởi điểm + lãi cộng dồn) tính từ đỉnh trước đó.&lt;br&gt; · &lt;b&gt;lãi/năm ÷ sụt&lt;/b&gt; (kiểu Calmar): mỗi đồng sụt vốn đổi được bao nhiêu lãi một năm.&lt;br&gt; · &lt;b&gt;tháng tệ nhất / tháng lãi / năm lãi&lt;/b&gt;: theo tháng và năm dương lịch.&lt;br&gt; · &lt;b&gt;Δ Sharpe bot&lt;/b&gt;: Sharpe của cả tổ hợp đang chọn trừ Sharpe khi bỏ phương pháp này ra (đang tắt thì là khi thêm vào).&lt;br&gt; · &lt;b&gt;tương quan&lt;/b&gt;: tương quan lãi THÁNG với phần còn lại của tổ hợp.&lt;br&gt; · &lt;b&gt;lệnh/tháng, thắng&lt;/b&gt;: số lệnh đóng mỗi tháng và tỷ lệ lệnh lãi (luật phụ không có lệnh riêng).&lt;br&gt; · Luật phụ PP1 là &lt;b&gt;phần chênh&lt;/b&gt; so với PP1 gốc nên không có Sharpe / sụt riêng; Kase, funding và BSADF chặn trùng nhau nên tổ hợp lấy đúng chuỗi của tổ hợp đang bật, không cộng rời.&lt;br&gt; &lt;b&gt;Dùng khi chọn phương pháp&lt;/b&gt; (cột «kiểm định nghiên cứu»):&lt;br&gt; · &lt;b&gt;KTC&lt;/b&gt;: khoảng tin cậy 95% của phần Sharpe tăng thêm, bootstrap theo khối 30 ngày ghép cặp; &lt;b&gt;Šidák&lt;/b&gt; = KTC đã nới cho số ô thử trong lưới (thử N ô thì mỗi ô phải chặt hơn).&lt;br&gt; · &lt;b&gt;phép giả (null)&lt;/b&gt;: cùng số lần / cùng cấu trúc nhưng đặt ngẫu nhiên (vào lệnh ngẫu nhiên, bỏ lệnh ngẫu nhiên, dịch vòng chuỗi chế độ); p = tỷ lệ lần giả tốt bằng hoặc hơn bản thật.&lt;br&gt; · &lt;b&gt;z&lt;/b&gt;: phần vượt phép giả chia sai số chuẩn theo khối; &lt;b&gt;ô lân cận&lt;/b&gt;: tham số kề bên cũng phải dương; &lt;b&gt;năm&lt;/b&gt;: ≥ 4/6 năm dương; &lt;b&gt;mốc cắt nến&lt;/b&gt;: kết quả giữ khi nến ngày cắt ở 0/4/8/12/16/20h UTC.&lt;br&gt; · Luật đạt chuẩn để chạy thật: đủ cả 5 (KTC Šidák &amp;gt; 0, sụt và tháng tệ không xấu hơn, năm, lân cận, phép giả)." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
+          <span class="sub">khoảng đang xem</span></div>
+          <div class="tw" style="max-height:none"><table id="ovPer"></table></div>
+</div>
+        <div class="panel"><div class="ph"><h3>Theo năm</h3>
+          <span class="sub">USD · các phương pháp đang bật</span></div>
+          <div class="tw" style="max-height:none"><table id="ovYr"></table></div></div>
+      </div>
+      <div class="colB">
+        <div class="panel"><div class="ph"><h3>Thực tế từ sổ bot</h3>
+          <span class="sub" id="ovActSub"></span></div>
+          <div class="tw"><table id="ovAct"></table></div></div>
       </div>
     </div>
   </section>
@@ -530,14 +750,8 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
         <div class="row">
           <button class="warn" id="btnSave">Lưu thay đổi</button>
           <button id="btnReset">Trả về bộ đã chốt</button>
+          <button class="info" type="button" data-tip-html="1" data-tip="Bộ tham số chốt trong &lt;b&gt;docs/rsi2-connors.md&lt;/b&gt; và &lt;b&gt;docs/xsmom-volnorm.md&lt;/b&gt;, chọn kèm kế toán đa phép thử. Đổi một con số là kết quả thật &lt;b&gt;không còn được nghiên cứu bảo chứng&lt;/b&gt;. Mọi thay đổi đều ghi vào nhật ký.&lt;br&gt;Cột «ước tính» tính lại ngay khi gõ, chưa cần lưu." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
           <span class="sub" id="cfgHint"></span>
-        </div>
-        <div class="sub" style="margin-top:9px">
-          Hai bộ tham số này được chốt trong <b>docs/rsi2-connors.md</b> và
-          <b>docs/xsmom-volnorm.md</b>, chọn kèm kế toán đa phép thử (§ Bội
-          số phép thử trong hai tài liệu). Đổi một con số là kết quả thật
-          <b>không còn được bảo chứng bởi nghiên cứu</b>. Mọi thay đổi đều ghi
-          vào nhật ký.
         </div>
       </div>
     </div>
@@ -546,35 +760,18 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
 
   <section id="t-flag">
     <div class="panel">
-      <div class="ph"><h3>Mã bị gắn cờ</h3>
+      <div class="ph"><h3>Mã bị gắn cờ</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Gỡ spot&lt;/b&gt; / &lt;b&gt;gỡ perp&lt;/b&gt;: tin «Binance Will Delist …» / «Binance Futures Will Delist …» — mã bị &lt;b&gt;chặn mua&lt;/b&gt; trong DELIST_BAN_DAYS (mặc định 90) ngày (RSI(2) không mở, động lượng không mở chân mua; vị thế đang giữ không bị đóng). &lt;b&gt;Thẻ Monitoring&lt;/b&gt;: Binance cảnh báo mã có rủi ro bị gỡ (~80% mã từng bị gắn thẻ về sau bị gỡ khỏi spot) — &lt;b&gt;chỉ hiện&lt;/b&gt;, chưa chặn mua. Nguồn: thông báo của Binance, mục «Delisting» và «Latest Binance News»." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
         <span class="docpick" id="flagPick"></span></div>
       <div class="pb">
         <p class="sub" id="flagSub" style="margin:0 0 10px">—</p>
         <div class="tw" style="max-height:560px"><table id="tflag"></table></div>
-        <p class="sub" style="margin:10px 0 0">
-          <b>Gỡ spot</b> / <b>gỡ perp</b>: tin «Binance Will Delist …» / «Binance Futures
-          Will Delist …» — mã bị <b>chặn mua</b> trong <span id="flagBan">90</span> ngày
-          (RSI(2) không mở, động lượng không mở chân mua; vị thế đang giữ không bị đóng).
-          <b>Thẻ Monitoring</b>: Binance cảnh báo mã có rủi ro bị gỡ (~80% mã từng bị
-          gắn thẻ về sau bị gỡ khỏi spot) — <b>chỉ hiện</b>, chưa chặn mua.
-          Nguồn: thông báo của Binance, mục «Delisting» và «Latest Binance News».
-        </p>
       </div>
     </div>
   </section>
 
   <section id="t-news">
-    <div class="panel" style="margin-bottom:12px"><div class="pb" style="padding-top:14px">
-      <p class="sub" style="margin:0">
-        Hai cách đánh theo tin đã đạt luật nghiên cứu (docs/huy-niem-yet.md), hiện chạy
-        <b>sổ giấy</b> — chỉ ghi, không đặt lệnh:
-        <b>tin gỡ spot</b> — bán khống perp ngay khi nhận tin, lời 15% thì dời stop về giá vào,
-        giữ tối đa 24 giờ (chỉ dùng được nếu nhận tin trong ~1–2 giây);
-        <b>thẻ Monitoring</b> — bán khống perp, không stop, giữ 24 giờ (độ trễ không quan trọng).
-        Độ trễ nhận tin ở dưới là con số quyết định có nên chạy thật hay không.
-      </p></div></div>
-    <div class="panel"><div class="ph"><h3>Sổ giấy theo tin</h3>
-      <span class="sub">chỉ ghi, không đặt lệnh — docs/huy-niem-yet.md</span></div>
+    <div class="panel"><div class="ph"><h3>Sổ giấy theo tin</h3><button class="info" type="button" data-tip-html="1" data-tip="Hai cách đánh theo tin đã đạt luật nghiên cứu (docs/huy-niem-yet.md), hiện chạy &lt;b&gt;sổ giấy&lt;/b&gt; — chỉ ghi, không đặt lệnh: &lt;b&gt;tin gỡ spot&lt;/b&gt; — bán khống perp ngay khi nhận tin, lời 15% thì dời stop về giá vào, giữ tối đa 24 giờ (chỉ dùng được nếu nhận tin trong ~1–2 giây); &lt;b&gt;thẻ Monitoring&lt;/b&gt; — bán khống perp, không stop, giữ 24 giờ (độ trễ không quan trọng). Độ trễ nhận tin ở dưới là con số quyết định có nên chạy thật hay không." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
+      <span class="sub">chỉ ghi, không đặt lệnh</span></div>
       <p class="mut" id="newsSt" style="margin:0 0 10px">—</p>
       <div class="tw" style="max-height:330px"><table id="tnp"></table></div>
       <h4 style="margin:14px 0 6px">Tin nhận được gần đây</h4>
@@ -582,14 +779,10 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
   </section>
 
   <section id="t-vsa">
-    <div class="panel" style="margin-bottom:12px"><div class="pb" style="padding-top:14px">
-      <p class="sub" style="margin:0">
-        <b>Sổ giấy — chỉ ghi, không đặt lệnh.</b> Ô duy nhất trong 324 ô VSA (sách <i>Master the Markets</i>)
-        sống qua kiểm độ bền (docs/vsa-push-4h.md): trong 10 nến 4H trước có nến <b>đẩy qua vùng cung</b>
-        (tăng, biên độ rộng, khối lượng cao, đóng gần đỉnh, vượt đỉnh 20 nến), có dấu hiệu mạnh trong 20 nến
-        trước, rồi một <b>nến giảm khối lượng thấp</b> → mua ở open nến sau, giữ 3 nến (12 giờ).
-        Ô được chọn sau khi nhìn lưới, nên sổ này là phép thử ngoài mẫu: so trung bình bps/lệnh với backtest.
-      </p></div></div>
+    <div class="panel" style="margin-bottom:12px"><div class="ph"><h3>PP6 trong bot</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;PP6 của bot từ 04/11/2026&lt;/b&gt; (hệ số &lt;code&gt;alloc_vsa&lt;/code&gt; ở tab «Cấu hình», 0 là tắt) — đưa vào &lt;b&gt;trước&lt;/b&gt; mốc «≥ 300 lệnh giấy» trong docs. Sổ giấy bên dưới vẫn chạy song song để đối chiếu. Ô duy nhất trong 324 ô VSA (sách &lt;i&gt;Master the Markets&lt;/i&gt;) sống qua kiểm độ bền (docs/vsa-push-4h.md): trong 10 nến 4H trước có nến &lt;b&gt;đẩy qua vùng cung&lt;/b&gt; (tăng, biên độ rộng, khối lượng cao, đóng gần đỉnh, vượt đỉnh 20 nến), có dấu hiệu mạnh trong 20 nến trước, rồi một &lt;b&gt;nến giảm khối lượng thấp&lt;/b&gt; → mua ở open nến sau, giữ 3 nến (12 giờ). Ô được chọn sau khi nhìn lưới, nên sổ này là phép thử ngoài mẫu: so trung bình bps/lệnh với backtest." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
+      <span class="sub" id="vsaBotSub">—</span></div>
+      <p class="mut" id="vsaBotSt" style="margin:0 0 10px">—</p>
+      <div class="tw" style="max-height:360px"><table id="tvsaBot"></table></div></div>
     <div class="panel"><div class="ph"><h3>Sổ giấy VSA 4H</h3>
       <span class="sub" id="vsaSub">—</span></div>
       <p class="mut" id="vsaSt" style="margin:0 0 10px">—</p>
@@ -597,15 +790,7 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
   </section>
 
   <section id="t-crash">
-    <div class="panel" style="margin-bottom:12px"><div class="pb" style="padding-top:14px">
-      <p class="sub" style="margin:0">
-        <b>Sổ giấy — chỉ ghi, không đặt lệnh, không đổi gì trong bot.</b> Khi BTC <b>đóng cửa ngày giảm ≥ 5%</b>,
-        sổ ghi lại điều gì xảy ra nếu bot <b>đóng mọi lệnh mua của động lượng</b> và <b>không mở lệnh mua động lượng
-        trong 7 lượt</b> (docs/btc-sap-pp1.md). RSI(2), TSVW, DSRM và chân bán không bị đụng tới.
-        Mỗi dòng là một vị thế thật của bot: <b>cắt</b> = đang giữ lúc kích hoạt, <b>bỏ qua</b> = bot mở trong lúc chặn.
-        Chênh USD dương = luật lẽ ra giúp bot.
-      </p></div></div>
-    <div class="panel" style="margin-bottom:12px"><div class="ph"><h3>Lần kích hoạt</h3>
+    <div class="panel" style="margin-bottom:12px"><div class="ph"><h3>Lần kích hoạt</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Sổ giấy — chỉ ghi, không đặt lệnh, không đổi gì trong bot.&lt;/b&gt; Khi BTC &lt;b&gt;đóng cửa ngày giảm ≥ 5%&lt;/b&gt;, sổ ghi lại điều gì xảy ra nếu bot &lt;b&gt;đóng mọi lệnh mua của động lượng&lt;/b&gt; và &lt;b&gt;không mở lệnh mua động lượng trong 7 lượt&lt;/b&gt; (docs/btc-sap-pp1.md). RSI(2), TSVW, DSRM và chân bán không bị đụng tới. Mỗi dòng là một vị thế thật của bot: &lt;b&gt;cắt&lt;/b&gt; = đang giữ lúc kích hoạt, &lt;b&gt;bỏ qua&lt;/b&gt; = bot mở trong lúc chặn. Chênh USD dương = luật lẽ ra giúp bot." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
       <span class="sub" id="crSub">—</span></div>
       <p class="mut" id="crSt" style="margin:0 0 10px">—</p>
       <div class="tw" style="max-height:260px"><table id="tcrE"></table></div></div>
@@ -613,11 +798,19 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
       <div class="tw" style="max-height:560px"><table id="tcrR"></table></div></div>
   </section>
 
+  <section id="t-c13">
+    <div class="panel" style="margin-bottom:12px"><div class="ph"><h3>Theo ngày khớp</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Sổ giấy — chỉ ghi, không đặt lệnh.&lt;/b&gt; Mỗi ngày, với mỗi mã top thanh khoản: lệnh &lt;b&gt;mua limit&lt;/b&gt; ở close − k × ATR14, có hiệu lực một ngày; khớp thì &lt;b&gt;bán ở close ngày khớp&lt;/b&gt; (docs/c13-limit-sau.md). 1R = 2 × ATR. Đây là chiến lược &lt;b&gt;ngày sập&lt;/b&gt;: phần lớn lời (và lỗ lớn nhất) đến từ những ngày cả thị trường sập, nhiều lệnh khớp cùng lúc — cột «ngân sách ngày» chia 1R cho mọi lệnh khớp trong ngày." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
+      <span class="sub" id="c13Sub">—</span></div>
+      <p class="mut" id="c13St" style="margin:0 0 10px">—</p>
+      <div class="tw" style="max-height:260px"><table id="tc13D"></table></div></div>
+    <div class="panel"><div class="ph"><h3>Lệnh khớp</h3></div>
+      <div class="tw" style="max-height:560px"><table id="tc13R"></table></div></div>
+  </section>
+
   <section id="t-bt">
     <div class="panel" style="margin-bottom:12px">
-      <div class="ph"><h3>Thiết lập</h3>
-        <span class="sub">mặc định = cấu hình đang chạy · chỉ tính, <b>không đổi
-          cấu hình, không đặt lệnh</b></span></div>
+      <div class="ph"><h3>Thiết lập</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Mô phỏng theo cách bot chạy.&lt;/b&gt; Tín hiệu chốt trên nến 1D đã đóng, khớp ở &lt;b&gt;open hôm sau&lt;/b&gt;. RSI(2) chạm stop hay vượt ngưỡng thoát thì đóng ở open hôm sau — bot không đặt lệnh dừng trên sàn. Vị thế động lượng trùng sổ, mã, chiều thì giữ nguyên, không mua bán lại. Trần áp đúng thứ tự của app, cộng hai chặn của sàn: lệnh tối thiểu và ký quỹ (phơi nhiễm ÷ đòn bẩy ≤ vốn). Funding thật tính từng ngày. Lãi/lỗ cộng theo USD với 1R cố định — vốn chỉ quyết định mở được bao nhiêu lệnh. &lt;br&gt;&lt;br&gt;Mã đủ &lt;b&gt;min_bars&lt;/b&gt; nến &lt;b&gt;tính đến ngày đó&lt;/b&gt; mới vào vũ trụ, nên không nhìn trước. Số khác bảng trong docs ở hai chỗ: khớp thoát hôm sau, và không có lệnh RSI(2) chồng lên một mã đang mở." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
+        <span class="sub" title="mặc định = cấu hình đang chạy · chỉ tính, không đổi cấu hình, không đặt lệnh">chỉ tính · không đặt lệnh</span></div>
       <div class="pb">
         <div class="btform" id="btForm"></div>
         <details class="more">
@@ -667,19 +860,6 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
           <div class="panel"><div class="ph"><h3>Lệnh bị chặn</h3>
             <span class="sub" id="btBlkSub"></span></div>
             <div class="tw"><table id="btBlk"></table></div></div>
-          <div class="panel"><div class="ph"><h3>Mô phỏng theo cách bot chạy</h3></div>
-            <div class="pb sub">
-              Tín hiệu chốt trên nến 1D đã đóng, khớp ở <b>open hôm sau</b>.
-              RSI(2) chạm stop hay vượt ngưỡng thoát thì đóng ở open hôm sau —
-              bot không đặt lệnh dừng trên sàn. Vị thế động lượng trùng sổ, mã,
-              chiều thì giữ nguyên, không mua bán lại. Trần áp đúng thứ tự của
-              app, cộng hai chặn của sàn: lệnh tối thiểu và ký quỹ (phơi nhiễm
-              ÷ đòn bẩy ≤ vốn). Funding thật tính từng ngày. Lãi/lỗ cộng theo
-              USD với 1R cố định — vốn chỉ quyết định mở được bao nhiêu lệnh.
-              <br><br>Mã đủ <b>min_bars</b> nến <b>tính đến ngày đó</b> mới
-              vào vũ trụ, nên không nhìn trước. Số khác bảng trong docs ở hai
-              chỗ: khớp thoát hôm sau, và không có lệnh RSI(2) chồng lên một mã
-              đang mở.</div></div>
         </div>
       </div>
       <div class="panel" style="margin-top:12px">
@@ -731,6 +911,35 @@ details.more summary{cursor:pointer;color:var(--acc);font-weight:600;font-size:1
 
 <script>
 const $ = i => document.getElementById(i);
+/* Tooltip chung: phan tu co data-tip (hoac title — doi sang data-tip khi re chuot lan dau de
+   tat tooltip mac dinh). data-tip-html="1" → noi dung la HTML do chinh trang dung (da esc). */
+const INFO_SVG = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg>';
+const INFO = (t, html = false) => `<button class="info" type="button" ${html ? 'data-tip-html="1" ' : ''}data-tip="${escA(t)}" aria-label="giải thích">${INFO_SVG}</button>`;
+(() => {
+  const box = document.createElement('div'); box.id = 'tipbox'; box.setAttribute('role', 'tooltip');
+  document.addEventListener('DOMContentLoaded', () => document.body.appendChild(box));
+  if (document.body) document.body.appendChild(box);
+  let cur = null;
+  const hide = () => { cur = null; box.classList.remove('on'); };
+  const show = el => {
+    let t = el.dataset.tip;
+    if (t == null && el.getAttribute('title')) { t = el.dataset.tip = el.getAttribute('title'); el.removeAttribute('title'); }
+    if (!t) return hide();
+    cur = el;
+    if (el.dataset.tipHtml) box.innerHTML = t; else box.textContent = t;
+    box.classList.add('on');
+    const r = el.getBoundingClientRect(), bw = box.offsetWidth, bh = box.offsetHeight;
+    let x = Math.min(Math.max(8, r.left + r.width / 2 - bw / 2), innerWidth - bw - 8);
+    let y = r.bottom + 8; if (y + bh > innerHeight - 8) y = Math.max(8, r.top - bh - 8);
+    box.style.left = x + 'px'; box.style.top = y + 'px';
+  };
+  const pick = e => e.target.closest && e.target.closest('[data-tip],[title]');
+  document.addEventListener('mouseover', e => { const el = pick(e); if (el !== cur) el ? show(el) : hide(); });
+  document.addEventListener('focusin', e => { const el = pick(e); el ? show(el) : hide(); });
+  document.addEventListener('focusout', hide);
+  document.addEventListener('scroll', hide, true);
+  document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('.info'); if (el) { e.preventDefault(); el === cur ? hide() : show(el); } });
+})();
 const NS = 'http://www.w3.org/2000/svg';
 const mk = (n, a) => { const e = document.createElementNS(NS, n);
   for (const k in a) e.setAttribute(k, a[k]); return e; };
@@ -741,6 +950,7 @@ const usd = v => (v == null ? '—' : v.toLocaleString('vi-VN',
 /* Dau thap phan cua so tien la dau phay (vi-VN) — phan tram phai theo. */
 const pct = (v, d = 2) => v.toFixed(d).replace('.', ',');
 const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const escA = s => esc(s).replace(/"/g, '&quot;');   // cho gia tri thuoc tinh (title / data-tip)
 let S = null, PREV = null, C = null, EDIT = {};
 
 function msg(text, ok = true) {
@@ -776,7 +986,7 @@ function table(el, cols, rows, fmt) {
 const symA = s => s ? {html: `<a class="sym" href="https://www.binance.com/en/futures/`
   + `${encodeURIComponent(s)}" target="_blank" rel="noopener" `
   + `title="mở chart ${esc(s)} trên Binance">${esc(s)}</a>`} : '—';
-const SLABEL = {rsi2: 'RSI(2)', xsmom: 'ĐỘNG LƯỢNG', tsvw: 'TSVW', dsrm: 'DSRM'};
+const SLABEL = {rsi2: 'RSI(2)', xsmom: 'ĐỘNG LƯỢNG', tsvw: 'TSVW', dsrm: 'DSRM', c13: 'C13', vsa: 'VSA 4H'};
 const sChip = s => ({html: `<span class="chip c-${s}">${SLABEL[s] || s}</span>`});
 const aChip = a => ({html: `<span class="chip c-${a === 'OPEN' ? 'open' : 'close'}">${a === 'OPEN' ? 'MỞ' : 'ĐÓNG'}</span>`});
 const sideTxt = d => d > 0 ? {html: '<span class="pos">MUA</span>'}
@@ -831,7 +1041,7 @@ function render() {
   const byS = {};
   for (const p of S.positions) byS[p.strategy] = (byS[p.strategy] || 0) + 1;
   $('npsub').textContent = (Object.entries(byS)
-    .map(([k, v]) => `${({rsi2: 'RSI(2)', xsmom: 'động lượng', tsvw: 'TSVW', dsrm: 'DSRM'})[k] || k} ${v}`).join(' · ') || '—')
+    .map(([k, v]) => `${({rsi2: 'RSI(2)', xsmom: 'động lượng', tsvw: 'TSVW', dsrm: 'DSRM', c13: 'C13', vsa: 'VSA 4H'})[k] || k} ${v}`).join(' · ') || '—')
     + ` · phơi nhiễm ${usd(gross)} USD`;
 
   const lr = S.last_run;
@@ -870,37 +1080,26 @@ function render() {
   if (S.caps.gross < needGross)
     warn.push(`trần tổng <b>${usd(S.caps.gross)}</b> nhỏ hơn phơi nhiễm `
       + `7 sổ cần (~${usd(needGross)})`);
-  $('caps').innerHTML = `<b>1R = ${usd(S.caps.r_usd)} USD</b> mỗi lệnh · `
-    + `tối đa <b>${S.caps.max_open}</b> lệnh mở cùng lúc`
-    + `<br>trần: tổng phơi nhiễm <b>${S.caps.gross_x}× vốn</b> · mở thêm mỗi lượt `
-    + `<b>${usd(S.caps.gross)}</b> USD · mỗi lệnh `
-    + `<b>${usd(S.caps.order)}</b> USD · <b>${S.caps.orders}</b> lệnh/lượt`
-    + (warn.length ? `<br><span class="neg">⚠ ${warn.join(' · ')} → lệnh sẽ `
-       + `bị chặn. Hạ <b>1R</b> hoặc nâng trần.</span>` : '');
-  $('alloc').innerHTML =
-    `Cỡ lệnh = <b>1R ÷ khoảng cách tới điểm thua</b>, không phụ thuộc vốn. `
-    + `RSI(2) lấy R từ cắt lỗ; động lượng lấy R = độ lệch chuẩn 30n × √`
-    + `${S.params.xsmom.hold ?? 7}.<br>`
-    + (S.alloc.rsi2 > 0
-        ? `RSI(2) <b>1R×${S.alloc.rsi2}</b> — top ${S.params.rsi2.topn}, `
-        : `<span class="neg">RSI(2) ĐANG TẮT</span> — top ${S.params.rsi2.topn}, `)
-    + `${S.params.rsi2.slots} chỗ, vào RSI(2)&lt;${S.params.rsi2.rsi_in}, `
-    + `thoát &gt;${S.params.rsi2.rsi_out}, cắt lỗ ${S.params.rsi2.atr_k}×ATR (trần ${S.params.rsi2.cap * 100}%)`
-    + (S.alloc.xsmom > 0
-        ? `<br>Động lượng <b>1R×${S.alloc.xsmom}</b> — top ${S.params.xsmom.topn}, `
-        : `<br><span class="neg">Động lượng ĐANG TẮT</span> — top ${S.params.xsmom.topn}, `)
-    + `điểm = lợi suất ${S.params.xsmom.lookback}n ÷ độ lệch chuẩn, `
-    + `${S.params.xsmom.sleeves} sổ × ${S.params.xsmom.legs} mua + ${S.params.xsmom.legs} bán`
-    + (S.params.xsmom.ma
-        ? `<br>lọc <b>MA${S.params.xsmom.ma}</b>: chỉ mua trên MA, chỉ bán dưới MA`
-          + ` — ứng viên không qua bị bỏ hẳn (~18%/kỳ)`
-        : `<br><span class="neg">lọc MA đang TẮT</span>`)
-    + (S.alloc.tsvw > 0
-        ? `<br>TSVW <b>1R×${S.alloc.tsvw}</b> — top 50, đáy/đỉnh V + VWAP neo, stop dưới AVWAP, chốt 2R, giữ ≤ 200 ngày`
-        : `<br><span class="neg">TSVW ĐANG TẮT</span>`)
-    + (S.alloc.dsrm > 0
-        ? `<br>DSRM <b>1R×${S.alloc.dsrm}</b> — top 50, Stoch&lt;20 → RSI&gt;50 + MACD cắt lên (bán đối xứng), stop đáy/đỉnh 10 nến, chốt 1,5R, giữ ≤ 200 ngày`
-        : `<br><span class="neg">DSRM ĐANG TẮT</span>`);
+  const chip = (lbl, val, tip, cls = '') => `<span class="schip ${cls}" title="${escA(tip)}">${lbl} <b>${val}</b></span>`;
+  $('caps').innerHTML = chip('1R', usd(S.caps.r_usd), 'số USD mất khi một lệnh chạm điểm cắt lỗ')
+    + chip('lệnh mở ≤', S.caps.max_open, 'số lệnh mở tối đa cùng lúc')
+    + chip('tổng ≤', `${S.caps.gross_x}× vốn`, 'trần tổng phơi nhiễm, kể cả vị thế đang giữ')
+    + chip('mở thêm/lượt ≤', usd(S.caps.gross), 'trần tổng giá trị lệnh mở trong một lượt', S.caps.gross < needGross ? 'bad' : '')
+    + chip('mỗi lệnh ≤', usd(S.caps.order), 'trần giá trị một lệnh', S.caps.order < needOrder ? 'bad' : '')
+    + chip('lệnh/lượt ≤', S.caps.orders, 'trần số lệnh mỗi lượt')
+    + (warn.length ? `<span class="schip bad" title="${escA(warn.join(' · ').replace(/<[^>]+>/g, '') + ' → lệnh sẽ bị chặn. Hạ 1R hoặc nâng trần.')}">⚠ trần thấp</span>` : '');
+  const P_ = S.params, AL = S.alloc;
+  const ST_ = [
+    ['xsmom', 'PP1 Động lượng', '#2a78d6', `top ${P_.xsmom.topn} · điểm = lợi suất ${P_.xsmom.lookback}n ÷ độ lệch chuẩn · ${P_.xsmom.sleeves} sổ × ${P_.xsmom.legs} mua + ${P_.xsmom.legs} bán · R = σ30n × √${P_.xsmom.hold ?? 7}` + (P_.xsmom.ma ? ` · lọc MA${P_.xsmom.ma}: chỉ mua trên MA, chỉ bán dưới MA` : ' · lọc MA TẮT')],
+    ['rsi2', 'PP2 RSI(2)', '#eb6834', `top ${P_.rsi2.topn} · ${P_.rsi2.slots} chỗ · vào RSI(2) < ${P_.rsi2.rsi_in}, thoát > ${P_.rsi2.rsi_out} · cắt lỗ ${P_.rsi2.atr_k}×ATR (trần ${P_.rsi2.cap * 100}%)`],
+    ['tsvw', 'PP3 TSVW', '#1baf7a', 'top 50 · đáy/đỉnh V + VWAP neo · stop dưới AVWAP · chốt 2R · giữ ≤ 200 ngày'],
+    ['dsrm', 'PP4 DSRM', '#eda100', 'top 50 · Stoch < 20 → RSI > 50 + MACD cắt lên (bán đối xứng) · stop đáy/đỉnh 10 nến · chốt 1,5R · giữ ≤ 200 ngày'],
+    ['c13', 'PP5 C13', '#7a6a00', 'top 50 · treo mua limit ở close − 2×ATR14 (hết hạn 1 ngày) · khớp thì bán ở close ngày khớp'],
+    ['vsa', 'PP6 VSA 4H', '#e87ba4', 'top 50 · mỗi nến 4H: đẩy qua vùng cung rồi nến giảm KL thấp → mua ở open nến sau, bán ở close nến thứ 3 (12 giờ) · không stop (dừng an toàn −30%)']];
+  $('alloc').innerHTML = ST_.map(([k, nm, c, d]) => {
+    const a = AL[k] || 0;
+    return `<span class="schip ${a > 0 ? '' : 'off'}" title="${escA(nm + ' — ' + d + (a > 0 ? ` · 1R × ${a} = ${usd(a * S.caps.r_usd)} USD` : ' · ĐANG TẮT'))}"><i style="background:${c}"></i>${esc(nm)} <b>${a > 0 ? '×' + a : 'tắt'}</b></span>`;
+  }).join('');
 
   FEE = S.fee_bps ?? 0;
   POSKEY = null;
@@ -1152,6 +1351,7 @@ const GROUPS = [
   ['alloc', 'Bật / tắt chiến lược', 'hệ số 1R riêng từng chiến lược · 0 là tắt'],
   ['rsi2', 'RSI(2) Connors v3', 'chỉ ảnh hưởng RSI(2)'],
   ['xsmom', 'Động lượng cắt ngang', 'chỉ ảnh hưởng động lượng'],
+  ['pp1x', 'Luật phụ động lượng (Kase · funding)', 'công tắc 1 bật / 0 tắt · chỉ ảnh hưởng động lượng'],
   ['risk', 'Trần rủi ro', 'DÙNG CHUNG cả hai chiến lược']];
 const WARN_SVG = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
   + '<path d="M12 3.6 2.6 20h18.8L12 3.6Z" stroke="currentColor" stroke-width="1.7"'
@@ -1181,15 +1381,14 @@ function renderCfg() {
     box.className = 'cfgtab';
     const t = document.createElement('table');
     const hr = t.insertRow();
-    for (const h of ['tham số', 'đã chốt', 'đang dùng'])
+    for (const h of ['tham số', 'đã chốt', 'đang dùng', ...(g === 'alloc' ? ['ước tính'] : [])])
       { const th = document.createElement('th'); th.textContent = h; hr.appendChild(th); }
     for (const k of keys) {
       const sp = C.spec[k], lk = C.locked[k], ef = (k in EDIT) ? EDIT[k] : C.effective[k];
       const r = t.insertRow();
       r.className = ef === lk ? 'off' : 'dr';
       const c0 = r.insertCell();
-      c0.innerHTML = `${sp.desc}<br><span class="kcode">`
-        + `${k} · ${sp.type === 'int' ? 'nguyên' : 'số'} [${sp.min} … ${sp.max}]</span>`;
+      c0.innerHTML = `<span title="${escA(`${k} · ${sp.type === 'int' ? 'số nguyên' : 'số'} trong [${sp.min} … ${sp.max}]`)}">${esc(sp.desc)}</span>`;
       const c1 = r.insertCell(); c1.textContent = lk; c1.className = 'mut';
       const c2 = r.insertCell();
       const inp = document.createElement('input');
@@ -1202,11 +1401,18 @@ function renderCfg() {
         inp.className = 'num' + (k in EDIT ? ' chg' : '');
         $('cfgHint').textContent = Object.keys(EDIT).length
           ? `${Object.keys(EDIT).length} ô đang sửa, chưa lưu` : '';
+        cfgEst();
       };
       c2.appendChild(inp);
+      if (g === 'alloc') { const c3 = r.insertCell(); c3.className = 'sub'; c3.id = 'ce-' + k.slice(6); c3.textContent = '…'; }
     }
     box.appendChild(t);
     card.appendChild(box);
+    if (g === 'alloc' || g === 'risk') {
+      const sm = document.createElement('div');
+      sm.className = 'ovcap'; sm.style.margin = '10px 4px 4px'; sm.id = 'ce-sum-' + g;
+      card.appendChild(sm);
+    }
     wrap.appendChild(card);
   }
   $('cfgHint').textContent = Object.keys(EDIT).length
@@ -1216,6 +1422,81 @@ function renderCfg() {
 async function loadCfg() {
   C = await (await fetch('/api/config')).json();
   renderCfg();
+  try { if (!CFGOV) CFGOV = await (await fetch('/api/overview')).json(); } catch (e) {}
+  cfgEst();
+}
+
+/* Uoc tinh phoi nhiem / so vi the / co lenh cua BO THAM SO dang go (ke ca o chua luu),
+   tu chuoi backtest trong methods_bt.json (cung nguon tab «Tổng quan»). Lai/lo khi ap
+   tran: ngay vuot tran thi nhan theo ti le tran ÷ phoi nhiem. */
+let CFGOV = null;
+const CE_K = ['xsmom', 'rsi2', 'tsvw', 'dsrm', 'c13', 'vsa'];
+const CE_TAG = {xsmom: 'PP1', rsi2: 'PP2', tsvw: 'PP3', dsrm: 'PP4', c13: 'PP5', vsa: 'PP6'};
+function cfgEst() {
+  const b = CFGOV && CFGOV.bt;
+  if (!b || !b.gross) { for (const k of CE_K) { const e = $('ce-' + k); if (e) e.textContent = '—'; } return; }
+  const v = k => { const x = (k in EDIT) ? parseFloat(EDIT[k]) : C.effective[k]; return isFinite(x) ? x : 0; };
+  const ru = v('risk_r_usd'), gx = v('max_gross_x'), ordc = v('max_order_usd'), mo = v('risk_max_open');
+  const grun = v('max_gross_usd'), orun = v('max_orders_per_run');
+  const eqNow = CFGOV.cfg.equity_now || CFGOV.cfg.equity, cap = gx * eqNow, n = b.n;
+  const g = new Float64Array(n), np = new Float64Array(n), d = new Float64Array(n);
+  const go = new Float64Array(n), no = new Float64Array(n);   // lenh mo trong luot ngay (PP1–PP4)
+  let ordMax = 0, ordWho = '';
+  const q = (a, p) => { const s_ = Array.from(a).sort((x, y) => x - y); return s_[Math.min(s_.length - 1, Math.floor(p * s_.length))]; };
+  const ser = k => k === 'vsa' ? b.series.vsa.map(x => x / (100 * (CFGOV.cfg.vsa_r_frac || 0.1)))
+    : k === 'xsmom' ? b.series.xsmom.map((x, i) => x + ((b.pp1x_combo || {})[(C.effective.xsmom_kase ? 'k' : '') + (C.effective.xsmom_fund_veto ? 'f' : '') + (C.effective.xsmom_bsadf_veto ? 'b' : '')] || [])[i] || 0)
+    : b.series[k];
+  for (const k of CE_K) {
+    const a = v('alloc_' + k), f = ru * a, G = b.gross[k], P = b.npos[k], S_ = ser(k), el = $('ce-' + k);
+    if (a > 0) for (let i = 0; i < n; i++) { g[i] += f * G[i]; np[i] += P[i]; d[i] += f * S_[i]; }
+    if (a > 0 && b.gopen && ['xsmom', 'rsi2', 'tsvw', 'dsrm'].includes(k))
+      for (let i = 0; i < n; i++) { go[i] += f * b.gopen[k][i]; no[i] += b.nopen[k][i]; }
+    if (a > 0 && (b.order_p95_r || {})[k] * f > ordMax) { ordMax = b.order_p95_r[k] * f; ordWho = CE_TAG[k]; }
+    if (!el) continue;
+    if (!(a > 0)) { el.textContent = 'tắt'; continue; }
+    const gm = G.reduce((x, y) => x + y, 0) / n * f, g95 = q(G, .95) * f, od = (b.order_per_r[k] || 0) * f;
+    const p95 = q(P, .95);
+    const w = Math.min(100, g95 / cap * 100);
+    el.innerHTML = `<span title="${escA(`phơi nhiễm TB ${n0(gm)} · p95 ${n0(g95)} USD (${pct(g95 / cap * 100, 0)}% trần tổng)`
+        + ` · lệnh ~${n0(od)} USD · ${pct(P.reduce((x, y) => x + y, 0) / n, 1)} vị thế TB, p95 ${p95}`
+        + ` · vốn cần riêng ≈ ${n0(g95 / gx)} USD`)}">`
+      + `<b class="${g95 > cap ? 'neg' : ''}">${n0(g95)}</b> USD<span class="capbar"><i class="${g95 > cap ? 'over' : ''}" style="width:${w}%"></i></span>`
+      + `${pct(g95 / cap * 100, 0)}%</span>`
+      + (od > ordc ? ` <span class="schip bad" title="lệnh ~${n0(od)} USD lớn hơn trần một lệnh ${n0(ordc)} USD">lệnh &gt; trần</span>` : '');
+  }
+  const over = g.filter(x => x > cap).length / n, n95 = q(np, .95), g95 = q(g, .95);
+  const st = x => { let c = 0, pk = 0, dd = 0, s1 = 0, s2 = 0; const mon = {};
+    x.forEach((y, i) => { c += y; pk = Math.max(pk, c); dd = Math.max(dd, pk - c); s1 += y; s2 += y * y;
+      const m = new Date(b.start + i * 864e5).toISOString().slice(0, 7); mon[m] = (mon[m] || 0) + y; });
+    const mu = s1 / n, sd = Math.sqrt(Math.max(0, s2 / n - mu * mu)), ms = Object.values(mon);
+    return {tot: s1, dd, sh: sd ? mu / sd * Math.sqrt(365) : 0, pos: ms.filter(y => y > 0).length, nm: ms.length}; };
+  const dc = Float64Array.from(d, (y, i) => g[i] > cap ? y * cap / g[i] : y);
+  const A = st(d), Bc = st(dc);
+  const ch = (lbl, val, tip, bad) => `<span class="schip ${bad ? 'bad' : ''}" title="${escA(tip)}">${lbl} <b>${val}</b></span>`;
+  const html = `<div class="chips">`
+    + ch('phơi nhiễm p95', n0(g95), 'tổng phơi nhiễm của cả bộ, p95 theo ngày backtest', g95 > cap)
+    + ch('trần', n0(cap), `${pct(gx, 1)}× vốn hiện tại ${n0(eqNow)} USD`)
+    + ch('vượt trần', pct(over * 100, 0) + '% ngày', 'số ngày bộ này cần phơi nhiễm vượt trần tổng', over > .05)
+    + ch('có trần', sgn0(Bc.tot), `backtest 2021–26, áp trần: sụt −${n0(Bc.dd)} · ${Bc.pos}/${Bc.nm} tháng lãi · Sharpe ${pct(Bc.sh, 2)}`)
+    + ch('không trần', sgn0(A.tot), `backtest 2021–26, không trần: sụt −${n0(A.dd)} · ${A.pos}/${A.nm} tháng lãi · Sharpe ${pct(A.sh, 2)}`)
+    + INFO('Ước tính từ lệnh backtest (luật phụ PP1 theo công tắc đang bật; C13 tuyến tính, bỏ qua ngân sách treo lệnh riêng; VSA là cận trên). Trần lấy theo vốn hiện tại; vốn tăng thì trần nới ra.')
+    + `</div>`;
+  const gmax = Math.max(...g), up = x => Math.ceil(x / 50) * 50;
+  const ok = (need, have, unit = '', invert = false) => (invert ? need <= have : need <= have)
+    ? `<span class="pos" title="đang ${n0(have)}${unit}">✓ ${n0(have)}${unit}</span>` : `<b class="neg" title="đang ${n0(have)}${unit} — thiếu">✗ ${n0(have)}${unit}</b>`;
+  const r1 = (lbl, n95, nmax, have, unit, tip) => `<tr title="${tip}"><td>${lbl}</td><td><b>${n0(n95)}${unit}</b></td><td>${n0(nmax)}${unit}</td><td>${ok(n95, have, unit)}</td></tr>`;
+  const need = `<div style="margin-top:10px"><b>Cần để không bị chặn</b>
+    <span class="mut" title="cột 1: đủ cho 95% số ngày backtest · cột 2: đủ cho mọi ngày">95% / mọi ngày</span>
+    <table class="cfgneed" style="margin-top:4px">
+      <tr><th></th><th>95% số ngày</th><th>mọi ngày</th><th>hiện có</th></tr>
+      ${r1('<b>Vốn</b>', up(g95 / gx), up(gmax / gx), eqNow, ' USD', 'phơi nhiễm ÷ MAX_GROSS_X — vốn hiện tại lấy từ đường vốn của bot')}
+      ${r1('hoặc trần tổng (× vốn)', g95 / eqNow, gmax / eqNow, gx, '×', 'phơi nhiễm ÷ vốn hiện tại')}
+      ${r1('Mở thêm mỗi lượt', up(q(go, .95)), up(Math.max(...go)), grun, ' USD', 'tổng giá trị lệnh mở trong một lượt ngày (PP1–PP4; C13 có ngân sách riêng, VSA chạy lượt 4H)')}
+      ${r1('Lệnh mỗi lượt', q(no, .95), Math.max(...no), orun, '', 'số lệnh mở trong một lượt ngày (PP1–PP4)')}
+      ${r1('Lệnh mở cùng lúc', n95, Math.max(...np), mo, '', 'tổng vị thế mở của mọi phương pháp')}
+      ${r1('Trần một lệnh', ordMax, ordMax, ordc, ' USD', 'p95 cỡ một lệnh của phương pháp có lệnh to nhất: ' + ordWho)}
+    </table></div>`;
+  for (const id of ['ce-sum-alloc', 'ce-sum-risk']) { const e = $(id); if (e) e.innerHTML = html + need; }
 }
 
 /* ================= đường vốn ================= */
@@ -1383,6 +1664,9 @@ async function openDoc(key) {
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.detail || d.error || r.statusText);
   DOCKEY = key;
+  // giu dia chi trung tai lieu dang mo (#/phuong-phap/<key>) — khong them buoc vao lich su
+  if (document.querySelector('nav.tabs button[data-tab="doc"]')?.classList.contains('on'))
+    history.replaceState(null, '', '#/' + TAB_ALIAS.doc + '/' + encodeURIComponent(key));
   const {html, toc} = mdHtml(d.text);
   $('docTitle').textContent = d.title;
   $('docMeta').textContent = `${d.file} · sửa lần cuối ${when(d.mtime)} · `
@@ -1889,6 +2173,613 @@ function renderTodo(p) {
   }
 }
 
+/* ================= tab Tong quan phuong phap =================
+   Moi phuong phap la mot chuoi lai/lo NGAY tu backtest (app/methods_bt.json,
+   don vi R he so 1). Trang nhan voi 1R × he so roi CONG THANG — khong mo phong
+   tran rui ro. Luat phu PP1 la phan chenh, di theo he so PP1. Mau theo thu tu
+   da kiem bang validator (khong mu mau, cap ke nhau). */
+const OVM = [
+  {k: 'xsmom', tag: 'PP1', kind: 'core', unit: 'R', c: '#2a78d6', name: 'Động lượng cắt ngang',
+   ev: 'lõi · chốt theo docs/xsmom-volnorm.md, kế toán đa phép thử khi chọn tham số',
+   desc: 'Top 20 thanh khoản: mua 10% mã mạnh nhất, bán 10% yếu nhất theo lãi 30 ngày ÷ biến động; giữ 7 ngày, lọc MA30.'},
+  {k: 'rsi2', tag: 'PP2', kind: 'core', unit: 'R', c: '#eb6834', name: 'RSI(2) Connors',
+   ev: 'lõi · chốt theo docs/rsi2-connors.md; stop HVN: Sharpe chênh KTC chứa 0',
+   desc: 'Top 10: mua khi RSI(2) < 10 và giá trên MA20; thoát khi RSI(2) > 70 hoặc chạm cắt lỗ HVN; tối đa 3 lớp.'},
+  {k: 'tsvw', tag: 'PP3', kind: 'core', unit: 'R', c: '#1baf7a', name: 'TSVW · VWAP neo đáy V',
+   ev: '6/6 luật độ bền (null z ≥ 2, 5/6 mốc cắt nến, hai nửa, top 20/100) · chọn sau 709 ô YouTube',
+   desc: 'Đáy/đỉnh V → phá cổ → hồi về cổ quanh VWAP neo; cắt lỗ sau AVWAP, chốt 2R. Hai chiều, top 50.'},
+  {k: 'dsrm', tag: 'PP4', kind: 'core', unit: 'R', c: '#eda100', name: 'DSRM · Stoch + RSI + MACD',
+   ev: '6/6 luật độ bền (null z ≥ 2, 5/6 mốc cắt nến, hai nửa, top 20/100) · chọn sau 709 ô YouTube',
+   desc: 'Stochastic quá bán, rồi RSI(14) > 50 và MACD cắt lên; cắt lỗ đáy 10 nến, chốt 1,5R. Hai chiều, top 50.'},
+  {k: 'c13', tag: 'PP5', kind: 'core', unit: 'R', c: '#7a6a00', name: 'C13 · limit sâu 2 ATR',
+   ev: '5/5 luật · vượt null z 3,58 > Šidák 2,96 (16 ô) · 6/6 năm · 6/6 mốc cắt nến · 86% lãi từ 42 ngày sập',
+   desc: 'Mỗi ngày treo lệnh mua limit ở close − 2×ATR14 cho top 50; khớp thì bán ở close ngày khớp. Lời chủ yếu ở ngày sập.'},
+  {k: 'vsa', tag: 'PP6', kind: 'core', unit: 'R', c: '#e87ba4', name: 'VSA 4H · đẩy qua vùng cung',
+   ev: '1/356 ô sống kiểm độ bền (4/4 cách lệch nến, top 10/20/50) nhưng chọn sau lưới, không ô nào đạt Šidák (z 3,72 < 3,78) · nửa 2024–26 yếu (z 1,5), 2025 âm · vào bot 04/11 trước mốc 300 lệnh giấy',
+   desc: 'Nến 4H đẩy qua vùng cung rồi nến giảm khối lượng thấp → mua, giữ 12 giờ, không stop. 1R quy ước = giá đi 10%.'},
+  {k: 'kase', tag: 'PP1 + Kase', kind: 'rule', unit: 'R', c: '#2a78d6', name: 'Kase stop cho chân mua',
+   ev: 'engine +262 USD · KTC 95% [+0,02; +0,52], Šidák [−0,12; +0,65] · phép giả đóng sớm p 0,000 · chọn sau lưới',
+   desc: 'Đóng lệnh MUA động lượng khi giá đóng cửa thủng mức Kase DevStop (K 2,2 · n 30) tính từ đỉnh.'},
+  {k: 'fund', tag: 'PP1 + funding', kind: 'rule', unit: 'R', c: '#2a78d6', name: 'Chặn bán khi funding cực thấp',
+   ev: 'ĐÃ GỠ khỏi bot 04/11 — không ổn định: engine +100 USD nhưng 2022 −60, đổi cách tính phân vị là +100…+215, trùng ~1/2 lệnh chặn với BSADF · KTC Šidák chứa 0',
+   desc: 'Không mở lệnh BÁN động lượng khi funding toàn thị trường ở phân vị ≤ 10% trong 3 ngày gần nhất.'},
+  {k: 'bsadf', tag: 'PP1 + BSADF', kind: 'rule', unit: 'R', c: '#2a78d6', name: 'Chặn bán khi mã đang “nổ”',
+   ev: 'engine +189 USD · KTC Šidák [+0,04; +0,38] · 6/6 năm · 24/24 ô dương · phép giả p 0,00',
+   desc: 'Không mở lệnh BÁN động lượng khi BSADF (ADF trên log giá, cửa sổ 30–90 nến) của mã vượt ngưỡng 95% — thực chất là cú sập đang tăng tốc.'},
+  {k: 'crash', tag: 'PP1 + BTC sập', kind: 'rule', unit: 'R', c: '#2a78d6', name: 'BTC sập → cắt chân mua',
+   ev: '+237 USD, 6/6 năm nhưng KTC chứa 0, phép giả Sharpe p 0,095, đổi dấu ở 4% → ứng viên',
+   desc: 'BTC đóng cửa ngày giảm ≥ 5%: đóng mọi lệnh mua động lượng, không mua lại trong 7 lượt.'},
+  {k: 'imd', tag: 'IMD', kind: 'extra', unit: 'R', c: '#6250d6', name: 'Impulse MACD 1D · chỉ bán',
+   ev: 'qua 6 luật sổ giấy sau tối ưu 152 ô → chờ quyết định',
+   desc: 'Impulse MACD cắt xuống ở vùng cao (m 2); cắt lỗ đỉnh 5 nến, chốt 10R. Top 50, chỉ chiều bán.'}];
+const OVK = Object.fromEntries(OVM.map(m => [m.k, m]));
+const ovLbl = m => m.kind === 'rule' ? `PP1 · ${m.name}` : `${m.tag} ${m.name}`;
+let OV = null, OVD = null, OVSEL = null, OVBASE = null, OVR = 'all', OVH = 'val',
+  OVI0 = 0, OVC = null;
+const ovClone = o => JSON.parse(JSON.stringify(o));
+const ovMon = m => `T${+m.slice(5)}/${m.slice(0, 4)}`;
+const ovU = ' <span class="mut" style="font-size:.6em">USD</span>';
+const sh2 = v => (v >= 0 ? '+' : '−') + pct(Math.abs(v), 2);
+
+function ovStatus(m) {
+  const c = OV.cfg;
+  if (m.kind === 'core') return c.alloc[m.k] > 0 ? ['run', 'ĐANG CHẠY'] : ['offs', 'ĐANG TẮT'];
+  if (m.k === 'kase') return c.pp1x.kase ? ['run', 'ĐANG CHẠY'] : ['offs', 'ĐANG TẮT'];
+  if (m.k === 'fund') return c.pp1x.fund_veto ? ['run', 'ĐANG CHẠY'] : ['cand', 'ỨNG VIÊN · KHÔNG ỔN ĐỊNH'];
+  if (m.k === 'bsadf') return c.pp1x.bsadf_veto ? ['run', 'ĐANG CHẠY'] : ['offs', 'ĐANG TẮT'];
+  if (m.k === 'crash') return c.crash_paper ? ['paper', 'SỔ GIẤY'] : ['cand', 'ỨNG VIÊN'];
+  return ['cand', 'ỨNG VIÊN'];
+}
+function ovBaseline() {
+  const c = OV.cfg, o = {};
+  for (const m of OVM) {
+    let x = 1;
+    if (m.kind === 'core') x = c.alloc[m.k] > 0 ? c.alloc[m.k] : 1;
+    else if (m.k === 'imd') x = c.alloc.tsvw > 0 ? c.alloc.tsvw : 1;   // ngang PP3
+    o[m.k] = {on: ovStatus(m)[0] === 'run', x};
+  }
+  return o;
+}
+const ovActive = (k, sel) => sel[k].on && (OVK[k].kind !== 'rule' || sel.xsmom.on);
+const ovScale = (k, sel) => OVK[k].unit === 'USD' ? sel[k].x / 100
+  : OV.cfg.r_usd * (OVK[k].kind === 'rule' ? sel.xsmom.x : sel[k].x);
+/* Kase / funding / BSADF tuong tac nhau (funding va BSADF chan trung ~1/2 so lenh):
+   khong cong rieng le ma lay dung chuoi cua TO HOP dang bat (pp1x_combo, cung engine). */
+const OVPX = {kase: 'k', fund: 'f', bsadf: 'b'};
+let OVCAP = localStorage.getItem('ovcap') !== '0';
+const ovCapUsd = () => OV.cfg.caps.gross_x * OV.cfg.equity;
+/* Phoi nhiem (USD) theo ngay cua to hop: chi cac PP chinh co chuoi gross
+   (methods_bt.json, USD o he so 1 voi 1R = 1 USD). Luat phu coi nhu khong doi phoi nhiem. */
+function ovGross(sel) {
+  const g = new Float64Array(OVD.n), np = new Float64Array(OVD.n);
+  for (const m of OVM) if (m.kind === 'core' && ovActive(m.k, sel) && OVD.G[m.k]) {
+    const f = ovScale(m.k, sel), x = OVD.G[m.k], c = OVD.NP[m.k];
+    for (let i = 0; i < g.length; i++) { g[i] += f * x[i]; np[i] += c[i]; }
+  }
+  return {g, np};
+}
+function ovDaily(sel) {
+  const d = ovDailyRaw(sel);
+  if (!OVCAP || !OVD.G.xsmom) return d;
+  const {g} = ovGross(sel), cap = ovCapUsd();
+  for (let i = 0; i < d.length; i++) if (g[i] > cap) d[i] *= cap / g[i];
+  return d;
+}
+function ovDailyRaw(sel) {
+  const d = new Float64Array(OVD.n);
+  for (const m of OVM) if (ovActive(m.k, sel) && !(m.k in OVPX)) {
+    const f = ovScale(m.k, sel), s = OVD.S[m.k];
+    for (let i = 0; i < d.length; i++) d[i] += f * s[i];
+  }
+  const key = Object.keys(OVPX).filter(k => ovActive(k, sel)).map(k => OVPX[k]).join('');
+  if (key) {
+    const f = ovScale('kase', sel), s = OVD.combo[key];
+    for (let i = 0; i < d.length; i++) d[i] += f * s[i];
+  }
+  return d;
+}
+function ovOne(k, sel) {
+  const f = ovScale(k, sel), s = OVD.S[k], d = new Float64Array(OVD.n);
+  for (let i = 0; i < d.length; i++) d[i] = f * s[i];
+  return d;
+}
+/* Chi so trong khoang dang xem: von khoi diem = START_EQUITY, lai cong don
+   (1R co dinh nen khong lai kep). */
+function ovStats(d) {
+  const i0 = OVI0, n = OVD.n, E0 = OV.cfg.equity, mon = new Float64Array(OVD.months.length);
+  let s = 0, s2 = 0, cum = 0, pk = E0, dd = 0, ddp = 0;
+  for (let i = i0; i < n; i++) {
+    const x = d[i]; s += x; s2 += x * x; cum += x; mon[OVD.mi[i]] += x;
+    const e = E0 + cum; if (e > pk) pk = e;
+    if (pk - e > dd) { dd = pk - e; ddp = dd / pk; }
+  }
+  const k = n - i0, mean = s / k, sd = Math.sqrt(Math.max(0, s2 / k - mean * mean));
+  const m0 = OVD.mi[i0], ms = Array.from(mon.slice(m0));
+  let pos = 0, bi = 0, wi = 0;
+  ms.forEach((v, j) => { if (v > 0) pos++; if (v > ms[bi]) bi = j; if (v < ms[wi]) wi = j; });
+  return {tot: s, sh: sd > 0 ? mean / sd * Math.sqrt(365) : 0, dd, ddp, ms, m0, pos,
+          best: ms[bi], worst: ms[wi], bi: bi + m0, wi: wi + m0, yrs: k / 365.25,
+          avg: s / ms.length, med: [...ms].sort((a, b) => a - b)[ms.length >> 1]};
+}
+function ovCorr(a, b) {
+  const n = a.length; if (n < 3) return null;
+  const ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n;
+  let sab = 0, sa = 0, sb = 0;
+  for (let i = 0; i < n; i++) { const p = a[i] - ma, q = b[i] - mb; sab += p * q; sa += p * p; sb += q * q; }
+  return sa > 0 && sb > 0 ? sab / Math.sqrt(sa * sb) : null;
+}
+function niceTicks(lo, hi, k = 5) {
+  const st0 = (hi - lo || 1) / k, mag = 10 ** Math.floor(Math.log10(st0));
+  const st = [1, 2, 2.5, 5, 10].map(x => x * mag).find(x => x >= st0);
+  const out = [];
+  for (let v = Math.ceil(lo / st) * st; v <= hi + 1e-9; v += st) out.push(Math.round(v / st) * st);
+  return out;
+}
+function ovSame(a, b) {
+  return OVM.every(m => ovActive(m.k, a) === ovActive(m.k, b)
+    && (!ovActive(m.k, a) || ovScale(m.k, a) === ovScale(m.k, b)));
+}
+function ovSave() {
+  try { localStorage.setItem('ovsel', JSON.stringify({base: OVBASE, sel: OVSEL})); } catch (e) {}
+}
+
+async function initOv() {
+  OV = await (await fetch('/api/overview')).json();
+  if (!OV.bt) throw new Error(OV.detail || 'không đọc được dữ liệu tổng quan');
+  const b = OV.bt, mpos = Object.fromEntries(b.months.map((m, i) => [m, i]));
+  const ts = new Array(b.n), mi = new Int16Array(b.n);
+  for (let i = 0; i < b.n; i++) {
+    ts[i] = b.start + i * 864e5;
+    mi[i] = mpos[new Date(ts[i]).toISOString().slice(0, 7)];
+  }
+  const S = {};
+  for (const k in b.series) S[k] = Float64Array.from(b.series[k]);
+  // VSA: tep luu USD cho lenh 100 USD → doi ra R (1R = gia di vsa_r_frac, co lenh = 1R / vsa_r_frac)
+  if (S.vsa) { const q = 100 * (OV.cfg.vsa_r_frac || 0.1); S.vsa = S.vsa.map(v => v / q); }
+  const combo = {};
+  for (const k in (b.pp1x_combo || {})) combo[k] = Float64Array.from(b.pp1x_combo[k]);
+  const G = {}, NP = {};
+  for (const k in (b.gross || {})) G[k] = Float64Array.from(b.gross[k]);
+  for (const k in (b.npos || {})) NP[k] = Int32Array.from(b.npos[k]);
+  OVD = {n: b.n, ts, mi, months: b.months, S, combo, G, NP, opr: b.order_per_r || {}};
+  OVBASE = ovBaseline();
+  // Giu lua chon cu qua lan tai lai trang — tru khi cau hinh chay da doi
+  try {
+    const s = JSON.parse(localStorage.getItem('ovsel') || 'null');
+    if (s && JSON.stringify(s.base) === JSON.stringify(OVBASE)
+        && OVM.every(m => s.sel[m.k])) OVSEL = s.sel;
+  } catch (e) {}
+  OVSEL = OVSEL || ovClone(OVBASE);
+  $('ovSub').innerHTML = `backtest <b>${day(b.start)} → ${day(ts.at(-1))}</b> · 1R = `
+    + `<b>${usd(OV.cfg.r_usd)} USD</b> · vốn ${n0(OV.cfg.equity)} USD · bot đang ở `
+    + `<b>${OV.mode === 'live' ? 'CHẠY THẬT' : 'SỔ GIẤY'}</b>`;
+  ovCards();
+  ovRender();
+}
+
+function ovCards() {
+  const mkCard = m => {
+    const [sc, st] = ovStatus(m), rule = m.kind === 'rule';
+    const d = document.createElement('div');
+    d.className = 'mcard'; d.id = 'mc-' + m.k;
+    d.innerHTML = `<div class="mhead"><i class="mdot" style="background:${m.c}"></i>
+      <div style="min-width:0"><div class="mtag">${m.tag}
+        <span class="chip c-${sc}" title="${escA(m.ev || '')}">${st}</span>${rule ? '<span class="chip c-rule">LUẬT PHỤ</span>' : ''}</div>
+        <div class="mname" title="${escA(m.desc)}">${esc(m.name)}</div></div>
+      <label class="sw" title="tính / không tính phương pháp này">
+        <input type="checkbox" data-k="${m.k}" aria-label="bật ${esc(m.name)}"><span></span></label></div>
+      <div class="mstats">
+        <div><b id="ms1-${m.k}">—</b><span>${rule ? 'chênh lãi' : 'lãi riêng'}</span></div>
+        <div><b id="ms2-${m.k}">—</b><span>Δ Sharpe bot</span></div>
+        <div><b id="ms3-${m.k}">—</b><span>${rule ? 'tháng có lợi' : 'tháng lãi'}</span></div></div>
+      <svg class="mspark" id="sp-${m.k}" aria-hidden="true"></svg>
+      <div class="mfoot">${rule
+        ? `<span>đi theo hệ số PP1</span><span class="eqv" id="eq-${m.k}"></span>`
+        : `<span>${m.unit === 'USD' ? 'USD mỗi lệnh' : 'hệ số 1R'}</span>
+           <input type="number" min="0" max="${m.unit === 'USD' ? 2000 : 50}"
+             step="${m.unit === 'USD' ? 10 : 0.5}" data-x="${m.k}">
+           <span class="eqv" id="eq-${m.k}"></span>`}</div>`;
+    return d;
+  };
+  $('ovRunG').textContent = ''; $('ovAddG').textContent = '';
+  for (const m of OVM) (ovStatus(m)[0] === 'run' ? $('ovRunG') : $('ovAddG')).appendChild(mkCard(m));
+  for (const el of document.querySelectorAll('#t-ov .sw input'))
+    el.onchange = () => { OVSEL[el.dataset.k].on = el.checked; ovSave(); ovRender(); };
+  for (const el of document.querySelectorAll('#t-ov .mfoot input')) {
+    el.oninput = () => {
+      const v = parseFloat(String(el.value).replace(',', '.'));
+      if (!(v >= 0)) return;
+      OVSEL[el.dataset.x].x = v;
+      clearTimeout(el._t); el._t = setTimeout(() => { ovSave(); ovRender(); }, 180);
+    };
+  }
+}
+
+function ovSpark(svg, d, c) {
+  svg.textContent = '';
+  const w = svg.clientWidth || 240, h = svg.clientHeight || 36;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const i0 = OVI0, n = OVD.n, step = Math.max(1, Math.floor((n - i0) / 160));
+  const v = []; let cum = 0;
+  for (let i = i0; i < n; i++) { cum += d[i]; if ((i - i0) % step === 0 || i === n - 1) v.push(cum); }
+  const lo = Math.min(0, ...v), hi = Math.max(0, ...v);
+  const X = i => 1 + i / Math.max(1, v.length - 1) * (w - 2);
+  const Y = q => 3 + (hi - q) / (hi - lo || 1) * (h - 6);
+  svg.appendChild(mk('line', {x1: 0, x2: w, y1: Y(0), y2: Y(0),
+    stroke: 'rgba(42,35,64,.16)', 'stroke-dasharray': '2 3'}));
+  const pts = v.map((q, i) => `${X(i).toFixed(1)},${Y(q).toFixed(1)}`).join(' ');
+  svg.appendChild(mk('polygon', {fill: c, 'fill-opacity': .13,
+    points: `${X(0)},${Y(0)} ${pts} ${X(v.length - 1)},${Y(0)}`}));
+  svg.appendChild(mk('polyline', {fill: 'none', stroke: c, 'stroke-width': 1.8,
+    'stroke-linejoin': 'round', points: pts}));
+}
+
+function ovRender() {
+  if (!OV) return;
+  const M = OVD.months.length;
+  OVI0 = 0;
+  if (OVR !== 'all') {
+    const mm = Math.max(0, M - +OVR);
+    OVI0 = OVD.mi.findIndex(x => x >= mm);
+  }
+  const dS = ovDaily(OVSEL), dB = ovDaily(OVBASE);
+  const S = ovStats(dS), B = ovStats(dB), same = ovSame(OVSEL, OVBASE);
+  const comp = OVM.filter(m => ovActive(m.k, OVSEL)).map(m => {
+    const d = ovOne(m.k, OVSEL); return {m, d, st: ovStats(d)}; });
+  OVC = {dS, dB, S, B, same, comp};
+  ovKpi(S, B, same);
+  ovChange(S, B, same);
+  ovCapLine();
+  // the: trang thai + chi so rieng + chenh Sharpe neu them / bo
+  for (const m of OVM) {
+    const card = $('mc-' + m.k), on = ovActive(m.k, OVSEL);
+    const inp = card.querySelector('.sw input');
+    inp.checked = OVSEL[m.k].on;
+    inp.disabled = m.kind === 'rule' && !OVSEL.xsmom.on;
+    card.classList.toggle('off', !on);
+    const base = ovActive(m.k, OVBASE);
+    card.classList.toggle('chg', on !== base
+      || (on && ovScale(m.k, OVSEL) !== ovScale(m.k, OVBASE)));
+    const xi = card.querySelector('.mfoot input');
+    if (xi) {
+      if (document.activeElement !== xi) xi.value = OVSEL[m.k].x;
+      xi.classList.toggle('chg', OVSEL[m.k].x !== OVBASE[m.k].x);
+    }
+    const f = ovScale(m.k, OVSEL);
+    $('eq-' + m.k).textContent = m.unit === 'USD' ? `${n0(OVSEL[m.k].x)} USD/lệnh`
+      : m.kind === 'rule' ? `×${pct(OVSEL.xsmom.x, 1)} · ${usd(f)} USD/1R`
+      : `${usd(f)} USD mỗi 1R`;
+    const d = ovOne(m.k, OVSEL), st = ovStats(d);
+    const flip = {...OVSEL, [m.k]: {...OVSEL[m.k], on: !OVSEL[m.k].on}};
+    const so = ovStats(ovDaily(flip));
+    const dsh = on ? S.sh - so.sh : so.sh - S.sh;
+    $('ms1-' + m.k).textContent = sgn0(st.tot);
+    $('ms1-' + m.k).className = cls(st.tot);
+    $('ms2-' + m.k).textContent = m.kind === 'rule' && !OVSEL.xsmom.on ? 'cần PP1' : sh2(dsh);
+    $('ms2-' + m.k).className = Math.abs(dsh) < .005 ? '' : cls(dsh);
+    // so thang lai / tong so thang trong khoang dang xem; % tinh tren nhung thang co lenh
+    const act = st.ms.filter(v => Math.abs(v) > 1e-9), npos = st.ms.filter(v => v > 1e-9).length;
+    $('ms3-' + m.k).textContent = act.length ? `${npos}/${st.ms.length}` : '—';
+    $('ms3-' + m.k).title = act.length
+      ? `${npos} tháng ${m.kind === 'rule' ? 'có lợi' : 'lãi'} trên ${st.ms.length} tháng`
+        + ` · ${act.length - npos} tháng ${m.kind === 'rule' ? 'bất lợi' : 'lỗ'}`
+        + (act.length < st.ms.length ? ` · ${st.ms.length - act.length} tháng không có tác động` : '')
+        + ` · ${pct(npos / act.length * 100, 0)}% số tháng có tác động` : '';
+    ovSpark($('sp-' + m.k), d, m.c);
+  }
+  ovCharts();
+  ovHeat();
+  ovPer();
+  ovYear();
+  ovActual();
+  ovNote();
+}
+
+function ovKpi(S, B, same) {
+  const dc = (v, f, good = v > 0) => same ? ''
+    : Math.abs(v) < 1e-9 ? '<span class="dchip eq">= đang chạy</span>'
+    : `<span class="dchip ${good ? 'up' : 'dn'}">${v > 0 ? '▲' : '▼'} ${f(Math.abs(v))} so với đang chạy</span>`;
+  const E0 = OV.cfg.equity;
+  $('ovK0l').textContent = OVR === 'all' ? 'Tổng lãi toàn giai đoạn' : `Tổng lãi ${OVR} tháng gần nhất`;
+  $('ovK0').innerHTML = bigUsd(S.tot);
+  $('ovK0').className = 'kpi ' + (S.tot < 0 ? 'neg' : '');
+  $('ovK0p').textContent = pc1(S.tot / E0) + ' vốn';
+  $('ovK0p').className = 'delta' + (S.tot < 0 ? ' neg' : '');
+  $('ovK0s').innerHTML = `≈ ${sgn0(S.tot / S.yrs)} USD/năm · ${S.ms.length} tháng · `
+    + (OVCAP
+      ? `<span title="ngày vượt trần tổng phơi nhiễm thì lãi/lỗ nhân theo tỉ lệ trần ÷ phơi nhiễm">đã áp trần ${n0(ovCapUsd())} USD</span>`
+      : '<span title="các phương pháp cộng thẳng, chưa áp trần tổng phơi nhiễm / số lệnh mở — xem «Cách đọc»">'
+        + 'chưa tính trần rủi ro</span>');
+  $('ovK0d').innerHTML = dc(S.tot - B.tot, v => n0(v) + ' USD');
+  const tile = (ic, lbl, val, sub, d, c = '') => `<div class="tile"><span class="ic">${ic}</span>`
+    + `<div class="lbl">${lbl}</div><div class="val ${c}">${val}</div>`
+    + `<div class="sub">${sub}</div>${d}</div>`;
+  const IC = {
+    cal: '<svg viewBox="0 0 21 21"><rect x="3.2" y="4.4" width="14.6" height="13.2" rx="3"/><path d="M3.2 8.6h14.6M7.4 2.8v3M13.6 2.8v3"/></svg>',
+    ok: '<svg viewBox="0 0 21 21"><circle cx="10.5" cy="10.5" r="7.6"/><path d="m7.2 10.8 2.3 2.3 4.4-4.7"/></svg>',
+    dn: '<svg viewBox="0 0 21 21"><path d="M3.4 6.3 8.4 11l2.9-2.6 6.3 5.8"/><path d="M17.6 10v4.4h-4.4"/></svg>',
+    sh: '<svg viewBox="0 0 21 21"><path d="M3.5 16.8h14M5.6 13.4l3.3-4 3 2.4 4.4-6"/></svg>'};
+  $('ovKpi').innerHTML =
+    tile(IC.cal, 'Lãi trung bình mỗi tháng', sgn0(S.avg) + ovU,
+      `trung vị ${sgn0(S.med)} · tốt nhất ${sgn0(S.best)} (${ovMon(OVD.months[S.bi])})`,
+      dc(S.avg - B.avg, v => n0(v) + ' USD'), cls(S.avg))
+    + tile(IC.ok, 'Tháng có lãi', `${S.pos}<span class="mut" style="font-size:.6em"> / ${S.ms.length}</span>`,
+      `${pct(S.pos / S.ms.length * 100, 0)}% số tháng · tệ nhất ${sgn0(S.worst)} (${ovMon(OVD.months[S.wi])})`,
+      dc(S.pos - B.pos, v => v + ' tháng'))
+    + tile(IC.dn, 'Sụt lớn nhất', '−' + n0(S.dd) + ovU,
+      `${pct(S.ddp * 100, 1)}% khỏi đỉnh vốn`,
+      dc(S.dd - B.dd, v => n0(v) + ' USD', S.dd < B.dd), S.ddp > .3 ? 'neg' : '')
+    + tile(IC.sh, 'Sharpe', pct(S.sh, 2), 'lãi/biến động ngày, năm hoá',
+      dc(S.sh - B.sh, v => pct(v, 2)));
+}
+
+function ovCapLine() {
+  const el = $('ovCapLine');
+  if (!OVD.G.xsmom) { el.textContent = ''; return; }
+  const {g, np} = ovGross(OVSEL), cap = ovCapUsd(), i0 = OVI0, n = OVD.n - i0;
+  const gs = Array.from(g.slice(i0)).sort((a, b) => a - b), q = p => gs[Math.min(gs.length - 1, Math.floor(p * gs.length))];
+  const mean = gs.reduce((a, b) => a + b, 0) / n, over = gs.filter(x => x > cap).length / n;
+  const ns = Array.from(np.slice(i0)).sort((a, b) => a - b), n95 = ns[Math.floor(.95 * ns.length)];
+  const raw = ovStats(ovDailyRaw(OVSEL));
+  const mo = OV.cfg.caps.max_open;
+  const w = Math.min(100, q(.95) / cap * 100);
+  const need95 = Math.ceil(q(.95) / OV.cfg.caps.gross_x / 50) * 50, needMax = Math.ceil(gs[gs.length - 1] / OV.cfg.caps.gross_x / 50) * 50;
+  const ch = (lbl, val, tip, bad) => `<span class="schip ${bad ? 'bad' : ''}" title="${escA(tip)}">${lbl} <b>${val}</b></span>`;
+  el.innerHTML = `<span class="chips">`
+    + ch('phơi nhiễm p95', n0(q(.95)), `TB ${n0(mean)} · tối đa ${n0(gs[gs.length - 1])} USD`, q(.95) > cap)
+    + ch('trần', n0(cap), `${pct(OV.cfg.caps.gross_x, 1)}× vốn đầu ${n0(OV.cfg.equity)} USD`)
+    + ch('vượt trần', pct(over * 100, 0) + '% ngày', 'số ngày tổ hợp cần phơi nhiễm vượt trần', over > .05)
+    + ch('vốn cần', n0(need95), `để 95% số ngày không bị chặn · ${n0(needMax)} USD cho mọi ngày`, need95 > OV.cfg.equity)
+    + ch('vị thế p95', `${n95}/${mo}`, 'số vị thế mở p95 / trần lệnh mở', n95 > mo)
+    + (OVCAP ? ch('không trần', sgn0(raw.tot), `lãi nếu không bị chặn · sụt −${n0(raw.dd)} USD`) : '')
+    + INFO('Ước tính từ lệnh backtest: PP2 từ 176 lệnh, VSA tính cả ngày có lệnh nên là cận trên, IMD không có số phơi nhiễm. Vốn tăng thì trần nới ra — số ở đây là khi bot bắt đầu với vốn đầu.')
+    + `</span>`;
+}
+function ovChange(S, B, same) {
+  const el = $('ovChg');
+  if (same) { el.classList.remove('on'); return; }
+  const tg = (m, t) => `<span class="tg"><i style="background:${m.c}"></i>${t} ${esc(ovLbl(m))}</span>`;
+  const add = [], rem = [], mod = [];
+  for (const m of OVM) {
+    const a = ovActive(m.k, OVSEL), b = ovActive(m.k, OVBASE);
+    if (a && !b) add.push(tg(m, '+'));
+    else if (!a && b) rem.push(tg(m, '−'));
+    else if (a && m.kind !== 'rule' && OVSEL[m.k].x !== OVBASE[m.k].x)
+      mod.push(tg(m, `${OVBASE[m.k].x}→${OVSEL[m.k].x}`));
+  }
+  const ar = (a, b, f) => `<b>${f(b)}</b> → <b>${f(a)}</b>`;
+  el.innerHTML = `So với cấu hình đang chạy: ${[...add, ...rem, ...mod].join(' ')}<br>`
+    + `Lãi ${ar(S.tot, B.tot, sgn0)} USD (<b class="${cls(S.tot - B.tot)}">${sgn0(S.tot - B.tot)}</b>)`
+    + ` · Sharpe ${ar(S.sh, B.sh, v => pct(v, 2))}`
+    + ` · tháng lỗ ${ar(S.ms.length - S.pos, B.ms.length - B.pos, v => v)}`
+    + ` · sụt lớn nhất ${ar(S.dd, B.dd, n0)} USD`
+    + ` · tháng tệ nhất ${ar(S.worst, B.worst, sgn0)} USD`;
+  el.classList.add('on');
+}
+
+function ovCharts() {
+  if (!OVC || !$('t-ov').classList.contains('on')) return;
+  ovBars();
+  const {dS, dB, same} = OVC, ts = OVD.ts.slice(OVI0);
+  const cum = d => { let c = 0; return Array.from(d.slice(OVI0), x => c += x); };
+  const series = [{name: same ? 'Đang chạy' : 'Đang chọn', v: cum(dS), c: '#6D5BD0', wd: 2.2, area: true}];
+  if (!same) series.push({name: 'Đang chạy', v: cum(dB), c: '#9C97AE', wd: 1.6});
+  lineChart($('ovCum'), $('ovTip2'), ts, series,
+    {fmt: v => sgn0(v), ticks: (lo, hi) => niceTicks(lo, hi, 5), label: true, right: 78});
+  $('ovCumLeg').innerHTML = series.map(s =>
+    `<span><i style="background:${s.c};height:2px;width:14px;vertical-align:middle"></i>${s.name}</span>`).join('')
+    + '<span class="mut">USD, đánh giá lại theo ngày</span>';
+}
+
+function ovBars() {
+  const svg = $('ovBar'), tip = $('ovTip'), {S, B, same, comp} = OVC;
+  svg.textContent = '';
+  const w = svg.clientWidth || 900, h = svg.clientHeight || 260;
+  const P = 12, R = 10, Bt = 18, L = 50;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const A = S.ms, Bm = B.ms, M = A.length, m0 = S.m0;
+  const all = same ? A : A.concat(Bm);
+  const lo = Math.min(0, ...all), hi = Math.max(0, ...all);
+  const Y = v => P + (hi - v) / (hi - lo || 1) * (h - P - Bt);
+  const cw = (w - L - R) / M, bw = Math.max(2, Math.min(24, cw * .68));
+  const X = j => L + cw * j + cw / 2;
+  for (const q of niceTicks(lo, hi, 5)) {
+    svg.appendChild(mk('line', {x1: L, x2: w - R, y1: Y(q), y2: Y(q),
+      stroke: q === 0 ? 'rgba(42,35,64,.28)' : 'rgba(42,35,64,.06)'}));
+    const t = mk('text', {x: L - 7, y: Y(q) + 3.5, fill: '#6F6986', 'font-size': 9.5,
+      'text-anchor': 'end'});
+    t.textContent = sgn0(q).replace('+', ''); svg.appendChild(t);
+  }
+  for (let j = 0; j < M; j++) {
+    const mo = OVD.months[m0 + j];
+    if (mo.endsWith('-01') || j === 0) {
+      if (j) svg.appendChild(mk('line', {x1: L + cw * j, x2: L + cw * j, y1: P, y2: h - Bt,
+        stroke: 'rgba(42,35,64,.07)'}));
+      const t = mk('text', {x: L + cw * j + 3, y: h - 4, fill: '#857FA0', 'font-size': 9.5});
+      t.textContent = M <= 14 ? ovMon(mo) : mo.slice(0, 4); svg.appendChild(t);
+    }
+  }
+  const hl = mk('rect', {y: P, height: h - P - Bt, width: cw, fill: 'rgba(109,91,208,.07)',
+    rx: 6, opacity: 0});
+  svg.appendChild(hl);
+  for (let j = 0; j < M; j++) {
+    const v = A[j], y0 = Y(0), y1 = Y(v);
+    svg.appendChild(mk('rect', {x: X(j) - bw / 2, y: Math.min(y0, y1), width: bw,
+      height: Math.max(1, Math.abs(y1 - y0)), rx: Math.min(3, bw / 3),
+      fill: v >= 0 ? '#2F9A6B' : '#D24B43'}));
+    if (!same) svg.appendChild(mk('line', {x1: X(j) - bw / 2 - 2, x2: X(j) + bw / 2 + 2,
+      y1: Y(Bm[j]), y2: Y(Bm[j]), stroke: '#2A2340', 'stroke-width': 2, opacity: .55,
+      'stroke-linecap': 'round'}));
+  }
+  const mcomp = comp.map(c => ({m: c.m, ms: c.st.ms}));
+  const hit = mk('rect', {x: L, y: 0, width: w - L - R, height: h, fill: 'transparent', class: 'hit'});
+  svg.appendChild(hit);
+  hit.onpointermove = ev => {
+    const b = svg.getBoundingClientRect();
+    const x = (ev.clientX - b.left) / b.width * w;
+    const j = Math.max(0, Math.min(M - 1, Math.floor((x - L) / cw)));
+    hl.setAttribute('x', L + cw * j); hl.setAttribute('opacity', 1);
+    const E0 = OV.cfg.equity, rows = mcomp.filter(c => Math.abs(c.ms[j]) > .005)
+      .sort((p, q) => Math.abs(q.ms[j]) - Math.abs(p.ms[j]));
+    tip.innerHTML = `<div class="d">${ovMon(OVD.months[m0 + j])}</div>`
+      + `<div class="row"><span>${same ? 'đang chạy' : 'đang chọn'}</span><b class="${cls(A[j])}">${sgn0(A[j])} USD</b></div>`
+      + `<div class="row"><span>trên vốn ${n0(E0)}</span><b>${pc1(A[j] / E0)}</b></div>`
+      + (same ? '' : `<div class="row"><span>đang chạy</span><b>${sgn0(Bm[j])}</b></div>`
+        + `<div class="row"><span>chênh</span><b class="${cls(A[j] - Bm[j])}">${sgn0(A[j] - Bm[j])}</b></div>`)
+      + (rows.length ? '<div class="sep"></div>' + rows.map(c =>
+        `<div class="row"><span><i style="background:${c.m.c};width:8px;height:8px;border-radius:2px"></i>${esc(ovLbl(c.m))}</span><b>${sgn0(c.ms[j])}</b></div>`).join('') : '');
+    tip.style.display = 'block';
+    const px = X(j) / w * b.width;
+    tip.style.left = (px > b.width / 2 ? px - tip.offsetWidth - 14 : px + 14) + 'px';
+  };
+  hit.onpointerleave = () => { hl.setAttribute('opacity', 0); tip.style.display = 'none'; };
+  $('ovBarLeg').innerHTML = '<span><i style="background:#2F9A6B"></i>tháng lãi</span>'
+    + '<span><i style="background:#D24B43"></i>tháng lỗ</span>'
+    + (same ? '' : '<span><i class="tick"></i>cấu hình đang chạy</span>')
+    + '<span class="mut">rê chuột để xem từng phương pháp</span>';
+}
+
+function ovHeat() {
+  const {S, B} = OVC, diff = OVH === 'diff', m0 = S.m0, E0 = OV.cfg.equity;
+  const val = S.ms.map((x, j) => diff ? x - B.ms[j] : x);
+  const byY = {};
+  val.forEach((v, j) => { const mo = OVD.months[m0 + j];
+    (byY[mo.slice(0, 4)] ||= {})[+mo.slice(5)] = v; });
+  const yrs = Object.keys(byY).sort();
+  const tot = Object.fromEntries(yrs.map(y => [y, Object.values(byY[y]).reduce((a, b) => a + b, 0)]));
+  const mx = Math.max(1, ...val.map(Math.abs)), mxT = Math.max(1, ...Object.values(tot).map(Math.abs));
+  const cell = (v, m, cl = '') => {
+    if (v == null) return `<td class="na ${cl}">·</td>`;
+    const a = Math.abs(v) < .5 ? 0 : .07 + .38 * Math.min(1, Math.abs(v) / m);
+    const bg = v >= 0 ? `rgba(39,128,90,${a})` : `rgba(194,54,47,${a})`;
+    return `<td class="${cl}" style="background:${bg};color:${v >= 0 ? 'var(--upink)' : 'var(--dnink)'}"`
+      + ` title="${sgn0(v)} USD · ${pc1(v / E0)} vốn">${sgn0(v)}</td>`;
+  };
+  $('ovHeat').innerHTML = '<tr><th>Năm</th>' + Array.from({length: 12}, (_, i) => `<th>T${i + 1}</th>`).join('')
+    + `<th>Cả năm</th></tr>` + yrs.map(y => `<tr><td>${y}</td>`
+      + Array.from({length: 12}, (_, i) => cell(byY[y][i + 1], mx)).join('')
+      + cell(tot[y], mxT, 'tot') + '</tr>').join('');
+}
+
+function ovPer() {
+  const E0 = OV.cfg.equity, {dS} = OVC, T = OV.bt.trades;
+  const tS = ovStats(dS);
+  const rows = OVM.map(m => {
+    const d = ovOne(m.k, OVSEL), st = ovStats(d), on = ovActive(m.k, OVSEL);
+    // tuong quan thang voi PHAN CON LAI cua to hop (bo chinh no ra neu dang bat)
+    const rest = tS.ms.map((v, j) => on ? v - st.ms[j] : v);
+    const tr = T[m.k] ? T[m.k].slice(st.m0) : null;
+    const n = tr ? tr.reduce((a, x) => a + x[0], 0) : null;
+    const w = tr ? tr.reduce((a, x) => a + x[1], 0) : null;
+    // Sortino: chi do lech nhung ngay lo; nam lai: tong lai tung nam duong lich
+    let dn = 0, k = 0;
+    for (let i = OVI0; i < d.length; i++) { k++; if (d[i] < 0) dn += d[i] * d[i]; }
+    const sdd = Math.sqrt(dn / Math.max(1, k)), mean = st.tot / Math.max(1, k);
+    const so = sdd > 0 ? mean / sdd * Math.sqrt(365) : null;
+    const yr = {};
+    st.ms.forEach((v, j) => { const y = OVD.months[st.m0 + j].slice(0, 4); yr[y] = (yr[y] || 0) + v; });
+    const yv = Object.values(yr);
+    const flip = {...OVSEL, [m.k]: {...OVSEL[m.k], on: !OVSEL[m.k].on}};
+    const sf = ovStats(ovDaily(flip));
+    const dsh = (m.kind === 'rule' && !OVSEL.xsmom.on) ? null : (on ? tS.sh - sf.sh : sf.sh - tS.sh);
+    return {m, st, on, rho: ovCorr(st.ms, rest), n, w, so, ypos: yv.filter(v => v > 0).length, ny: yv.length, dsh};
+  });
+  const rule = r => r.m.kind === 'rule';
+  table($('ovPer'), ['phương pháp', 'trạng thái', 'lãi USD', 'USD/năm', 'Sharpe', 'Sortino', 'sụt lớn nhất',
+    'lãi/năm ÷ sụt', 'tháng tệ nhất', 'tháng lãi', 'năm lãi', 'Δ Sharpe bot', 'tương quan', 'lệnh/tháng', 'thắng',
+    'kiểm định'], rows, r => [
+    {html: `<i class="mdot" style="display:inline-block;margin:0 7px 0 0;vertical-align:-1px;background:${r.m.c};opacity:${r.on ? 1 : .35}"></i>`
+      + (rule(r) ? '<span style="color:var(--dim)">PP1 ·</span>' : esc(r.m.tag))
+      + ` <span style="font-weight:500;color:var(--ink2)">${esc(r.m.name)}</span>`},
+    {html: r.on ? '<span class="chip c-run">ĐANG TÍNH</span>' : '<span class="chip c-offs">KHÔNG TÍNH</span>'},
+    {html: `<span class="${cls(r.st.tot)}">${sgn0(r.st.tot)}</span>`},
+    sgn0(r.st.tot / r.st.yrs),
+    rule(r) ? '—' : pct(r.st.sh, 2),
+    rule(r) || r.so == null ? '—' : pct(r.so, 2),
+    rule(r) ? '—' : `−${n0(r.st.dd)}`,
+    rule(r) || !(r.st.dd > 0) ? '—' : pct(r.st.tot / r.st.yrs / r.st.dd, 2),
+    {html: `<span class="${cls(r.st.worst)}">${sgn0(r.st.worst)}</span>`},
+    `${r.st.pos}/${r.st.ms.length}`,
+    `${r.ypos}/${r.ny}`,
+    r.dsh == null ? 'cần PP1' : {html: `<span class="${Math.abs(r.dsh) < .005 ? '' : cls(r.dsh)}">${sh2(r.dsh)}</span>`},
+    r.rho == null ? '—' : sh2(r.rho),
+    r.n == null ? '—' : pct(r.n / r.st.ms.length, 1),
+    r.n ? `${pct(r.w / r.n * 100, 0)}%` : '—',
+    {html: r.m.ev ? INFO(r.m.ev) : '—'}]);
+}
+
+function ovYear() {
+  const {S, B, comp} = OVC, m0 = S.m0;
+  const yrs = [...new Set(OVD.months.slice(m0).map(m => m.slice(0, 4)))];
+  const ysum = ms => Object.fromEntries(yrs.map(y => [y, ms.reduce((a, v, j) =>
+    OVD.months[m0 + j].startsWith(y) ? a + v : a, 0)]));
+  const cs = comp.map(c => ({m: c.m, y: ysum(c.st.ms)})), yS = ysum(S.ms), yB = ysum(B.ms);
+  const vc = v => ({html: `<span class="${cls(v)}">${sgn0(v)}</span>`});
+  table($('ovYr'), ['năm', ...cs.map(c => c.m.tag), 'tổng', ...(OVC.same ? [] : ['đang chạy', 'chênh'])],
+    [...yrs, 'tất cả'], y => {
+      const g = o => y === 'tất cả' ? Object.values(o).reduce((a, b) => a + b, 0) : o[y];
+      return [y, ...cs.map(c => vc(g(c.y))), {html: `<b class="${cls(g(yS))}">${sgn0(g(yS))}</b>`},
+        ...(OVC.same ? [] : [vc(g(yB)), vc(g(yS) - g(yB))])];
+    });
+  const hr = $('ovYr').rows[0];
+  cs.forEach((c, i) => { hr.cells[i + 1].innerHTML =
+    `<i class="mdot" style="display:inline-block;width:8px;height:8px;margin:0 5px 0 0;background:${c.m.c}"></i>${esc(c.m.tag)}`; });
+}
+
+function ovActual() {
+  const A = OV.actual || {}, keys = ['xsmom', 'rsi2', 'tsvw', 'dsrm', 'c13', 'vsa'];
+  const months = Object.keys(A).sort().reverse();
+  $('ovActSub').textContent = `vị thế đã đóng · ${OV.mode === 'live' ? 'chạy thật' : 'sổ giấy'} `;
+  table($('ovAct'), ['tháng', 'PP1', 'PP2', 'PP3', 'PP4', 'PP5', 'PP6', 'tổng'], months, mo => {
+    const r = A[mo]; let t = 0;
+    const cells = keys.map(k => { const x = r[k]; if (!x) return '—';
+      t += x[0];
+      return {html: `<span class="${cls(x[0])}">${sgn0(x[0])}</span> <span class="mut">(${x[1]})</span>`}; });
+    return [ovMon(mo), ...cells, {html: `<b class="${cls(t)}">${sgn0(t)}</b>`}];
+  });
+  if (!months.length) {
+    const td = $('ovAct').rows[1].cells[0];
+    td.style.whiteSpace = 'normal'; td.style.fontFamily = 'var(--ui)';
+    td.textContent = 'Chưa có lệnh nào đóng trong sổ. Bảng sẽ tự điền khi bot chạy các lượt hằng ngày.';
+  }
+}
+
+function ovNote() {
+  const c = OV.cfg;
+  $('ovInfo').dataset.tip =
+    `<p>Mỗi phương pháp là một chuỗi lãi/lỗ <b>theo ngày</b> từ backtest, đánh giá lại theo giá đóng cửa,
+      đã trừ phí 0,1% mỗi lệnh và funding. Lãi USD = số R × 1R (${usd(c.r_usd)} USD) × hệ số trên thẻ.</p>`
+    + `<p>Các phương pháp được <b>cộng thẳng</b> với nhau, <b>không tính trần rủi ro</b> (trần tổng ${pct(c.caps.gross_x, 1)}× vốn,
+      tối đa ${c.caps.max_open} lệnh mở, trần lệnh ${n0(c.caps.order)} USD). Với vốn ${n0(c.equity)} USD các trần này sẽ cắt bớt lệnh,
+      nên số thật thấp hơn — nhất là khi hệ số lớn.</p>`
+    + `<p><b>Luật phụ PP1</b> là phần chênh so với PP1 gốc và đi theo hệ số PP1; tắt PP1 thì luật phụ mất tác dụng.
+      <b>VSA</b> tính theo lệnh cố định (USD mỗi lệnh), không theo R. <b>Δ Sharpe bot</b> trên thẻ = Sharpe tổ hợp khi có
+      so với khi không có phương pháp đó.</p>`
+    + `<p>Ứng viên và luật phụ được chọn <b>sau khi đã nhìn lưới tham số</b> → số liệu thiên lạc quan; khoảng tin cậy
+      của phần cải thiện đều còn chứa 0. Xem tab «Phương pháp» trước khi bật thật.</p>`
+    + `<p class="mut" style="margin:0">Dữ liệu dựng ngày ${esc(OV.bt.built)}, đến ${day(OVD.ts.at(-1))}.
+      Dựng lại: scripts/build_methods_overview.py (repo nghiên cứu).</p>`;
+}
+
+$('ovRange').onclick = e => { const b = e.target.closest('button'); if (!b) return;
+  OVR = b.dataset.r;
+  for (const x of $('ovRange').children) x.classList.toggle('on', x === b);
+  ovRender(); };
+$('ovHeatSeg').onclick = e => { const b = e.target.closest('button'); if (!b) return;
+  OVH = b.dataset.h;
+  for (const x of $('ovHeatSeg').children) x.classList.toggle('on', x === b);
+  ovHeat(); };
+for (const b of $('ovCapSeg').querySelectorAll('button')) {
+  b.classList.toggle('on', (b.dataset.c === '1') === OVCAP);
+  b.onclick = () => { OVCAP = b.dataset.c === '1'; localStorage.setItem('ovcap', OVCAP ? '1' : '0');
+    for (const x of $('ovCapSeg').querySelectorAll('button')) x.classList.toggle('on', x === b); ovRender();
+    if (VSBT) renderVsbt(VSBT); };
+}
+$('ovRun').onclick = () => { OVSEL = ovClone(OVBASE); ovSave(); ovRender(); };
+$('ovAll').onclick = () => { for (const m of OVM) OVSEL[m.k].on = true; ovSave(); ovRender(); };
+$('ovCore').onclick = () => { for (const m of OVM) OVSEL[m.k].on = m.kind === 'core';
+  ovSave(); ovRender(); };
+
 async function call(path, body) {
   const r = await fetch(path, {method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -1900,10 +2791,114 @@ async function call(path, body) {
 async function refresh() {
   S = await (await fetch('/api/state')).json();
   render();
+  try { renderVsbt(await (await fetch('/api/vsbt')).json()); } catch (e) {}
   try { renderNews(await (await fetch('/api/news')).json()); } catch (e) {}
   try { renderVsa(await (await fetch('/api/vsa')).json()); } catch (e) {}
   try { renderCrash(await (await fetch('/api/crash')).json()); } catch (e) {}
+  try { renderC13(await (await fetch('/api/c13')).json()); } catch (e) {}
   try { FLAGS = await (await fetch('/api/flags')).json(); renderFlags(); } catch (e) {}
+}
+
+/* Thuc te so voi backtest (bang dieu khien) — /api/vsbt */
+const VSBT_NM = {xsmom: ['PP1', 'Động lượng', '#2a78d6'], rsi2: ['PP2', 'RSI(2)', '#eb6834'], tsvw: ['PP3', 'TSVW', '#1baf7a'],
+  dsrm: ['PP4', 'DSRM', '#eda100'], c13: ['PP5', 'C13', '#7a6a00'], vsa: ['PP6', 'VSA 4H', '#e87ba4']};
+let VSBT = null;
+function renderVsbt(V) {
+  VSBT = V;
+  const d = V.days || 0, A = V.agg;
+  if (A) {
+    /* Cung che do voi nut «Có trần / Không trần» o tab Tổng quan, de hai noi khop so */
+    const capOn = localStorage.getItem('ovcap') !== '0';
+    const c = capOn ? A.cap : A.raw, o = capOn ? A.raw : A.cap, yr = 365;
+    const lbl = capOn ? 'có trần' : 'không trần', olbl = capOn ? 'không trần' : 'có trần';
+    const line = (id, html, tip) => { const e = $(id);
+      e.innerHTML = `<span class="bt">BACKTEST · ${lbl.toUpperCase()}</span>` + html; e.dataset.tip = tip; };
+    const note = ` · Chế độ «${lbl}» theo nút ở tab Tổng quan · trần = ${pct(A.cap_usd / A.start_equity, 0)}× vốn đầu = ${n0(A.cap_usd)} USD, `
+      + `${pct(A.over * 100, 0)}% số ngày backtest vượt trần`;
+    line('bt-eq', `<b>${sgn0(c.per_day * yr)}</b>/năm · tổng <b>${sgn0(c.tot)}</b>`,
+      `Backtest 2021–26 ở hệ số đang chạy: ${sgn0(c.per_day * yr)} USD/năm, tổng ${sgn0(c.tot)} · kỳ vọng ${sgn0(c.per_day * d)} sau ${pct(d, 1)} ngày đã chạy`
+      + ` · ${olbl}: ${sgn0(o.per_day * yr)} USD/năm, tổng ${sgn0(o.tot)}` + note);
+    line('bt-dd', `sụt lớn nhất <b>−${n0(c.dd)}</b>`,
+      `Sụt lớn nhất backtest 2021–26: ${lbl} −${n0(c.dd)} USD (${pct(c.dd / A.start_equity * 100, 0)}% vốn đầu ${n0(A.start_equity)}) · ${olbl} −${n0(o.dd)} USD` + note);
+    line('bt-np', `TB <b>${pct(A.npos_mean, 0)}</b> · p95 <b>${A.npos_p95}</b>`,
+      `Số vị thế mở theo ngày backtest (không trần) · phơi nhiễm p95 ${n0(A.gross_p95)} USD so với trần ${n0(A.cap_usd)} USD`);
+    line('bt-lr', `~<b>${pct(A.trades_per_day, 1)}</b> lệnh/ngày · tháng lãi <b>${c.pos}/${c.nm}</b>`,
+      `Backtest 2021–26: ${pct(A.trades_per_day, 2)} lệnh đóng mỗi ngày (không trần) · tháng lãi ${lbl} ${c.pos}/${c.nm}, ${olbl} ${o.pos}/${o.nm}` + note);
+    /* Thuc te → uoc luong nam: lai danh gia lai (von hien tai − von dau) ÷ so ngay × 365,
+       kem khoang 95% tinh tu do lech chuan ngay cua backtest (cung che do tran). */
+    const T = V.total || {}, ea = $('act-yr'), mu = c.per_day, sdv = c.sd_day;
+    const need = mu > 0 ? Math.ceil((1.96 * sdv / (0.5 * mu)) ** 2) : null;
+    if (d < 1) {
+      ea.innerHTML = `<span class="bt act">THỰC TẾ → NĂM</span>chưa đủ 1 ngày`;
+      ea.dataset.tip = `Bot mới chạy ${pct(d, 1)} ngày ở chế độ này — chưa ước lượng.`
+        + (need ? ` Cần khoảng ${n0(need)} ngày để ước lượng lãi năm trong khoảng ±50% (do lãi ngày dao động mạnh: σ ≈ ${n0(sdv)} USD/ngày so với TB ${sgn0(mu)}).` : '');
+    } else {
+      const yrA = T.mtm_usd / d * 365, half = 1.96 * sdv / Math.sqrt(d) * 365;
+      const z = sdv ? (T.mtm_usd - mu * d) / (sdv * Math.sqrt(d)) : 0;
+      const v = z <= -2 ? ['lo', 'thấp hơn BT'] : z >= 2 ? ['hi', 'cao hơn BT'] : ['ok', 'trong vùng BT'];
+      ea.innerHTML = `<span class="bt act">THỰC TẾ → NĂM</span><b class="${cls(yrA)}">${sgn0(yrA)}</b>/năm <span class="verd ${v[0]}">${v[1]}</span>`;
+      ea.dataset.tip = `Lãi đánh giá lại ${sgn0(T.mtm_usd)} USD (vốn ${n0(T.equity)} − vốn đầu) trong ${pct(d, 1)} ngày → ${sgn0(yrA)} USD/năm.`
+        + ` Khoảng 95%: ${sgn0(yrA - half)} … ${sgn0(yrA + half)} USD/năm (σ ngày backtest ${n0(sdv)} USD).`
+        + ` Backtest ${lbl}: ${sgn0(mu * 365)} USD/năm · z = ${pct(z, 2)}.`
+        + (need ? ` Cần ~${n0(need)} ngày để khoảng còn ±50%.` : '') + ` Đã chốt: ${sgn0(T.closed_usd)} USD.`;
+    }
+    const br = V.bt_range;
+    if (br) line('bt-dt', `<b>${day(br[0])}</b> → <b>${day(br[1])}</b>`,
+      `Dữ liệu backtest của tab «Tổng quan» và bảng «Thực tế so với backtest»: nến 1D từ ${day(br[0])} đến ${day(br[1])}`);
+  }
+  $('vsbtSub').innerHTML = `<span title="${escA(`từ ${when(V.since)} · chế độ ${V.mode === 'live' ? 'chạy thật' : 'giấy'}`)}">`
+    + `${V.mode === 'live' ? 'thật' : 'giấy'} · ${pct(d, d < 10 ? 1 : 0)} ngày</span>`;
+  const two = (a, b, tip, good) => ({html: `<span title="${escA(tip)}"><b class="${good == null ? '' : good ? 'pos' : 'neg'}">${a}</b>`
+    + ` <span class="mut">/ ${b}</span></span>`});
+  const f2 = (x, k = 2) => x == null ? '—' : (x >= 0 ? '+' : '−') + pct(Math.abs(x), k);
+  const pc = x => x == null ? '—' : Math.round(x * 100) + '%';
+  /* Chi so cap bot: thuc te so voi phan phoi cua MOI cua so cung so ngay trong backtest */
+  const C = V.cmp, capOn = localStorage.getItem('ovcap') !== '0';
+  const MD = [  // khoa, ten, don vi, huong tot (+1 cao tot, −1 thap tot, 0 trung tinh), dinh dang
+    ['pnl', 'Lãi trong kỳ', 'USD', 1, sgn0], ['per_year', 'Quy ra năm', 'USD/năm', 1, sgn0],
+    ['max_dd', 'Sụt lớn nhất', 'USD', -1, v => '−' + n0(v)], ['worst_day', 'Ngày tệ nhất', 'USD', 1, sgn0],
+    ['win_days', 'Tỉ lệ ngày lãi', '', 1, v => Math.round(v * 100) + '%'], ['sharpe', 'Sharpe', '', 1, v => pct(v, 2)],
+    ['gross', 'Phơi nhiễm TB', 'USD', 0, n0], ['npos', 'Vị thế mở TB', '', 0, v => pct(v, 1)]];
+  $('vsbtM').innerHTML = !C ? '' : MD.map(([k, nm, u, dir, fm]) => {
+    const B = k === 'gross' ? (capOn ? C.bt.gross : C.bt.gross_raw) : k === 'npos' ? C.bt.npos : (C.bt[capOn ? 'cap' : 'raw'] || {})[k];
+    if (!B) return '';
+    const a = (C.act || {})[k], [lo, md, hi] = B;
+    const span = Math.max(1e-9, hi - lo), x0 = lo - span * .25, x1 = hi + span * .25, P = v => Math.max(0, Math.min(100, (v - x0) / (x1 - x0) * 100));
+    let v = ['', 'chưa có'];
+    if (a != null) v = a < lo ? (dir > 0 ? ['lo', 'thấp hơn BT'] : dir < 0 ? ['hi', 'tốt hơn BT'] : ['hi', 'thấp hơn BT'])
+      : a > hi ? (dir > 0 ? ['hi', 'cao hơn BT'] : dir < 0 ? ['lo', 'tệ hơn BT'] : ['lo', 'cao hơn BT']) : ['ok', 'trong vùng BT'];
+    const tip = `${nm}${u ? ' (' + u + ')' : ''} sau ${C.L} ngày · thực tế ${a == null ? '—' : fm(a)} · backtest ${capOn ? 'có trần' : 'không trần'}:`
+      + ` trung vị ${fm(md)}, 95% các cửa sổ ${C.L} ngày nằm trong ${fm(lo)} … ${fm(hi)}`
+      + (k === 'gross' || k === 'npos' ? ' · thực tế lấy từ các lượt chạy ngày' : '');
+    return `<div class="mrow" title="${escA(tip)}"><div class="t"><span>${nm}</span>${a == null ? '' : `<span class="verd ${v[0]}">${v[1]}</span>`}</div>`
+      + `<div class="a ${dir && a != null ? cls(a * (k === 'max_dd' ? -1 : 1)) : ''}">${a == null ? '—' : fm(a)}</div>`
+      + `<div class="rb"><span class="band" style="left:${P(lo)}%;width:${P(hi) - P(lo)}%"></span><span class="med" style="left:${P(md)}%"></span>`
+      + (a == null ? '' : `<span class="me" style="left:${P(a)}%"></span>`) + `</div>`
+      + `<div class="s"><span>${fm(lo)}</span><span>BT ${fm(md)}</span><span>${fm(hi)}</span></div></div>`;
+  }).join('');
+  const rows = Object.entries(V.rows || {}).filter(([k, r]) => r.alloc > 0 || r.act.n || r.act.open);
+  table($('tvsbt'), ['', 'lệnh đóng', 'đang mở', 'thắng', 'R / lệnh', 'lãi USD', 'ước năm'], rows, ([k, r]) => {
+    const [tag, nm, c] = VSBT_NM[k] || [k, k, '#999'], a = r.act, b = r.bt || {};
+    const small = a.n < 30, ci = (C && C.strat && C.strat[k]) || {};
+    const inr = (x, q) => x == null || !q ? null : x < q[0] ? -1 : x > q[2] ? 1 : 0;
+    const vv = (x, q, up = true) => { const t = inr(x, q); if (t == null) return '';
+      return t === 0 ? ' <span class="verd ok">≈</span>' : (t > 0) === up ? ' <span class="verd hi">↑</span>' : ' <span class="verd lo">↓</span>'; };
+    const rng = (q, f) => q ? ` · 95%: ${f(q[0])} … ${f(q[2])}` : '';
+    return [
+      {html: `<span class="schip ${r.alloc > 0 ? '' : 'off'}" title="${escA(nm + (r.alloc > 0 ? ' · hệ số ' + r.alloc : ' · đang tắt'))}"><i style="background:${c}"></i>${tag} ${esc(nm)}</span>`},
+      {html: two(a.n, b.exp_n == null ? '—' : n0(b.exp_n), `thực tế ${a.n} lệnh đóng · backtest kỳ vọng ${b.exp_n == null ? '—' : pct(b.exp_n, 1)} lệnh trong ${pct(d, 1)} ngày (${b.trades_per_day == null ? '—' : pct(b.trades_per_day, 2)} lệnh/ngày)`
+        + rng(ci.n_trades, v => n0(v)) + ' (mọi cửa sổ cùng số ngày, không trần — bị chặn lệnh thì thấp hơn)', null).html + vv(a.n, ci.n_trades)},
+      a.open || 0,
+      {html: two(pc(a.win), pc(b.win), `tỉ lệ lệnh lãi · thực tế / backtest${rng(ci.win, pc)} với ${a.n} lệnh${small ? ' — mẫu nhỏ' : ''}`, null).html + vv(a.win, ci.win)},
+      {html: two(f2(a.r_per), f2(b.r_per), `lãi TB mỗi lệnh tính bằng R · thực tế / backtest${rng(ci.r_per, f2)} với ${a.n} lệnh${a.bps == null ? '' : ` · thực tế TB ${f2(a.bps, 0)} bps`}${small ? ' — mẫu nhỏ' : ''}`, null).html + vv(a.r_per, ci.r_per)},
+      two(sgn0(a.usd), b.exp_usd == null ? '—' : sgn0(b.exp_usd), `lãi đã chốt thực tế · backtest kỳ vọng trong cùng số ngày ở hệ số đang chạy (${b.per_day_usd == null ? '—' : sgn0(b.per_day_usd)} USD/ngày)`,
+        a.n >= 5 ? a.usd >= 0 : null),
+      (() => { const by = b.per_day_usd == null ? '—' : sgn0(b.per_day_usd * 365);
+        if (a.per_year == null) return {html: `<span title="${escA('chưa đủ 1 ngày chạy · backtest ' + by + ' USD/năm (không trần)')}"><b>—</b> <span class="mut">/ ${by}</span></span>`};
+        const z = a.z ?? 0, v = z <= -2 ? ['lo', '↓'] : z >= 2 ? ['hi', '↑'] : ['ok', '≈'];
+        return {html: `<span title="${escA(`thực tế ${sgn0(a.usd)} USD đã chốt trong ${pct(d, 1)} ngày → ${sgn0(a.per_year)} USD/năm · backtest ${by} USD/năm (không trần) · z = ${pct(z, 2)} (|z| < 2: trong vùng backtest)`)}">`
+          + `<b class="${cls(a.per_year)}">${sgn0(a.per_year)}</b> <span class="mut">/ ${by}</span> <span class="verd ${v[0]}">${v[1]}</span></span>`}; })()];
+  });
 }
 
 let FLAGS = null, FLAGF = 'all';
@@ -1920,7 +2915,7 @@ function renderFlags() {
   const nBan = R.filter(x => x.ban_until).length, nTag = R.filter(x => x.tag_on).length;
   $('flagPill').style.display = nBan ? '' : 'none';
   $('flagPill').textContent = nBan;
-  $('flagBan').textContent = FLAGS.ban_days;
+  if ($('flagBan')) $('flagBan').textContent = FLAGS.ban_days;
   const held = R.filter(x => x.held && (x.ban_until || x.tag_on)).map(x => x.symbol);
   $('flagSub').innerHTML = `<b>${nBan}</b> mã đang bị chặn mua · <b>${nTag}</b> mã đang có thẻ Monitoring`
     + ` · ${R.length} mã từng bị gắn cờ`
@@ -1971,13 +2966,36 @@ function renderNews(N) {
 function renderVsa(V) {
   const st = V.status || {}, k = V.stats || {}, b = V.backtest || {};
   const f = (x, d = 1) => x == null ? '—' : (x >= 0 ? '+' : '') + x.toFixed(d);
+  const B = V.bot || {}, bs = B.status || {};
+  $('vsaBotSub').textContent = B.alloc > 0
+    ? `1R×${B.alloc} = ${usd(B.r_usd)} USD · 1R = giá đi ${Math.round((B.r_frac || 0.1) * 100)}% → ${usd(B.r_usd / (B.r_frac || 0.1))} USD mỗi lệnh · tối đa ${B.max_open} lệnh · ${B.mode === 'live' ? 'chạy thật' : 'sổ bot (giấy)'}`
+    : 'ĐANG TẮT (alloc_vsa = 0) — vị thế còn mở vẫn được đóng sau 3 nến';
+  const ch = (lbl, val, tip = '', c = '') => `<span class="schip ${c}" title="${escA(tip)}">${lbl} <b>${val}</b></span>`;
+  const errs = [...(bs.errors || []), bs.error || ''].filter(Boolean);
+  $('vsaBotSt').innerHTML = `<span class="chips">`
+    + ch('lượt cuối', bs.t ? when(bs.t) : 'chưa chạy')
+    + (bs.t && !bs.off ? ch('tín hiệu', bs.signals || 0) + ch('mở', bs.opened || 0) + ch('đóng', bs.closed || 0)
+        + ch('bỏ lỡ', bs.missed || 0, 'lượt chạy trễ quá 15 phút sau open nến vào') : '')
+    + ((bs.blocked || []).length ? ch('bị chặn', bs.blocked.length, bs.blocked.join('\n'), 'bad') : '')
+    + ((bs.skipped || []).length ? ch('bỏ qua', bs.skipped.length, bs.skipped.join('\n')) : '')
+    + (errs.length ? ch('lỗi', errs.length, errs.join('\n'), 'bad') : '')
+    + ch('đang mở', (B.open || []).length) + ch('đã đóng', B.n || 0) + ch('lãi', usd(B.usd || 0))
+    + `</span>`;
+  const rows = [...(B.open || []).map(p => ({...p, open: 1})), ...(B.closed || [])];
+  table($('tvsaBot'), ['mã', 'vào lúc (nến)', 'giá vào', 'USD', 'ra lúc', 'giá ra', 'bps', 'lãi USD'], rows, r => [
+    r.symbol, when(r.entry_ts), r.entry_px, usd(r.notional || 0),
+    r.open ? {html: '<span style="color:var(--acc)">đang mở</span>'} : when(r.exit_ts), r.exit_px ?? '—',
+    r.pnl_bps == null ? '—' : {html: `<span class="${r.pnl_bps >= 0 ? 'pos' : 'neg'}">${r.pnl_bps >= 0 ? '+' : ''}${Math.round(r.pnl_bps)}</span>`},
+    r.pnl_bps == null ? '—' : usd((r.notional || 0) * r.pnl_bps / 1e4)]);
   $('vsaSub').textContent = `top ${V.topn} · ${V.usd_per_trade} USD mỗi lệnh · chạy 2 phút sau mỗi nến 4H`;
-  $('vsaSt').innerHTML = `Lượt cuối: ${st.t ? when(st.t) : 'chưa chạy'}`
-    + (st.t ? ` · quét ${st.scanned} mã · ${st.signals} tín hiệu · mở ${st.opened} · bỏ lỡ ${st.missed} · đóng ${st.closed}` : '')
-    + (st.errors && st.errors.length ? ` · <span class="neg">${st.errors.length} lỗi tải nến</span>` : '')
-    + `<br>Sổ giấy: <b>${k.n}</b> lệnh đã đóng · TB <b>${f(k.mean)}</b> bps · trung vị ${f(k.median)} · thắng `
-    + `${k.win == null ? '—' : Math.round(k.win * 100) + '%'} · lãi ${usd(k.usd)} · bỏ lỡ ${k.missed}`
-    + ` — backtest 2021–26: TB ${f(b.mean)} bps, trung vị ${f(b.median)}, thắng ${Math.round(b.win * 100)}%, ~${b.per_day} lệnh/ngày`;
+  $('vsaSt').innerHTML = `<span class="chips">`
+    + ch('lượt cuối', st.t ? when(st.t) : 'chưa chạy',
+        st.t ? `quét ${st.scanned} mã · ${st.signals} tín hiệu · mở ${st.opened} · bỏ lỡ ${st.missed} · đóng ${st.closed}` : '')
+    + ((st.errors || []).length ? ch('lỗi tải nến', st.errors.length, st.errors.join('\n'), 'bad') : '')
+    + ch('lệnh đóng', k.n ?? 0) + ch('TB bps', f(k.mean), `trung vị ${f(k.median)} · backtest TB ${f(b.mean)}, trung vị ${f(b.median)}`)
+    + ch('thắng', k.win == null ? '—' : Math.round(k.win * 100) + '%', `backtest ${Math.round(b.win * 100)}% · ~${b.per_day} lệnh/ngày`)
+    + ch('lãi', usd(k.usd)) + ch('bỏ lỡ', k.missed ?? 0)
+    + `</span>`;
   table($('tvsa'), ['tín hiệu (nến)', 'mã', 'vào lúc', 'giá vào', 'ra lúc', 'giá ra', 'funding bps', 'bps', 'USD', 'ghi chú'],
     V.rows || [], r => [
       when(r.t_signal), r.symbol, r.entry_px == null ? '—' : when(r.t_entry), r.entry_px,
@@ -2008,23 +3026,71 @@ function renderCrash(V) {
       r.open || !r.r_usd ? '—' : sg(r.d_usd / r.r_usd),
       r.end_why || '—']);
 }
+function renderC13(V) {
+  const st = V.status || {}, k = V.stats || {}, b = V.backtest || {}, ru = V.rule || {};
+  const day = t => new Date(t).toISOString().slice(0, 10);
+  const sg = (x, d = 2) => x == null ? '—' : {html: `<span class="${x >= 0 ? 'pos' : 'neg'}">${x >= 0 ? '+' : ''}${x.toFixed(d)}</span>`};
+  $('c13Sub').textContent = `k ${ru.k} × ATR · top ${ru.topn} · 1R ${ru.r_usd} USD`;
+  $('c13St').innerHTML = `Lượt cuối: ${st.t ? when(st.t) : 'chưa chạy'} · ${k.orders || 0} lệnh đã đặt, ${k.pending || 0} đang chờ`
+    + ` · ${k.fills || 0} lệnh khớp trong ${k.fill_days || 0} ngày · lãi <b>${usd(k.usd || 0)}</b>`
+    + ` (ngân sách ngày ${usd(k.usd_budget || 0)})`
+    + (k.r_per_fill == null ? '' : ` · ${k.r_per_fill.toFixed(3)} R/lệnh, thắng ${Math.round(k.win * 100)}%`)
+    + `<br>Backtest 2021–26: ${b.fills} lệnh khớp trong ${b.fill_days} ngày, +${b.r_per_fill} R/lệnh, thắng ${Math.round(b.win * 100)}%;`
+    + ` ${Math.round(b.crash_days_share_r * 100)}% R đến từ ngày sập, ngày tệ nhất ${b.worst_day_r} R.`;
+  table($('tc13D'), ['ngày khớp', 'số lệnh', 'lãi USD', 'R', 'ngân sách ngày USD'], V.days || [], d => [
+    day(d.day), d.fills, sg(d.usd), sg(d.r), sg(d.usd_budget)]);
+  table($('tc13R'), ['ngày đặt', 'mã', 'hạng', 'close', 'ATR', 'limit', 'khớp', 'bán', 'USD', 'R'], V.rows || [], r => [
+    day(r.day_set), r.symbol, r.rank, r.close_ref, +r.atr.toPrecision(4), +r.lim.toPrecision(6), r.fill_px, r.exit_px,
+    sg(r.usd), sg(r.r)]);
+}
 function busy(b) { for (const id of ['btnFetch','btnPrev','btnRun','btnFlat'])
   $(id).disabled = b; }
 
+/* Alias tren URL cho tung tab: /#/tong-quan, /#/cau-hinh ... (va /#/phuong-phap/<tai-lieu>).
+   Dung hash de khong phai them duong dan phia may chu; nut Lui / Toi cua trinh duyet di theo. */
+const TAB_ALIAS = {dash: 'bang-dieu-khien', ov: 'tong-quan', cfg: 'cau-hinh', flag: 'ma-gan-co',
+  news: 'danh-theo-tin', vsa: 'vsa-4h', crash: 'btc-sap', c13: 'limit-sau', bt: 'tinh-lich-su',
+  doc: 'phuong-phap', log: 'nhat-ky'};
+const ALIAS_TAB = Object.fromEntries(Object.entries(TAB_ALIAS).map(([k, v]) => [v, k]));
+function tabFromHash() {
+  const p = decodeURIComponent(location.hash.replace(/^#\/?/, '')).split('/');
+  const k = ALIAS_TAB[p[0]] || (TAB_ALIAS[p[0]] ? p[0] : null);
+  return k ? {tab: k, sub: p[1] || null} : null;
+}
+function setHash(tab, sub) {
+  const h = '#/' + TAB_ALIAS[tab] + (sub ? '/' + encodeURIComponent(sub) : '');
+  if (location.hash !== h) history.pushState(null, '', h);
+}
+function goTab(tab, sub, push = true) {
+  const b = document.querySelector(`nav.tabs button[data-tab="${tab}"]`);
+  if (!b) return;
+  b._sub = sub; b._push = push; b.click();
+}
+window.addEventListener('popstate', () => { const t = tabFromHash(); goTab(t ? t.tab : 'dash', t && t.sub, false); });
+
 for (const b of document.querySelectorAll('nav.tabs button')) {
   b.onclick = () => {
+    const sub = b._sub || null, push = b._push !== false;
+    b._sub = null; b._push = true;
+    if (push) setHash(b.dataset.tab, sub);
     for (const x of document.querySelectorAll('nav.tabs button')) x.classList.remove('on');
     for (const x of document.querySelectorAll('section')) x.classList.remove('on');
     b.classList.add('on');
     $('t-' + b.dataset.tab).classList.add('on');
     if (b.dataset.tab === 'cfg') loadCfg().catch(e => msg(e.message, false));
     if (b.dataset.tab === 'flag') renderFlags();
-    if (b.dataset.tab === 'doc' && !DOCS) initDocs().catch(e => msg(e.message, false));
+    if (b.dataset.tab === 'doc') {
+      const go = () => sub && DOCS && DOCS.some(d => d.key === sub) ? openDoc(sub) : null;
+      (DOCS ? Promise.resolve(go()) : initDocs().then(go)).catch(e => msg(e.message, false));
+    }
     if (b.dataset.tab === 'bt') { if (!BT) initBt().catch(e => msg(e.message, false));
       else btCharts(); }
     if (b.dataset.tab === 'dash' && S) chart(S.equity);
+    if (b.dataset.tab === 'ov') { if (!OV) initOv().catch(e => msg(e.message, false));
+      else ovRender(); }
   };
 }
+{ const t0 = tabFromHash(); if (t0) goTab(t0.tab, t0.sub, false); }
 $('btnSave').onclick = async () => {
   if (!Object.keys(EDIT).length) { msg('Không có ô nào thay đổi.'); return; }
   if (!confirm(`Lưu ${Object.keys(EDIT).length} thay đổi? Các giá trị lệch khỏi `
@@ -2096,7 +3162,7 @@ $('btnDisarm').onclick = async () => {
 setInterval(() => { $('clock').textContent = new Date().toISOString().slice(0, 19)
   .replace('T', ' '); }, 1000);
 let rz; addEventListener('resize', () => { clearTimeout(rz);
-  rz = setTimeout(() => { S && chart(S.equity); btCharts(); }, 140); });
+  rz = setTimeout(() => { S && chart(S.equity); btCharts(); if (OV) ovRender(); }, 140); });
 renderTodo(null);
 refresh().catch(e => msg(e.message, false));
 setInterval(() => refresh().catch(() => {}), 30000);

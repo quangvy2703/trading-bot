@@ -12,7 +12,7 @@ import time
 
 import numpy as np
 
-from . import db, data, delist as DL, executor, settings, strategies as ST, swing as SW, volprofile as VP
+from . import c13 as C13, db, data, delist as DL, executor, pp1x as PX, settings, strategies as ST, swing as SW, volprofile as VP
 from .binance import DAY, PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -168,11 +168,26 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
     if r_xsmom <= 0:
         note["xsmom"] = {"tắt": True, "vị thế sẽ đóng": len(cur_x)}
         cur_x, new = [], None
+    # ---- luat phu PP1 (app/pp1x.py), moi luat mot cong tac ----
+    F = settings.pp1x()
+    kase_x: dict = {}
+    if F["kase"] and cur_x:
+        try:
+            kase_x = PX.kase_exits(P, day, cur_x)
+        except Exception as e:
+            db.log("error", f"Kase: tính mức lỗi, bỏ qua luật hôm nay: {e}")
+        for p in cur_x:
+            if id(p) in kase_x:
+                p["exit_why"] = kase_x[id(p)]      # plan() mang ly do sang lenh DONG
+                db.log("info", f"Kase đóng {p['symbol']} (sổ {p['sleeve']}) · {kase_x[id(p)]}")
+    kase_keys = {(p["sleeve"], p["symbol"], p["side"]) for p in cur_x if id(p) in kase_x}
     for p in cur_x:
         # Giam so so trong tab cau hinh se bo roi vi the o so cu: chung khong
         # bao gio trung `sl` nua nen se duoc giu mai mai ma khong ai tai can
         # bang. Khong dua vao so muc tieu => luot nay dong chung lai.
         if p["sleeve"] is not None and p["sleeve"] >= X["sleeves"]:
+            continue
+        if id(p) in kase_x:                         # Kase: khong dua vao so muc tieu → dong
             continue
         if p["sleeve"] != sl:
             target.append({"strategy": "xsmom", "sleeve": p["sleeve"],
@@ -180,6 +195,32 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
                            "stop": None, **keep_of(p)})
     if r_xsmom > 0:
         new = ST.xsmom_target(P, rank, day, nobuy)
+    fv = None
+    if new and F["fund_veto"]:
+        try:
+            fv = PX.fund_veto(day)
+        except Exception as e:
+            db.log("error", f"funding: tính phân vị lỗi, bỏ qua luật hôm nay: {e}")
+        if fv and fv.get("active"):
+            cut = [x["symbol"] for x in new if x["side"] < 0]
+            # Bo han, khong thay bang ma ke tiep — giong engine nghien cuu.
+            new = [x for x in new if x["side"] > 0]
+            if cut:
+                db.log("info", f"funding toàn thị trường cực thấp (phân vị {fv.get('pct')}) · "
+                               f"không mở lệnh BÁN động lượng: {', '.join(cut)}")
+    bv: dict = {}
+    if new and F["bsadf_veto"]:
+        try:
+            bv = PX.bsadf_veto(P, day, [x["symbol"] for x in new if x["side"] < 0])
+        except Exception as e:
+            db.log("error", f"BSADF: tính lỗi, bỏ qua luật hôm nay: {e}")
+        if bv:
+            new = [x for x in new if not (x["side"] < 0 and x["symbol"] in bv)]
+            db.log("info", "BSADF > ngưỡng · không mở lệnh BÁN động lượng: "
+                           + ", ".join(f"{s} ({v:.2f})" for s, v in bv.items()))
+    if new and kase_keys:
+        # ma vua bi Kase dong khong mo lai trong cung luot (so den luot hom nay)
+        new = [x for x in new if (sl, x["symbol"], x["side"]) not in kase_keys]
     if new:
         for x in new:
             # Khong co stop: 1R = mot lan do lech chuan bat loi qua dung ky
@@ -199,6 +240,10 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
                 1 for p in cur_x if p["sleeve"] is not None
                 and p["sleeve"] >= X["sleeves"]),
             "vị thế mới": len(new or []),
+            "Kase đóng": sorted(p["symbol"] for p in cur_x if id(p) in kase_x) if F["kase"] else "tắt",
+            "funding chặn bán": (bool(fv and fv.get("active")) if fv is not None else
+                                 ("tắt" if not F["fund_veto"] else "không cần tính")),
+            "BSADF chặn bán": sorted(bv) if F["bsadf_veto"] else "tắt",
             "sổ khác giữ nguyên": len(cur_x) - sum(
                 1 for p in cur_x if p["sleeve"] == sl)}
 
@@ -243,6 +288,16 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
         note[sname] = {"giữ": len(cur_s) - len(ex_s), "thoát": len(ex_s),
                        "tín hiệu": len(sig),
                        "lý do thoát": sorted({w for w in ex_s.values()})}
+
+    # ---- PP6 VSA 4H (app/vsa.py): mo / dong theo lich 4H rieng. Luot ngay
+    # giu nguyen moi vi the cua no (ke ca khi he so = 0: lich 4H tu dong sau
+    # 3 nen) — khong dua vao muc tieu thi plan() se dong oan chung.
+    cur_v = [p for p in cur if p["strategy"] == "vsa"]
+    for p in cur_v:
+        target.append({"strategy": "vsa", "sleeve": p.get("sleeve"), "symbol": p["symbol"],
+                       "side": p["side"], "stop": None, **keep_of(p)})
+    if cur_v:
+        note["vsa"] = {"giữ (lịch 4H tự đóng)": len(cur_v)}
     return target, note
 
 
@@ -535,14 +590,27 @@ def _run_once(force: bool = False) -> dict:
             eq += reconcile(prices, eq)
             eq += float(db.kv_get("realised_pending", 0) or 0)
             db.kv_set("realised_pending", 0.0)
+        # PP6 VSA chot lenh giua cac luot ngay (lich 4H) — cong vao von o day
+        eq += float(db.kv_get(f"vsa_realised:{m}", 0) or 0)
+        db.kv_set(f"vsa_realised:{m}", 0.0)
+        # C13: lenh limit dat o luot truoc — khop thi ghi so (luot nay dong lai)
+        try:
+            C13.settle(m, P, day)
+        except Exception as e:
+            db.log("error", f"C13: đối chiếu lệnh limit lỗi: {e}")
         cur_pos = open_positions(m)
         target, note = build_target(P, rank, day, cur_pos)
+        n13 = len(C13.exits(cur_pos))           # vi the C13 giu dung mot ngay → dong
+        if n13:
+            note["c13"] = {"đóng": n13}
         filt = data.filters(api) if m == "live" else {}
 
         actions = executor.plan(target, cur_pos)
+        # vi the C13 dong het trong luot nay — khong tinh vao tran so lenh / phoi nhiem
+        keep_pos = [p for p in cur_pos if p["strategy"] != "c13"]
         allowed, blocked = executor.apply_caps(
-            actions, eq, prices, len(cur_pos),
-            sum(float(p.get("notional") or 0.0) for p in cur_pos))
+            actions, eq, prices, len(keep_pos),
+            sum(float(p.get("notional") or 0.0) for p in keep_pos))
         if m == "live":          # so giay giu nguyen hanh vi nhu backtest
             # SAU tran: lenh mo bi chan thi khong dong oan vi the nguoc chieu
             allowed, clash = executor.one_way(allowed, cur_pos)
@@ -581,6 +649,21 @@ def _run_once(force: bool = False) -> dict:
                 else:
                     _book_open(cx, a, m)
         _save_blocked(run_id, day, m, blocked)
+        # C13: treo lenh limit mua cho nen ke tiep (sau khi so da ghi xong)
+        try:
+            if C13.r_usd() > 0:
+                try:
+                    nob = DL.banned(DL.notices(), int(time.time() * 1000), settings.risk()["ban_days"])
+                except Exception:
+                    nob = {}
+                note["c13"] = {**note.get("c13", {}),
+                               **C13.place(m, P, day, rank, eq + realised, nob, filt)}
+            else:
+                n_ = C13.cancel_all(m)
+                if n_:
+                    db.log("info", f"C13 đang tắt: huỷ {n_} lệnh limit còn treo")
+        except Exception as e:
+            db.log("error", f"C13: đặt lệnh limit lỗi: {e}")
         eq += realised          # lai/lo da chot la USD, khong phai ty le
         if m == "live":
             safety_now(filt)    # sau khi so da ghi vi the moi
@@ -605,6 +688,11 @@ def _run_once(force: bool = False) -> dict:
         for a in failed:
             db.log("warn", f"không khớp, bỏ khỏi sổ: {a['action']} "
                            f"{a['symbol']} ({a.get('status')})")
+        if CFG.c13_paper:            # so giay C13 — chi ghi, khong dat lenh (app/c13.py)
+            try:
+                C13.run_once(P, day)
+            except Exception as e:
+                db.log("warn", f"sổ giấy C13 lỗi: {e}")
         db.log("info", f"luợt chạy {run_id} xong · chế độ {m} · {len(done)} lệnh"
                        f" · vốn {mtm:,.2f} USD")
         return {"run_id": run_id, "day": day, "mode": m, "note": note,

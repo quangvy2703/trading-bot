@@ -1,13 +1,14 @@
-# VSA 4H — "đẩy qua vùng cung" rồi nến giảm khối lượng thấp (SỔ GIẤY)
+# PP6 · VSA 4H — "đẩy qua vùng cung" rồi nến giảm khối lượng thấp
 
 Nguồn: Tom Williams, *Master the Markets* (TradeGuider, 2009), phương pháp
 Volume Spread Analysis (VSA). Nghiên cứu ngày 02/11/2026, script trong
 `../scripts/`: `gh_vsa.py` (lưới), `gh_vsa_verify.py` (độ bền),
 `gh_vsa_corr.py` (tương quan), `gh_vsa_rs.py` (chọn mã mạnh hơn chỉ số).
 
-**Trạng thái: sổ giấy.** App chỉ ghi lệnh giả (tab «VSA 4H (giấy)»), không
-bao giờ đặt lệnh thật. Ô này được chọn *sau khi* nhìn 324 ô, nên sổ giấy là
-phép thử ngoài mẫu thật sự đầu tiên.
+**Trạng thái: PP6 của bot từ 04/11/2026** (hệ số `alloc_vsa`, mặc định 5;
+0 là tắt) — đưa vào theo yêu cầu vận hành, **trước** mốc «≥ 300 lệnh giấy» ở
+cuối trang. Ô này được chọn *sau khi* nhìn 324 ô, nên sổ giấy (tab «VSA 4H»)
+vẫn chạy song song làm phép thử ngoài mẫu.
 
 ## Luật
 
@@ -55,8 +56,27 @@ Tương quan PUSH–động lượng: ngày +0,08, tuần +0,19, tháng +0,39; v
 1,36 → 1,81 (chênh +0,45, KTC95 [−0,07 ; +0,93]; 2025 âm); cả ba chiến lược
 1,59 → 1,97 (+0,38, KTC95 [−0,06 ; +0,76]). Có ích nhưng chưa chắc.
 
-## Khi nào xét chạy thật
+## Chạy trong bot (PP6)
 
-Sau **≥ 300 lệnh giấy** (~6 tháng): TB bps/lệnh dương và KTC95 không thấp
-hơn hẳn +38,7 của backtest; số lệnh/ngày và tỉ lệ "bỏ lỡ" khớp kỳ vọng.
-Chạy thật cần thêm phần đặt lệnh 4H vào executor — chưa làm.
+- Lịch riêng mỗi 4 giờ (00:02, 04:02, … UTC), chung lịch với sổ giấy, trong
+  khoá của lượt ngày (không chạy chồng lượt 00:05 hay «ép lệnh»).
+- **Mở:** tín hiệu ở nến vừa đóng, lượt chạy trong 15 phút sau open nến vào →
+  MUA thị trường (chạy thật) / ghi ở open nến (sổ bot giấy). Trễ hơn → «bỏ lỡ».
+- **Đóng:** nến thứ 3 đã đóng → BÁN thị trường reduceOnly (≈ close nến đó).
+  Lượt ngày giữ nguyên vị thế PP6; nếu lượt ngày mở chiều BÁN cùng mã (sàn
+  một chiều) thì vị thế PP6 bị đóng sớm («đóng để mở ngược chiều»).
+- **Cỡ lệnh:** không có stop nên 1R quy ước = giá đi `VSA_R_FRAC` (10%), cỡ
+  lệnh = 1R / 0,10 → 5 × 2 USD / 0,10 = **100 USD**, đúng cỡ sổ giấy; rủi ro
+  ngày tương đương PP3/PP4 ở hệ số 5 (độ lệch chuẩn ngày ≈ 10 USD).
+- **Dừng an toàn trên sàn:** SAFETY_R × 1R = giá −30% (chỉ chống thảm hoạ).
+- **Bỏ mã:** PP6 đang giữ, bot đang giữ chiều BÁN mã đó, thông báo huỷ niêm yết.
+- **Trần:** `VSA_MAX_OPEN` = 20 lệnh cùng lúc (backtest p95 9, tối đa 31) + các
+  trần chung (trần lệnh, tổng phơi nhiễm, số lệnh mở).
+- Lãi/lỗ chốt giữa hai lượt ngày cộng vào vốn ở lượt ngày kế tiếp.
+- Tab «Tính lịch sử» không mô phỏng PP6.
+
+## Mốc đánh giá lại
+
+Sau **≥ 300 lệnh** (~6 tháng, sổ giấy và sổ bot): TB bps/lệnh dương và KTC95
+không thấp hơn hẳn +38,7 của backtest; số lệnh/ngày và tỉ lệ «bỏ lỡ» khớp kỳ
+vọng. Không đạt → hạ `alloc_vsa` về 0.

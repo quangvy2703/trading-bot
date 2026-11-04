@@ -128,6 +128,14 @@ class Trader:
                           type="LIMIT", timeInForce="GTC", quantity=qty,
                           price=price)
 
+    def limit_gtd(self, symbol: str, side: str, qty: float, price: str,
+                  good_till_ms: int, cid: str) -> dict:
+        """Lenh gioi han GTD: san tu huy luc `good_till_ms` (C13 — lenh limit sau
+        mot ngay). Khong reduceOnly: day la lenh MO."""
+        return self._call("POST", "/fapi/v1/order", symbol=symbol, side=side,
+                          type="LIMIT", timeInForce="GTD", quantity=qty, price=price,
+                          goodTillDate=int(good_till_ms), newClientOrderId=cid)
+
     def book(self, symbol: str) -> tuple[float, float]:
         """Gia mua / ban tot nhat tren CHINH san dat lenh (testnet co so lenh rieng)."""
         r = self._c.get("/fapi/v1/ticker/bookTicker", params={"symbol": symbol})
