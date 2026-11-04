@@ -80,12 +80,12 @@ services:
       # doi; tu ~16 tro len sut bat dau tang. Xem docs/money-management-r.md
       # § Ghep hai chien luoc, muc SUA — so 32 cu dem trung lenh RSI(2).
       ALLOC_RSI2: "${ALLOC_RSI2:-8.0}"        # chi RSI(2)
-      ALLOC_XSMOM: "${ALLOC_XSMOM:-1.0}"      # chi dong luong cat ngang
+      ALLOC_XSMOM: "${ALLOC_XSMOM:-5.0}"      # chi dong luong cat ngang
       # TSVW (day V + AVWAP) va DSRM (Stoch+RSI+MACD), khung ngay, app/swing.py,
       # docs/tsvw-dsrm.md. Bat chay that 03/11/2026 theo yeu cau van hanh, 1R
       # moi lenh. Bang chung: 6/6 luat do ben nhung chon sau 709 o YouTube.
-      ALLOC_TSVW: "${ALLOC_TSVW:-1.0}"
-      ALLOC_DSRM: "${ALLOC_DSRM:-1.0}"
+      ALLOC_TSVW: "${ALLOC_TSVW:-5.0}"
+      ALLOC_DSRM: "${ALLOC_DSRM:-5.0}"
       # ---- RSI(2) mua them: so lop toi da moi ma (1 = khong mua them, 1..5) ----
       # Dang giu ma ma RSI(2) lai < 10 thi mo them mot lop, moi lop 1R va mot
       # cho rieng. Bang chung yeu (26 lenh lop 2, chua ngoai mau) — xem
