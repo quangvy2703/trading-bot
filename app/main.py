@@ -15,7 +15,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import backtest, c13, crash, data, db, delist, executor, news, runner, settings, vsa, vsbt as VB
+from . import backtest, c13, crash, data, db, delist, executor, news, pp1tp, pp1wf, runner, settings, vsa, vsbt as VB
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -111,6 +111,14 @@ def _start() -> None:
     sched.add_job(_vsa_job, CronTrigger(hour="*/4", minute=2),
                   id="vsa4h", replace_existing=True,
                   misfire_grace_time=600, coalesce=True)
+    # PP1 chot loi lenh BAN: nen 1H dong dau gio, chay phut 1 (sau khi Binance chot nen).
+    sched.add_job(_tp_job, CronTrigger(minute=1),
+                  id="pp1tp1h", replace_existing=True,
+                  misfire_grace_time=900, coalesce=True)
+    # PP1 windfall: nen 15m dong o phut 0/15/30/45, chay phut 1 sau do.
+    sched.add_job(_wf_job, CronTrigger(minute="1,16,31,46"),
+                  id="pp1wf15m", replace_existing=True,
+                  misfire_grace_time=300, coalesce=True)
     sched.start()
     db.log("info", f"khởi động · lịch chạy {CFG.run_at_utc} UTC · "
                    f"chạy thật ở tầng mã: {'MỞ' if CFG.live_enabled_env else 'KHOÁ'}")
@@ -153,6 +161,22 @@ def _vsa_job() -> None:
         vsa.run_once()
     except Exception:
         db.log("error", "lịch VSA 4H (PP6 + sổ giấy) hỏng:\n" + traceback.format_exc()[-800:])
+
+
+def _tp_job() -> None:
+    """PP1: chot loi lenh BAN moi gio (app/pp1tp.py, cong tac xsmom_tp)."""
+    try:
+        pp1tp.run_once()
+    except Exception:
+        db.log("error", "lịch chốt lời PP1 mỗi giờ hỏng:\n" + traceback.format_exc()[-800:])
+
+
+def _wf_job() -> None:
+    """PP1: windfall moi nen 15m (app/pp1wf.py, cong tac xsmom_wf)."""
+    try:
+        pp1wf.run_once()
+    except Exception:
+        db.log("error", "lịch windfall PP1 15m hỏng:\n" + traceback.format_exc()[-800:])
 
 
 @app.get("/healthz")
@@ -291,6 +315,7 @@ def actual_vs_backtest():
     al, ru = settings.alloc(), float(settings.risk()["r_usd"])
     F = settings.pp1x()
     ck = ("k" if F["kase"] else "") + ("f" if F["fund_veto"] else "") + ("b" if F["bsadf_veto"] else "")
+    ckc = ck + ("+tp" if F.get("tp") else "") + ("+wf" if F.get("wf") else "")   # khoa cache / vsbt: chuoi chot loi / windfall PP1
     first = _rows("SELECT MIN(ts) AS t FROM runs WHERE mode=?", m)[0]["t"]
     rows = _rows("SELECT strategy, entry_ts, exit_ts, notional, r_usd, pnl_bps FROM positions "
                  "WHERE mode=? AND open=0 AND pnl_bps IS NOT NULL", m)
@@ -312,6 +337,10 @@ def actual_vs_backtest():
             s = list(bt["series"][k])
             if k == "xsmom" and ck and ck in bt.get("pp1x_combo", {}):
                 s = [a + c for a, c in zip(s, bt["pp1x_combo"][ck])]
+            if k == "xsmom" and F.get("tp") and "pp1tp" in bt["series"]:
+                s = [a + c for a, c in zip(s, bt["series"]["pp1tp"])]
+            if k == "xsmom" and F.get("wf") and "pp1wf" in bt["series"]:
+                s = [a + c for a, c in zip(s, bt["series"]["pp1wf"])]
             if k == "vsa":                 # tep luu USD cho lenh 100 USD → R (1R = gia di VSA_R_FRAC)
                 s = [x / (100 * CFG.vsa_r_frac) for x in s]
             n_d = len(s)
@@ -338,6 +367,10 @@ def actual_vs_backtest():
             s_ = list(bt["series"][k])
             if k == "xsmom" and ck and ck in bt.get("pp1x_combo", {}):
                 s_ = [x + c for x, c in zip(s_, bt["pp1x_combo"][ck])]
+            if k == "xsmom" and F.get("tp") and "pp1tp" in bt["series"]:
+                s_ = [x + c for x, c in zip(s_, bt["series"]["pp1tp"])]
+            if k == "xsmom" and F.get("wf") and "pp1wf" in bt["series"]:
+                s_ = [x + c for x, c in zip(s_, bt["series"]["pp1wf"])]
             if k == "vsa":
                 s_ = [x / (100 * CFG.vsa_r_frac) for x in s_]
             G = bt["gross"].get(k) or [0.0] * n; NP = bt["npos"].get(k) or [0] * n
@@ -366,8 +399,8 @@ def actual_vs_backtest():
         rr = _rows("SELECT gross, n_open FROM runs WHERE mode=? AND status='xong' ORDER BY ts", m)
         L = len(dx) if dx else max(1, int(round(days)))
         caps_ = settings.risk()
-        key = (tuple(sorted(al.items())), ru, ck, CFG.vsa_r_frac, float(caps_["gross_x"]) * float(CFG.start_equity), _OV["mtime"])
-        cmpx = VB.compare(bt, key, al, ru, ck, CFG.vsa_r_frac, key[4],
+        key = (tuple(sorted(al.items())), ru, ckc, CFG.vsa_r_frac, float(caps_["gross_x"]) * float(CFG.start_equity), _OV["mtime"])
+        cmpx = VB.compare(bt, key, al, ru, ckc, CFG.vsa_r_frac, key[4],
                           {"d": dx, "g": [float(r["gross"] or 0) for r in rr], "npos": [int(r["n_open"] or 0) for r in rr]},
                           L, {k: out[k]["act"] for k in out})
     e_now = runner.equity_now()
@@ -405,7 +438,14 @@ def state():
         "sched": {"at": CFG.run_at_utc,
                   "next": nxt.next_run_time.isoformat() if nxt and nxt.next_run_time else None,
                   "vsa_next": (j.next_run_time.isoformat()
-                               if (j := sched.get_job("vsa4h")) and j.next_run_time else None)},
+                               if (j := sched.get_job("vsa4h")) and j.next_run_time else None),
+                  "pp1tp_next": (j2.next_run_time.isoformat()
+                                 if (j2 := sched.get_job("pp1tp1h")) and j2.next_run_time else None),
+                  "pp1tp_last": db.kv_get("pp1tp_last", {}) or {},
+                  "pp1wf_next": (j3.next_run_time.isoformat()
+                                 if (j3 := sched.get_job("pp1wf15m")) and j3.next_run_time else None),
+                  "pp1wf_last": db.kv_get("pp1wf_last", {}) or {},
+                  "pp1wf_reenter": db.kv_get("pp1wf_reenter", []) or []},
         "last_run": db.kv_get("last_run"),
         "safety": db.kv_get("safety", {}) or {},
         "blocked": db.kv_get("blocked"),

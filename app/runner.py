@@ -263,6 +263,16 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
                            "stop": None, "r_usd": r_xsmom,
                            "notional": r_xsmom / rf,
                            "why": f"điểm {x['score']:+.2f} · R {rf*100:.1f}%"})
+    # ---- windfall (app/pp1wf.py): mo lai lenh bi dong giua ngay o so KHONG den luot ----
+    wf_re: list = []
+    if r_xsmom > 0 and F.get("wf") and F.get("wf_re"):
+        from . import pp1wf as WF          # import muon: pp1wf import runner
+        try:
+            have = {(t["sleeve"], t["symbol"], t["side"]) for t in target if t["strategy"] == "xsmom"}
+            wf_re = WF.reentry_targets(P, day, sl, r_xsmom, have, nobuy)
+        except Exception as e:
+            db.log("error", f"windfall: mở lại lỗi, bỏ qua hôm nay: {e}")
+        target += wf_re
     if r_xsmom > 0:
         note["xsmom"] = {
             "sổ tái cân bằng hôm nay": sl,
@@ -274,6 +284,7 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
             "funding chặn bán": (bool(fv and fv.get("active")) if fv is not None else
                                  ("tắt" if not F["fund_veto"] else "không cần tính")),
             "BSADF chặn bán": sorted(bv) if F["bsadf_veto"] else "tắt",
+            "windfall mở lại": sorted(f"{x['symbol']} (sổ {x['sleeve']})" for x in wf_re) if F.get("wf") else "tắt",
             "sổ khác giữ nguyên": len(cur_x) - sum(
                 1 for p in cur_x if p["sleeve"] == sl)}
 
@@ -622,6 +633,9 @@ def _run_once(force: bool = False) -> dict:
             eq += reconcile(prices, eq)
         db.kv_set("realised_pending", 0.0)
         db.kv_set(f"vsa_realised:{m}", 0.0)
+        # PP1 chot loi lenh BAN moi gio (app/pp1tp.py) — cong vao von o day
+        eq += float(db.kv_get(f"tp_realised:{m}", 0) or 0)
+        db.kv_set(f"tp_realised:{m}", 0.0)
         # C13: lenh limit dat o luot truoc — khop thi ghi so (luot nay dong lai)
         try:
             C13.settle(m, P, day)
@@ -680,6 +694,12 @@ def _run_once(force: bool = False) -> dict:
                 else:
                     _book_open(cx, a, m)
         _save_blocked(run_id, day, m, blocked)
+        # windfall: muc mo lai da den luot hom nay (mo duoc, bi chan, hay so den luot) → bo
+        try:
+            from . import pp1wf as WF
+            WF.consume(day + DAY)
+        except Exception as e:
+            db.log("warn", f"windfall: dọn danh sách mở lại lỗi: {e}")
         # C13: treo lenh limit mua cho nen ke tiep (sau khi so da ghi xong)
         try:
             if C13.r_usd() > 0:

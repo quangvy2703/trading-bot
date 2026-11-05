@@ -65,6 +65,8 @@ SPEC = {
     "xsmom_kase":      ("pp1x", int, 0, 1, "Kase: đóng chân MUA động lượng khi close < đỉnh − (TB + K·σ biên độ 2 nến) — 1 bật, 0 tắt"),
     "xsmom_fund_veto": ("pp1x", int, 0, 1, "funding: không mở lệnh BÁN động lượng khi funding toàn thị trường cực thấp — 1 bật, 0 tắt"),
     "xsmom_bsadf_veto": ("pp1x", int, 0, 1, "BSADF: không mở lệnh BÁN động lượng khi mã đang 'nổ' (BSADF > ngưỡng 95%) — 1 bật, 0 tắt"),
+    "xsmom_tp":        ("pp1x", int, 0, 1, "Chốt lời lệnh BÁN động lượng mỗi giờ (C4): lãi ≥ 0,5R khi tỉ trọng KL spot ≤ 0,8× TB, hoặc ngày giữ thứ 4 lãi ≥ 1R — 1 bật, 0 tắt"),
+    "xsmom_wf":        ("pp1x", int, 0, 1, "Windfall: đóng lệnh động lượng khi nến 15m chạy có lợi ≥ 25σ (σ 3 ngày), mở lại ở lượt ngày kế tiếp nếu sổ chưa đến lượt — 1 bật, 0 tắt"),
 }
 
 
@@ -79,7 +81,8 @@ def locked() -> dict:
          "risk_r_usd": CFG.risk_r_usd, "risk_max_open": CFG.risk_max_open,
          "delist_ban_days": CFG.delist_ban_days,
          "xsmom_kase": CFG.xsmom_kase, "xsmom_fund_veto": CFG.xsmom_fund_veto,
-         "xsmom_bsadf_veto": CFG.xsmom_bsadf}
+         "xsmom_bsadf_veto": CFG.xsmom_bsadf, "xsmom_tp": CFG.xsmom_tp,
+         "xsmom_wf": CFG.xsmom_wf}
     for k, v in LOCK_RSI2.items():
         d[f"rsi2.{k}"] = v
     for k, v in LOCK_XSMOM.items():
@@ -121,10 +124,11 @@ def risk() -> dict:
 
 
 def pp1x() -> dict:
-    """Cong tac hai luat phu cho dong luong."""
+    """Cong tac cac luat phu cho dong luong."""
     e = effective()
     return {"kase": bool(e["xsmom_kase"]), "fund_veto": bool(e["xsmom_fund_veto"]),
-            "bsadf_veto": bool(e["xsmom_bsadf_veto"])}
+            "bsadf_veto": bool(e["xsmom_bsadf_veto"]), "tp": bool(e["xsmom_tp"]),
+            "wf": bool(e["xsmom_wf"]), "wf_re": bool(CFG.xsmom_wf_re)}
 
 
 def alloc() -> dict:

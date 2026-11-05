@@ -81,6 +81,23 @@ class Config:
     xsmom_bsadf_w: int = _i("XSMOM_BSADF_W", 90)
     xsmom_bsadf_w0: int = _i("XSMOM_BSADF_W0", 30)
     xsmom_bsadf_cv: float = _f("XSMOM_BSADF_CV", 0.531)
+    #   XSMOM_TP        chot loi lenh BAN dong luong giua cac luot (app/pp1tp.py, C4 = F08 + P16),
+    #                   kiem moi gio: F08 lai >= F08_M R va ti trong KL spot <= (1 - F08_X) x TB 60 ngay;
+    #                   P16 trong ngay giu thu P16_H lai >= P16_M R
+    xsmom_tp: int = _i("XSMOM_TP", 1)
+    xsmom_tp_f08_x: float = _f("XSMOM_TP_F08_X", 0.2)
+    xsmom_tp_f08_m: float = _f("XSMOM_TP_F08_M", 0.5)
+    xsmom_tp_p16_h: int = _i("XSMOM_TP_P16_H", 4)
+    xsmom_tp_p16_m: float = _f("XSMOM_TP_P16_M", 1.0)
+    #   XSMOM_WF        windfall PP1 (app/pp1wf.py): moi nen XSMOM_WF_TF vua dong, side x z >= XSMOM_WF_K
+    #                   (z = log-return / sd XSMOM_WF_W nen truoc) → dong; XSMOM_WF_RE 1 = mo lai o luot ngay ke tiep
+    #                   neu so khong den luot. XSMOM_WF_SIDE both / long / short
+    xsmom_wf: int = _i("XSMOM_WF", 1)
+    xsmom_wf_k: float = _f("XSMOM_WF_K", 25.0)
+    xsmom_wf_tf: str = os.environ.get("XSMOM_WF_TF", "15m")
+    xsmom_wf_w: int = _i("XSMOM_WF_W", 288)
+    xsmom_wf_re: int = _i("XSMOM_WF_RE", 1)
+    xsmom_wf_side: str = os.environ.get("XSMOM_WF_SIDE", "both")
     # So giay C13 (app/c13.py, docs/c13-limit-sau.md): lenh mua limit sau k×ATR duoi close,
     # ban o close ngay khop. Chi ghi, khong dat lenh. 0 = tat.
     c13_paper: bool = os.environ.get("C13_PAPER", "0") == "1"

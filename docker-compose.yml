@@ -166,6 +166,21 @@ services:
       XSMOM_BSADF_W: "${XSMOM_BSADF_W:-90}"
       XSMOM_BSADF_W0: "${XSMOM_BSADF_W0:-30}"
       XSMOM_BSADF_CV: "${XSMOM_BSADF_CV:-0.531}"
+      # Chot loi lenh BAN dong luong moi gio (app/pp1tp.py, docs/pp1-tp-c4.md): C4 = F08 + P16.
+      # F08: lai >= 0,5R va ti trong KL spot 3 ngay <= 0,8 x trung vi 60 ngay; P16: ngay giu thu 4 lai >= 1R.
+      XSMOM_TP: "${XSMOM_TP:-1}"
+      XSMOM_TP_F08_X: "${XSMOM_TP_F08_X:-0.2}"
+      XSMOM_TP_F08_M: "${XSMOM_TP_F08_M:-0.5}"
+      XSMOM_TP_P16_H: "${XSMOM_TP_P16_H:-4}"
+      XSMOM_TP_P16_M: "${XSMOM_TP_P16_M:-1.0}"
+      # Windfall PP1 (app/pp1wf.py): nen 15m vua dong co side x z >= K (z = log-return / sd 288 nen truoc)
+      # → dong lenh; RE 1 = mo lai o luot ngay ke tiep neu so khong den luot. SIDE both / long / short.
+      XSMOM_WF: "${XSMOM_WF:-1}"
+      XSMOM_WF_K: "${XSMOM_WF_K:-25}"
+      XSMOM_WF_TF: "${XSMOM_WF_TF:-15m}"
+      XSMOM_WF_W: "${XSMOM_WF_W:-288}"
+      XSMOM_WF_RE: "${XSMOM_WF_RE:-1}"
+      XSMOM_WF_SIDE: "${XSMOM_WF_SIDE:-both}"
       # ---- so giay C13 (app/c13.py) — CHI GHI, KHONG DAT LENH; khop ly tuong de doi chieu
       # voi C13 chay trong bot (ALLOC_C13). C13_K / C13_TOPN dung chung cho ca hai. 0 = tat.
       C13_PAPER: "${C13_PAPER:-1}"
