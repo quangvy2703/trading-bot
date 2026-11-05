@@ -179,7 +179,10 @@ RESEARCH = {
 def defaults() -> dict:
     e = settings.effective()
     e.update(start_equity=CFG.start_equity, leverage=float(CFG.leverage),
-             min_notional=5.0, fee_bps=FEE_BPS, one_way=True)
+             min_notional=5.0, fee_bps=FEE_BPS, one_way=True,
+             # dung tren san nhu bot that (executor.sync_safety): stop RSI(2) khop
+             # trong nen tai muc stop; dong luong co dung an toan SAFETY_R x R
+             exch_stop=True, safety_r=float(CFG.safety_r))
     return e
 
 
@@ -307,9 +310,25 @@ def _run(p: dict) -> dict:
             if not np.isfinite(C[si, j]):
                 closes.append((q, "hết dữ liệu"))
             elif q["stop"] and Lo[si, j] <= q["stop"]:
+                if p.get("exch_stop"):          # dung tren san: khop ngay trong nen j tai muc stop
+                    q["px_x"] = min(float(O[si, j]), float(q["stop"])) if np.isfinite(O[si, j]) else float(q["stop"])
+                    q["j_x"] = j
                 closes.append((q, "cắt lỗ"))
             elif np.isfinite(RSI[si, j]) and RSI[si, j] > R["rsi_out"]:
                 closes.append((q, f"RSI>{R['rsi_out']:g}"))
+        if p.get("exch_stop") and float(p.get("safety_r", 3.0)) > 0:   # dung an toan dong luong o SAFETY_R x R tu gia vao
+            for q in pos:
+                if q["strategy"] != "xsmom" or j < q["entry_j"]:
+                    continue
+                si = q["si"]
+                d_ = min(float(p.get("safety_r", 3.0)) * q["r_usd"] / q["notional"], 0.95)
+                lvl = q["entry_px"] * (1 - q["side"] * d_)
+                hit = (q["side"] == 1 and Lo[si, j] <= lvl) or (q["side"] == -1 and H[si, j] >= lvl)
+                if hit:
+                    o_ = float(O[si, j]) if np.isfinite(O[si, j]) else lvl
+                    q["px_x"] = min(o_, lvl) if q["side"] == 1 else max(o_, lvl)
+                    q["j_x"] = j
+                    closes.append((q, "dừng an toàn"))
         cset = {id(q) for q, _ in closes}
         opens = []
         uni = (AGE[:, j] >= R["min_bars"]) & np.isfinite(C[:, j])
@@ -505,12 +524,14 @@ def _run(p: dict) -> dict:
             px = O[si, j + 1]
             if not np.isfinite(px) or px <= 0:
                 px = last_px(si, j)
+            if "px_x" in q:                     # dung tren san da khop trong nen j
+                px = q["px_x"]
             g = q["notional"] * q["side"] * (px / q["entry_px"] - 1)
             pnl = g - q["notional"] * fee
             real[q["strategy"]] += pnl
             trades.append({"s": q["strategy"], "sym": syms[si], "side": q["side"],
                            "sl": q["sleeve"], "a": int(T[q["entry_j"]]),
-                           "z": int(T[j + 1]), "pin": q["entry_px"], "pout": float(px),
+                           "z": int(T[q["j_x"]] if "j_x" in q else T[j + 1]), "pin": q["entry_px"], "pout": float(px),
                            "usd": q["notional"], "r": q["r_usd"],
                            "pnl": pnl - q["fund"], "fund": q["fund"], "why": why})
         pos = [q for q in pos if id(q) not in cids] + ok2

@@ -26,8 +26,14 @@ def bt_daily(bt: dict, alloc: dict, ru: float, ck: str, r_frac: float) -> dict:
         if a <= 0 or k not in bt["series"]:
             continue
         s = np.asarray(bt["series"][k], float)
-        if k == "xsmom" and ck and ck in bt.get("pp1x_combo", {}):
-            s = s + np.asarray(bt["pp1x_combo"][ck], float)
+        parts = (ck or "").split("+")      # "kb+tp+wf": combo Kase/funding/BSADF + chuoi chot loi / windfall
+        ck0, tp, wf = parts[0], "tp" in parts[1:], "wf" in parts[1:]
+        if k == "xsmom" and ck0 and ck0 in bt.get("pp1x_combo", {}):
+            s = s + np.asarray(bt["pp1x_combo"][ck0], float)
+        if k == "xsmom" and tp and "pp1tp" in bt["series"]:
+            s = s + np.asarray(bt["series"]["pp1tp"], float)
+        if k == "xsmom" and wf and "pp1wf" in bt["series"]:
+            s = s + np.asarray(bt["series"]["pp1wf"], float)
         if k == "vsa":
             s = s / (100 * r_frac)
         d += s * ru * a

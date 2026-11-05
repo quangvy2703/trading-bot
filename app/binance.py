@@ -50,6 +50,11 @@ class PublicApi:
         return self._get("/fapi/v1/klines", symbol=symbol, interval="1h",
                          startTime=int(start_ms), limit=int(limit))
 
+    def klines_iv(self, symbol: str, interval: str, start_ms: int, limit: int = 1500) -> list:
+        """Nen khung bat ky (15m cho windfall PP1, app/pp1wf.py) — khong luu kho."""
+        return self._get("/fapi/v1/klines", symbol=symbol, interval=interval,
+                         startTime=int(start_ms), limit=int(limit))
+
     def prices(self) -> dict:
         """Gia khop gan nhat cho moi ma — dung lam gia vao/ra cua so giay."""
         return {x["symbol"]: float(x["price"])

@@ -1351,7 +1351,7 @@ const GROUPS = [
   ['alloc', 'Bật / tắt chiến lược', 'hệ số 1R riêng từng chiến lược · 0 là tắt'],
   ['rsi2', 'RSI(2) Connors v3', 'chỉ ảnh hưởng RSI(2)'],
   ['xsmom', 'Động lượng cắt ngang', 'chỉ ảnh hưởng động lượng'],
-  ['pp1x', 'Luật phụ động lượng (Kase · funding)', 'công tắc 1 bật / 0 tắt · chỉ ảnh hưởng động lượng'],
+  ['pp1x', 'Luật phụ động lượng (Kase · BSADF · chốt lời · windfall)', 'công tắc 1 bật / 0 tắt · chỉ ảnh hưởng động lượng'],
   ['risk', 'Trần rủi ro', 'DÙNG CHUNG cả hai chiến lược']];
 const WARN_SVG = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
   + '<path d="M12 3.6 2.6 20h18.8L12 3.6Z" stroke="currentColor" stroke-width="1.7"'
@@ -1444,7 +1444,7 @@ function cfgEst() {
   let ordMax = 0, ordWho = '';
   const q = (a, p) => { const s_ = Array.from(a).sort((x, y) => x - y); return s_[Math.min(s_.length - 1, Math.floor(p * s_.length))]; };
   const ser = k => k === 'vsa' ? b.series.vsa.map(x => x / (100 * (CFGOV.cfg.vsa_r_frac || 0.1)))
-    : k === 'xsmom' ? b.series.xsmom.map((x, i) => x + ((b.pp1x_combo || {})[(C.effective.xsmom_kase ? 'k' : '') + (C.effective.xsmom_fund_veto ? 'f' : '') + (C.effective.xsmom_bsadf_veto ? 'b' : '')] || [])[i] || 0)
+    : k === 'xsmom' ? b.series.xsmom.map((x, i) => x + (((b.pp1x_combo || {})[(C.effective.xsmom_kase ? 'k' : '') + (C.effective.xsmom_fund_veto ? 'f' : '') + (C.effective.xsmom_bsadf_veto ? 'b' : '')] || [])[i] || 0) + ((C.effective.xsmom_tp && b.series.pp1tp) ? b.series.pp1tp[i] : 0) + ((C.effective.xsmom_wf && b.series.pp1wf) ? b.series.pp1wf[i] : 0))
     : b.series[k];
   for (const k of CE_K) {
     const a = v('alloc_' + k), f = ru * a, G = b.gross[k], P = b.npos[k], S_ = ser(k), el = $('ce-' + k);
@@ -2206,6 +2206,12 @@ const OVM = [
   {k: 'bsadf', tag: 'PP1 + BSADF', kind: 'rule', unit: 'R', c: '#2a78d6', name: 'Chặn bán khi mã đang “nổ”',
    ev: 'engine +189 USD · KTC Šidák [+0,04; +0,38] · 6/6 năm · 24/24 ô dương · phép giả p 0,00',
    desc: 'Không mở lệnh BÁN động lượng khi BSADF (ADF trên log giá, cửa sổ 30–90 nến) của mã vượt ngưỡng 95% — thực chất là cú sập đang tăng tốc.'},
+  {k: 'pp1tp', tag: 'PP1 + chốt lời', kind: 'rule', unit: 'R', c: '#2a78d6', name: 'Chốt lời lệnh bán mỗi giờ (C4)',
+   ev: 'engine +491 USD · Sharpe 2,34→2,46 · tổng lỗ tháng âm −2.064→−1.712, Šidák [+91; +745] · 6/6 năm, 6/6 mốc cắt ngày · phép giả p 0,000 · số tháng âm không đổi · chọn sau lưới',
+   desc: 'Lệnh BÁN động lượng: lãi ≥ 0,5R khi tỉ trọng khối lượng spot 3 ngày ≤ 0,8× trung vị 60 ngày, hoặc ngày giữ thứ 4 lãi ≥ 1R → đóng ở nến 1H kế tiếp.'},
+  {k: 'pp1wf', tag: 'PP1 + windfall', kind: 'rule', unit: 'R', c: '#2a78d6', name: 'Windfall nến 15m (k 25, mở lại)',
+   ev: 'trên nền C4: +694 USD · Sharpe 2,46→2,56, Šidák-6 [+0,01; +0,25] · 6/6 năm · dev +539 / holdout +155 · NHƯNG 10 ngày tốt nhất = toàn bộ phần lãi (chủ yếu ngày sập chớp nhoáng), k chọn trên cùng mẫu, tháng âm 17→16 không ý nghĩa',
+   desc: 'Nến 15m vừa đóng chạy có lợi ≥ 25× độ lệch chuẩn 3 ngày → đóng lệnh động lượng; lượt ngày kế tiếp mở lại nếu sổ chưa đến lượt tái cân bằng.'},
   {k: 'crash', tag: 'PP1 + BTC sập', kind: 'rule', unit: 'R', c: '#2a78d6', name: 'BTC sập → cắt chân mua',
    ev: '+237 USD, 6/6 năm nhưng KTC chứa 0, phép giả Sharpe p 0,095, đổi dấu ở 4% → ứng viên',
    desc: 'BTC đóng cửa ngày giảm ≥ 5%: đóng mọi lệnh mua động lượng, không mua lại trong 7 lượt.'},
@@ -2227,6 +2233,8 @@ function ovStatus(m) {
   if (m.k === 'kase') return c.pp1x.kase ? ['run', 'ĐANG CHẠY'] : ['offs', 'ĐANG TẮT'];
   if (m.k === 'fund') return c.pp1x.fund_veto ? ['run', 'ĐANG CHẠY'] : ['cand', 'ỨNG VIÊN · KHÔNG ỔN ĐỊNH'];
   if (m.k === 'bsadf') return c.pp1x.bsadf_veto ? ['run', 'ĐANG CHẠY'] : ['offs', 'ĐANG TẮT'];
+  if (m.k === 'pp1tp') return c.pp1x.tp ? ['run', 'ĐANG CHẠY'] : ['offs', 'ĐANG TẮT'];
+  if (m.k === 'pp1wf') return c.pp1x.wf ? ['run', 'ĐANG CHẠY'] : ['offs', 'ĐANG TẮT'];
   if (m.k === 'crash') return c.crash_paper ? ['paper', 'SỔ GIẤY'] : ['cand', 'ỨNG VIÊN'];
   return ['cand', 'ỨNG VIÊN'];
 }
