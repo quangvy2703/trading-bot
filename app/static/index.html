@@ -516,6 +516,54 @@ nav.tabs button svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:curren
 .mrow .rb .med{position:absolute;top:-2px;width:2px;height:10px;background:var(--acc);border-radius:1px}
 .mrow .rb .me{position:absolute;top:-3px;width:10px;height:12px;margin-left:-5px;border-radius:3px;background:var(--ink);box-shadow:0 0 0 2px #fff}
 .mrow .s{font-size:10.5px;color:var(--dim);display:flex;justify-content:space-between}
+/* The tung phuong phap: thuc te so voi backtest */
+.scards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:8px;padding:0 16px 14px}
+.scard{min-width:0;background:rgba(255,255,255,.62);border:1px solid var(--edge);border-top:3px solid var(--c);border-radius:12px;padding:7px 9px 8px}
+.scard.off{opacity:.5}
+@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  .scard{transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease}
+  .scard:hover{transform:translateY(-3px);background:rgba(255,255,255,.9);
+    box-shadow:0 10px 24px -10px rgba(42,35,64,.28),0 0 0 1px color-mix(in srgb,var(--c) 35%,transparent)}
+  .scard.off:hover{opacity:.8}
+}
+.scard .h{display:flex;justify-content:space-between;align-items:center;gap:6px;min-width:0}
+.scard .h .schip{padding:2px 8px;font-size:12px}
+.scard .h .sub{font-size:10.5px;white-space:nowrap}
+.scard>.sub{font-size:11px;margin-top:4px;line-height:1.5}
+.scard .verd{font-size:10px;padding:0 5px}
+.scard .mg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px}
+.scard .mrow{padding:5px 7px 4px;border-radius:9px;min-width:0}
+.scard .mrow .t{font-size:10.5px;white-space:nowrap}
+.scard .mrow .t>span:first-child{overflow:hidden;text-overflow:ellipsis}
+.scard .mrow .a{font-size:12.5px;margin-top:1px}
+.scard .mrow .rb{height:4px;margin:4px 0 2px}
+.scard .mrow .rb .med{top:-2px;height:8px}
+.scard .mrow .rb .me{top:-2px;width:8px;height:8px;margin-left:-4px;border-radius:50%}
+.scard .mrow .s{font-size:9.5px}
+.scards--all{grid-template-columns:1fr;padding-bottom:8px}
+.scard .mg4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){.scard .mg4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:330px){.scard .mg{grid-template-columns:1fr}}
+.scard .note{font-size:10px;color:var(--dim);margin-top:5px}
+@media (max-width:560px){.scards{padding:0 10px 12px;grid-template-columns:1fr}}
+
+/* Nhom the: the lon chua cac the nho (giong the «Tổng bot») */
+.grp{background:rgba(255,255,255,.4);border:1px solid var(--rim);border-top:3px solid var(--c,var(--acc));
+  border-radius:var(--r);box-shadow:var(--sh);padding:9px 11px 11px;margin-top:12px;min-width:0}
+section>.grp:first-child{margin-top:0}
+.gh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 8px}
+.grp .tile,.grp .mcard{box-shadow:none;background:rgba(255,255,255,.62);border-color:var(--edge)}
+.grp .mcard.off{background:rgba(255,255,255,.3);border-color:rgba(42,35,64,.16)}
+.grp .mgrid{margin-top:0}
+.grp .ovcap{margin:9px 2px 0}
+@media (max-width:560px){.grp{padding:8px 8px 9px}}
+/* Moi the noi len khi re chuot (chi chuot that, ton trong giam chuyen dong) */
+@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  .tile,.mcard,.scard,.grp,.panel{transition:transform .18s ease,box-shadow .18s ease,background-color .18s ease}
+  .tile:hover,.mcard:hover{transform:translateY(-3px);box-shadow:0 10px 24px -10px rgba(42,35,64,.28)}
+  .panel:hover,.grp:hover{transform:translateY(-2px);box-shadow:0 14px 32px -14px rgba(42,35,64,.24)}
+  .mcard.chg:hover{box-shadow:0 0 0 2px rgba(109,91,208,.5),0 10px 24px -10px rgba(42,35,64,.28)}
+}
 </style>
 
 <div class="app">
@@ -553,6 +601,7 @@ nav.tabs button svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:curren
   </nav>
 
   <section id="t-dash" class="on">
+    <div class="grp"><div class="gh"><span class="schip"><i style="background:var(--acc)"></i>Tài khoản</span></div>
     <div class="hero">
       <div class="tile">
         <span class="ic"><svg viewBox="0 0 21 21"><path d="M3.2 7.6c0-1.6 1.1-2.6 2.7-2.9L15 3.2c1.4-.2 2.4.6 2.4 2v1.4"/><rect x="3.2" y="6.6" width="14.6" height="11.2" rx="3.4"/><path d="M17.8 11.2h-3a2 2 0 0 0 0 4h3"/><circle class="fill" cx="14.9" cy="13.2" r=".95"/></svg></span>
@@ -579,7 +628,7 @@ nav.tabs button svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:curren
           <div class="lbl">Dữ liệu</div>
           <div class="val" id="dt">—</div><div class="sub" id="dtsub">—</div><div class="btl" id="bt-dt"></div></div>
       </div>
-    </div>
+    </div></div>
 
     <div class="panel" style="margin-top:12px">
       <div class="ph"><h3>Đường vốn</h3><span class="sub" id="cvread"></span></div>
@@ -596,8 +645,10 @@ nav.tabs button svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:curren
     <div class="panel" style="margin-top:12px">
       <div class="ph"><h3>Thực tế so với backtest</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Ô chỉ số&lt;/b&gt;: thực tế (số to, chấm đen) so với &lt;b&gt;mọi cửa sổ cùng số ngày&lt;/b&gt; trong backtest 2021–26 ở hệ số đang chạy — dải tím là 95% các cửa sổ, vạch là trung vị. Ngoài dải thì gắn nhãn lệch. Có trần / không trần theo nút ở tab Tổng quan. Sharpe hiện khi đã chạy ≥ 7 ngày.&lt;br&gt;&lt;b&gt;Bảng&lt;/b&gt;: thực tế / backtest từng chiến lược. ≈ trong vùng 95%, ↑ ↓ lệch: số lệnh theo cửa sổ cùng số ngày; tỉ lệ thắng và R/lệnh theo khoảng tin cậy với đúng số lệnh thực tế.&lt;br&gt;Thực tế: vị thế đã đóng + đường vốn của chế độ đang chạy (giấy hoặc thật), từ lượt chạy đầu tiên. Backtest không có phí trượt giá thật và không bị chặn lệnh." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
         <span class="sub" id="vsbtSub"></span></div>
-      <div class="mgrid2" id="vsbtM"></div>
-      <div class="tw"><table id="tvsbt"></table></div>
+      <div class="scards scards--all"><div class="scard" style="--c:var(--acc)">
+        <div class="h"><span class="schip"><i style="background:var(--acc)"></i>Tổng bot</span><span class="sub" id="vsbtAllSub"></span></div>
+        <div class="mg mg4" id="vsbtM"></div></div></div>
+      <div class="scards" id="vsbtCards"></div>
     </div>
 
     <div class="cols">
@@ -681,7 +732,8 @@ nav.tabs button svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:curren
       </span>
     </div>
 
-    <div class="hero" style="margin-top:11px">
+    <div class="grp"><div class="gh"><span class="schip"><i style="background:var(--acc)"></i>Tổ hợp đang chọn</span></div>
+    <div class="hero">
       <div class="tile ovhero">
         <span class="ic"><svg viewBox="0 0 21 21"><path d="M3.4 14.7 8.4 10l2.9 2.6 6.3-5.8"/><path d="M17.6 11V6.6h-4.4"/></svg></span>
         <div class="lbl" id="ovK0l">Tổng lãi</div>
@@ -692,13 +744,13 @@ nav.tabs button svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:curren
       </div>
       <div class="lat" id="ovKpi"></div>
     </div>
-    <div class="ovcap" id="ovCapLine"></div>
+    <div class="ovcap" id="ovCapLine"></div></div>
     <div class="ovchg" id="ovChg"></div>
 
-    <div class="mgh"><h4 title="tắt bớt để xem bot sẽ ra sao nếu thiếu phương pháp đó">Đang chạy trong bot</h4></div>
-    <div class="mgrid" id="ovRunG"></div>
-    <div class="mgh"><h4 title="sổ giấy · ứng viên · luật đang tắt — bật lên để xem lãi/lỗ đổi thế nào">Có thể thêm</h4></div>
-    <div class="mgrid" id="ovAddG"></div>
+    <div class="grp" style="--c:var(--up)"><div class="gh"><span class="schip" title="tắt bớt để xem bot sẽ ra sao nếu thiếu phương pháp đó"><i style="background:var(--up)"></i>Đang chạy trong bot</span></div>
+    <div class="mgrid" id="ovRunG"></div></div>
+    <div class="grp" style="--c:var(--dim)"><div class="gh"><span class="schip" title="sổ giấy · ứng viên · luật đang tắt — bật lên để xem lãi/lỗ đổi thế nào"><i style="background:var(--dim)"></i>Có thể thêm</span></div>
+    <div class="mgrid" id="ovAddG"></div></div>
 
     <div class="panel" style="margin-top:14px">
       <div class="ph"><h3>Lãi/lỗ từng tháng</h3>
@@ -832,7 +884,7 @@ nav.tabs button svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:curren
     </div>
 
     <div id="btRes">
-      <div class="btkpi" id="btKpi"></div>
+      <div class="grp"><div class="gh"><span class="schip"><i style="background:var(--acc)"></i>Kết quả</span></div><div class="btkpi" id="btKpi"></div></div>
       <div class="panel" style="margin-top:12px">
         <div class="ph"><h3>Lãi luỹ kế</h3>
           <span class="sub legend" id="btLeg"></span></div>
@@ -1317,6 +1369,7 @@ function paintAcct() {
 
 function paintPnl() {
   paintAcct();
+  paintCards();
   const tb = $('tpos');
   if (!tb) return;
   const Q = POS.map(pnlOf);
@@ -2859,6 +2912,7 @@ function renderVsbt(V) {
     ['max_dd', 'Sụt lớn nhất', 'USD', -1, v => '−' + n0(v)], ['worst_day', 'Ngày tệ nhất', 'USD', 1, sgn0],
     ['win_days', 'Tỉ lệ ngày lãi', '', 1, v => Math.round(v * 100) + '%'], ['sharpe', 'Sharpe', '', 1, v => pct(v, 2)],
     ['gross', 'Phơi nhiễm TB', 'USD', 0, n0], ['npos', 'Vị thế mở TB', '', 0, v => pct(v, 1)]];
+  $('vsbtAllSub').textContent = C ? `cả bot · ${pct(d, d < 10 ? 1 : 0)} ngày · backtest ${capOn ? 'có trần' : 'không trần'}` : '';
   $('vsbtM').innerHTML = !C ? '' : MD.map(([k, nm, u, dir, fm]) => {
     const B = k === 'gross' ? (capOn ? C.bt.gross : C.bt.gross_raw) : k === 'npos' ? C.bt.npos : (C.bt[capOn ? 'cap' : 'raw'] || {})[k];
     if (!B) return '';
@@ -2876,29 +2930,72 @@ function renderVsbt(V) {
       + (a == null ? '' : `<span class="me" style="left:${P(a)}%"></span>`) + `</div>`
       + `<div class="s"><span>${fm(lo)}</span><span>BT ${fm(md)}</span><span>${fm(hi)}</span></div></div>`;
   }).join('');
-  const rows = Object.entries(V.rows || {}).filter(([k, r]) => r.alloc > 0 || r.act.n || r.act.open);
-  table($('tvsbt'), ['', 'lệnh đóng', 'đang mở', 'thắng', 'R / lệnh', 'lãi USD', 'ước năm'], rows, ([k, r]) => {
-    const [tag, nm, c] = VSBT_NM[k] || [k, k, '#999'], a = r.act, b = r.bt || {};
-    const small = a.n < 30, ci = (C && C.strat && C.strat[k]) || {};
-    const inr = (x, q) => x == null || !q ? null : x < q[0] ? -1 : x > q[2] ? 1 : 0;
-    const vv = (x, q, up = true) => { const t = inr(x, q); if (t == null) return '';
-      return t === 0 ? ' <span class="verd ok">≈</span>' : (t > 0) === up ? ' <span class="verd hi">↑</span>' : ' <span class="verd lo">↓</span>'; };
-    const rng = (q, f) => q ? ` · 95%: ${f(q[0])} … ${f(q[2])}` : '';
-    return [
-      {html: `<span class="schip ${r.alloc > 0 ? '' : 'off'}" title="${escA(nm + (r.alloc > 0 ? ' · hệ số ' + r.alloc : ' · đang tắt'))}"><i style="background:${c}"></i>${tag} ${esc(nm)}</span>`},
-      {html: two(a.n, b.exp_n == null ? '—' : n0(b.exp_n), `thực tế ${a.n} lệnh đóng · backtest kỳ vọng ${b.exp_n == null ? '—' : pct(b.exp_n, 1)} lệnh trong ${pct(d, 1)} ngày (${b.trades_per_day == null ? '—' : pct(b.trades_per_day, 2)} lệnh/ngày)`
-        + rng(ci.n_trades, v => n0(v)) + ' (mọi cửa sổ cùng số ngày, không trần — bị chặn lệnh thì thấp hơn)', null).html + vv(a.n, ci.n_trades)},
-      a.open || 0,
-      {html: two(pc(a.win), pc(b.win), `tỉ lệ lệnh lãi · thực tế / backtest${rng(ci.win, pc)} với ${a.n} lệnh${small ? ' — mẫu nhỏ' : ''}`, null).html + vv(a.win, ci.win)},
-      {html: two(f2(a.r_per), f2(b.r_per), `lãi TB mỗi lệnh tính bằng R · thực tế / backtest${rng(ci.r_per, f2)} với ${a.n} lệnh${a.bps == null ? '' : ` · thực tế TB ${f2(a.bps, 0)} bps`}${small ? ' — mẫu nhỏ' : ''}`, null).html + vv(a.r_per, ci.r_per)},
-      two(sgn0(a.usd), b.exp_usd == null ? '—' : sgn0(b.exp_usd), `lãi đã chốt thực tế · backtest kỳ vọng trong cùng số ngày ở hệ số đang chạy (${b.per_day_usd == null ? '—' : sgn0(b.per_day_usd)} USD/ngày)`,
-        a.n >= 5 ? a.usd >= 0 : null),
-      (() => { const by = b.per_day_usd == null ? '—' : sgn0(b.per_day_usd * 365);
-        if (a.per_year == null) return {html: `<span title="${escA('chưa đủ 1 ngày chạy · backtest ' + by + ' USD/năm (không trần)')}"><b>—</b> <span class="mut">/ ${by}</span></span>`};
-        const z = a.z ?? 0, v = z <= -2 ? ['lo', '↓'] : z >= 2 ? ['hi', '↑'] : ['ok', '≈'];
-        return {html: `<span title="${escA(`thực tế ${sgn0(a.usd)} USD đã chốt trong ${pct(d, 1)} ngày → ${sgn0(a.per_year)} USD/năm · backtest ${by} USD/năm (không trần) · z = ${pct(z, 2)} (|z| < 2: trong vùng backtest)`)}">`
-          + `<b class="${cls(a.per_year)}">${sgn0(a.per_year)}</b> <span class="mut">/ ${by}</span> <span class="verd ${v[0]}">${v[1]}</span></span>`}; })()];
-  });
+  /* Moi phuong phap mot the: thuc te / backtest cung so ngay, o he so dang chay.
+     ↑ ↓ ≈ = ngoai / trong khoang 95% cua backtest (so lenh: moi cua so cung
+     so ngay; thang, R/lenh: theo so lenh thuc te; uoc nam: z cua lai da chot). */
+  const ks = Object.keys(V.rows || {}).filter(k => { const r = V.rows[k]; return r.alloc > 0 || r.act.n || r.act.open; });
+  const inr = (x, q) => x == null || !q ? null : x < q[0] ? -1 : x > q[2] ? 1 : 0;
+  const vv = (x, q) => { const t = inr(x, q); if (t == null) return '';
+    return t === 0 ? '<span class="verd ok">≈</span>' : t > 0 ? '<span class="verd hi">↑</span>' : '<span class="verd lo">↓</span>'; };
+  const rng = (q, f) => q ? ` · 95% backtest: ${f(q[0])} … ${f(q[2])}` : '';
+  $('vsbtCards').innerHTML = ks.map(k => {
+    const r = V.rows[k], [tag, nm, c] = VSBT_NM[k] || [k, k, '#999'], a = r.act, b = r.bt || {};
+    const ci = (C && C.strat && C.strat[k]) || {}, small = a.n < 30;
+    const by = b.per_day_usd == null ? null : b.per_day_usd * 365;
+    const z = a.z, zv = a.per_year == null || z == null ? '' : z <= -2 ? '<span class="verd lo">thấp hơn BT</span>'
+      : z >= 2 ? '<span class="verd hi">cao hơn BT</span>' : '<span class="verd ok">trong vùng BT</span>';
+    /* Thanh khoang giong o chi so cap bot: dai tim = 95% backtest, vach = trung vi,
+       cham den = thuc te. Lai da chot: ky vong ± 1,96·σ ngay·√ngay (cung he so). */
+    const h1 = b.sd_day_usd == null ? null : 1.96 * b.sd_day_usd * Math.sqrt(Math.max(d, 1));
+    const pt = x => x == null ? null : [x, x, x];
+    const bar = (nm, x, q, fm, tip) => {
+      if (!q) return '';
+      const [lo, md, hi] = q, span = Math.max(hi - lo, Math.abs(md) * .5, 1e-9);
+      const x0 = lo - span * .25, x1 = hi + span * .25, P = v => Math.max(0, Math.min(100, (v - x0) / (x1 - x0) * 100));
+      const t = inr(x, q), v = t == null || hi === lo ? null : t === 0 ? ['ok', '≈ BT'] : t > 0 ? ['hi', '↑ BT'] : ['lo', '↓ BT'];
+      return `<div class="mrow" title="${escA(`${nm} · thực tế ${x == null ? '—' : fm(x)} · backtest trung vị ${fm(md)}`
+          + (hi === lo ? '' : `, 95%: ${fm(lo)} … ${fm(hi)}`) + (tip ? ' · ' + tip : ''))}">`
+        + `<div class="t"><span>${nm}</span>${v ? `<span class="verd ${v[0]}">${v[1]}</span>` : ''}</div>`
+        + `<div class="a">${x == null ? '—' : fm(x)}</div>`
+        + `<div class="rb">${hi === lo ? '' : `<span class="band" style="left:${P(lo)}%;width:${P(hi) - P(lo)}%"></span>`}`
+        + `<span class="med" style="left:${P(md)}%"></span>${x == null ? '' : `<span class="me" style="left:${P(x)}%"></span>`}</div>`
+        + `<div class="s"><span>${hi === lo ? '' : fm(lo)}</span><span>BT ${fm(md)}</span><span>${hi === lo ? '' : fm(hi)}</span></div></div>`;
+    };
+    return `<div class="scard ${r.alloc > 0 ? '' : 'off'}" style="--c:${c}">`
+      + `<div class="h"><span class="schip" title="${escA(nm)}"><i style="background:${c}"></i>${tag} ${esc(nm)}</span>`
+      + `<span class="sub">${r.alloc > 0 ? `×${pct(r.alloc, 1)} · 1R ${n0(r.alloc * V.r_usd)} USD` : 'đang tắt'}</span></div>`
+      + `<div class="sub">đang mở <b>${a.open || 0}</b>${a.open ? ` · chưa chốt <b data-sk="${k}">—</b>` : ''}${zv ? ' ' + zv : ''}</div>`
+      + `<div class="mg">`
+      + bar('Lãi đã chốt', a.usd, b.exp_usd == null ? null : [b.exp_usd - h1, b.exp_usd, b.exp_usd + h1], sgn0,
+        `USD trong ${pct(d, 1)} ngày ở hệ số đang chạy` + (a.per_year == null ? '' : ` · quy năm ${sgn0(a.per_year)} / BT ${by == null ? '—' : sgn0(by)}`)
+        + (z == null ? '' : ` · z = ${pct(z, 2)}`))
+      + bar('Lệnh đóng', a.n, ci.n_trades, n0, `backtest ${b.trades_per_day == null ? '—' : pct(b.trades_per_day, 2)} lệnh/ngày, mọi cửa sổ ${pct(d, 0)} ngày — bị chặn lệnh thì thấp hơn`)
+      + bar('Thắng', a.win, ci.win || pt(b.win), pc, `khoảng 95% theo ${a.n} lệnh thực tế${small ? ' — mẫu nhỏ' : ''}`)
+      + bar('R / lệnh', a.r_per, ci.r_per || pt(b.r_per), f2, `khoảng 95% theo ${a.n} lệnh thực tế${a.bps == null ? '' : ` · TB ${f2(a.bps, 0)} bps`}${small ? ' — mẫu nhỏ' : ''}`)
+      + `</div>`
+      + (small ? `<div class="note">${a.n} lệnh đóng · cần ~30 lệnh để so thắng, R/lệnh</div>` : '')
+      + `</div>`;
+  }).join('');
+  paintCards();
+}
+
+/* Lai/lo chua chot tung phuong phap theo gia danh dau (moi tick), tu so bot:
+   moi dong so tinh theo gia vao rieng cua no, tru phi khu hoi FEE nhu pnlOf. */
+function paintCards() {
+  const box = $('vsbtCards');
+  if (!box || !S) return;
+  for (const el of box.querySelectorAll('[data-sk]')) {
+    let u = 0, rr = 0, miss = 0;
+    for (const p of S.positions) {
+      if (p.strategy !== el.dataset.sk) continue;
+      const px = MARK[p.symbol];
+      if (!px || !p.entry_px) { miss++; continue; }
+      const v = p.qty * p.entry_px * ((px - p.entry_px) / p.entry_px * p.side - FEE / 1e4);
+      u += v; if (p.r_usd) rr += v / p.r_usd;
+    }
+    el.textContent = signed(u, n0) + ' USD · ' + signed(rr, v => pct(v, 1)) + 'R' + (miss ? ` · ${miss} chưa có giá` : '');
+    el.className = u >= 0 ? 'pos' : 'neg';
+  }
 }
 
 let FLAGS = null, FLAGF = 'all';

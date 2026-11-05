@@ -27,6 +27,36 @@ def equity_now() -> float:
         cx.close()
 
 
+def realised_base(m: str) -> float:
+    """Von DA CHOT: von dau + lai/lo moi lenh da dong trong so (moi chien luoc,
+    ke ca lenh chot giua cac luot). KHONG noi chuoi tu moc von truoc: moc do da
+    gom lai/lo chua chot, cong them mark_to_market nua la dem hai lan."""
+    cx = db.connect()
+    try:
+        r = cx.execute("SELECT COALESCE(SUM(notional * pnl_bps / 1e4), 0) AS s FROM positions "
+                       "WHERE mode=? AND open=0 AND pnl_bps IS NOT NULL AND notional IS NOT NULL",
+                       (m,)).fetchone()
+        return float(CFG.start_equity) + float(r["s"] or 0.0)
+    finally:
+        cx.close()
+
+
+def exchange_equity() -> float | None:
+    """Von that tren san = so du vi + lai/lo chua chot (totalMarginBalance).
+    Gom ca phi, funding, nap/rut ma so bot khong biet. Loi mang → None."""
+    t = None
+    try:
+        t = Trader()
+        a = t.account()
+        return float(a["totalWalletBalance"]) + float(a["totalUnrealizedProfit"])
+    except Exception as e:
+        db.log("warn", f"không đọc được vốn trên sàn, dùng vốn theo sổ: {e}")
+        return None
+    finally:
+        if t is not None:
+            t.close()
+
+
 def mode() -> str:
     ready, _ = executor.live_ready()
     return "live" if ready else "paper"
@@ -585,13 +615,12 @@ def _run_once(force: bool = False) -> dict:
             db.log("warn", f"cập nhật thông báo huỷ niêm yết / thẻ Monitoring lỗi: {e}")
 
         prices = api.prices()
-        eq = equity_now()
+        # eq = von DA CHOT theo so. Lenh chot giua cac luot (doi chieu 5 phut,
+        # PP6 VSA) da nam trong so nen hai bien kv cu chi con duoc xoa ve 0.
+        eq = realised_base(m)
         if m == "live":
             eq += reconcile(prices, eq)
-            eq += float(db.kv_get("realised_pending", 0) or 0)
-            db.kv_set("realised_pending", 0.0)
-        # PP6 VSA chot lenh giua cac luot ngay (lich 4H) — cong vao von o day
-        eq += float(db.kv_get(f"vsa_realised:{m}", 0) or 0)
+        db.kv_set("realised_pending", 0.0)
         db.kv_set(f"vsa_realised:{m}", 0.0)
         # C13: lenh limit dat o luot truoc — khop thi ghi so (luot nay dong lai)
         try:
@@ -608,8 +637,10 @@ def _run_once(force: bool = False) -> dict:
         actions = executor.plan(target, cur_pos)
         # vi the C13 dong het trong luot nay — khong tinh vao tran so lenh / phoi nhiem
         keep_pos = [p for p in cur_pos if p["strategy"] != "c13"]
+        # Tran theo von DANH GIA LAI: chay that lay so cua san, giay tinh tu so.
+        eq_now = (exchange_equity() if m == "live" else None) or mark_to_market(P, day, eq, prices)
         allowed, blocked = executor.apply_caps(
-            actions, eq, prices, len(keep_pos),
+            actions, eq_now, prices, len(keep_pos),
             sum(float(p.get("notional") or 0.0) for p in keep_pos))
         if m == "live":          # so giay giu nguyen hanh vi nhu backtest
             # SAU tran: lenh mo bi chan thi khong dong oan vi the nguoc chieu
@@ -667,7 +698,7 @@ def _run_once(force: bool = False) -> dict:
         eq += realised          # lai/lo da chot la USD, khong phai ty le
         if m == "live":
             safety_now(filt)    # sau khi so da ghi vi the moi
-        mtm = mark_to_market(P, day, eq, prices)
+        mtm = (exchange_equity() if m == "live" else None) or mark_to_market(P, day, eq, prices)
         with db.tx() as cx:
             cx.execute("INSERT OR REPLACE INTO equity(ts,mode,value) "
                        "VALUES(?,?,?)", (day, m, mtm))
