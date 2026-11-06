@@ -1,0 +1,19 @@
+# Ghep them tren may chu:
+#   docker compose -f docker-compose.yml -f deploy/compose.server.yml up -d --build
+#
+# cloudflared noi RA Cloudflare, khong mo cong nao tren may. Trang UI van chi
+# lang nghe 127.0.0.1 (docker-compose.yml); ngoai mang chi vao duoc qua
+# Cloudflare Access (dang nhap email OTP). Trong dashboard, Public Hostname
+# tro toi  http://app:8000  (ten dich vu trong cung mang compose).
+services:
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: crypto-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN:?dat TUNNEL_TOKEN trong .env}"
+    depends_on: [app]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}

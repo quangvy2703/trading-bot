@@ -632,7 +632,7 @@ section>.grp:first-child{margin-top:0}
     </div></div>
 
     <div class="panel" style="margin-top:12px">
-      <div class="ph"><h3>Đường vốn</h3><span class="sub" id="cvread"></span></div>
+      <div class="ph"><h3>Đường vốn</h3><span id="cvInfo"></span><span class="sub legend" id="cvLeg" style="margin-left:14px"></span><span class="sub" id="cvread"></span></div>
       <svg id="cv" role="img" aria-label="Đường vốn tài khoản"></svg>
     </div>
 
@@ -1078,11 +1078,17 @@ function render() {
       + (ACCT && !ACCT.ok ? ` · không đọc được tài khoản: ${ACCT.why}` : '');
   }
 
+  /* sut tren duong von thuc (neu doc duoc san), bo phan nap/rut: rut tien khong phai sut */
+  const ev = eqLines()[0].v, trf = EQ2 && EQ2.ok ? EQ2.transfers : [];
   let pk = 0, dd = 0;
-  for (const e of eq) { pk = Math.max(pk, e.value); dd = Math.max(dd, 1 - e.value / pk); }
-  $('dd').textContent = eq.length ? '−' + pct(dd * 100, 1) + '%' : '—';
+  for (const e of ev) {
+    const x = e.value - trf.reduce((a, q) => a + (q.ts <= e.ts && q.ts > ev[0].ts ? q.value : 0), 0);
+    pk = Math.max(pk, x); dd = Math.max(dd, pk > 0 ? 1 - x / pk : 0);
+  }
+  $('dd').textContent = ev.length ? '−' + pct(dd * 100, 1) + '%' : '—';
   $('dd').className = 'val ' + (dd > 0.25 ? 'neg' : '');
-  $('ddsub').textContent = 'đỉnh ' + (pk ? usd(pk) + ' USD' : '—');
+  const tAll = trf.reduce((a, q) => a + (ev.length && q.ts > ev[0].ts ? q.value : 0), 0);
+  $('ddsub').textContent = 'đỉnh ' + (pk ? usd(pk + tAll) + ' USD' : '—') + (tAll ? ' (quy theo nạp/rút)' : '');
 
   /* Vi the mo TRUOC khi doi cach ghi so khong co `notional` — quy doi tu
      ty trong von cu de con cong duoc vao phoi nhiem. */
@@ -1185,7 +1191,7 @@ function render() {
   const dr = S.drift || [];
   $('driftPill').style.display = dr.length ? '' : 'none';
   $('driftPill').textContent = dr.length;
-  chart(eq);
+  chart();
 }
 
 /* ============ lời/lỗ sống ============ */
@@ -1557,14 +1563,34 @@ function cfgEst() {
 /* ================= đường vốn ================= */
 let CH = null;   /* hinh hoc dang ve, de lop crosshair tra lai gia tri */
 
-function chart(eq) {
+/* Hai duong, truc X theo thoi gian (hai duong co moc lech nhau):
+   von thuc = vi + lai/lo chua chot, chup tren san; da chot = so du vi.
+   Chua doc duoc san (giay / khong khoa) → mot duong von theo so cua bot. */
+let EQ2 = null;
+async function loadEq() {
+  try { EQ2 = await (await fetch('/api/equity')).json(); }
+  catch (e) { EQ2 = {ok: false, why: e.message}; }
+  if (S) render();
+}
+const eqLines = () => EQ2 && EQ2.ok && EQ2.real.length > 1
+  ? [{k: 'real', name: 'vốn thực', col: '#6D5BD0', v: EQ2.real},
+     {k: 'booked', name: 'đã chốt', col: '#2E8FB8', v: EQ2.booked, dash: '4 3'}]
+  : [{k: 'book', name: 'sổ bot', col: '#6D5BD0', v: S.equity}];
+
+function chart() {
   const svg = $('cv');
   svg.textContent = '';
   CH = null;
+  const L = eqLines(), ex = EQ2 && EQ2.ok;
+  $('cvLeg').innerHTML = L.map(l => `<span><i style="background:${l.col}"></i>${l.name}</span>`).join('');
+  $('cvInfo').innerHTML = INFO(ex ? 'Vốn thực = số dư ví + lãi/lỗ chưa chốt trên Binance, chụp mỗi 15 phút (trước đó: mốc lượt chạy hằng ngày).'
+      + ' Đã chốt = số dư ví: vốn + lãi/lỗ đã đóng − phí ± funding ± nạp/rút, dựng từ lịch sử thu nhập của sàn (giữ 3 tháng).'
+      + ' Vạch đứng = nạp / rút.'
+      : 'Chưa đọc được tài khoản trên sàn' + (EQ2 && EQ2.why ? ` (${EQ2.why})` : '') + ' — đây là vốn theo sổ của bot (vốn đầu + lãi/lỗ), không phải tiền trên sàn.');
   const w = svg.clientWidth || 900, h = svg.clientHeight || 150;
   const P = 10, R = 58, B = 15;
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  if (eq.length < 2) {
+  if (L[0].v.length < 2) {
     svg.classList.add('empty');
     svg.setAttribute('viewBox', `0 0 ${w} 46`);
     const t = mk('text', {x: 13, y: 27, fill: '#6F6986', 'font-size': 11.5});
@@ -1572,64 +1598,78 @@ function chart(eq) {
     svg.appendChild(t); return;
   }
   svg.classList.remove('empty');
-  const v = eq.map(e => e.value);
-  const lo = Math.min(...v, 1000), hi = Math.max(...v, 1000);
-  const X = i => P + i / (v.length - 1) * (w - P - R);
-  const Y = x => P + (hi - x) / (hi - lo || 1) * (h - P - B);
-  const pts = v.map((x, i) => `${X(i).toFixed(1)},${Y(x).toFixed(1)}`).join(' ');
+  const all = L.flatMap(l => l.v);
+  const t0 = Math.min(...all.map(e => e.ts)), t1 = Math.max(...all.map(e => e.ts));
+  const vs = all.map(e => e.value);
+  let lo = Math.min(...vs), hi = Math.max(...vs);
+  const pad = (hi - lo) * 0.06 || Math.abs(hi) * 0.01 || 1; lo -= pad; hi += pad;
+  const X = t => P + (t - t0) / (t1 - t0 || 1) * (w - P - R);
+  const Y = x => P + (hi - x) / (hi - lo) * (h - P - B);
+  const pts = v => v.map(e => `${X(e.ts).toFixed(1)},${Y(e.value).toFixed(1)}`).join(' ');
 
   const gd = mk('linearGradient', {id: 'gfill', x1: 0, y1: 0, x2: 0, y2: 1});
   gd.appendChild(mk('stop', {offset: 0, 'stop-color': '#6D5BD0', 'stop-opacity': .30}));
   gd.appendChild(mk('stop', {offset: 1, 'stop-color': '#6D5BD0', 'stop-opacity': 0}));
   const defs = mk('defs', {}); defs.appendChild(gd); svg.appendChild(defs);
 
-  svg.appendChild(mk('line', {x1: P, x2: w - R, y1: Y(1000), y2: Y(1000),
-    stroke: 'rgba(42,35,64,.16)', 'stroke-dasharray': '3 4'}));
+  for (const x of ex ? EQ2.transfers : []) {
+    if (x.ts < t0) continue;
+    svg.appendChild(mk('line', {x1: X(x.ts), x2: X(x.ts), y1: P, y2: h - B,
+      stroke: x.value >= 0 ? 'rgba(46,143,184,.45)' : 'rgba(194,112,28,.5)', 'stroke-dasharray': '2 3'}));
+  }
+  const v0 = L[0].v;
   svg.appendChild(mk('polygon', {fill: 'url(#gfill)',
-    points: `${X(0)},${Y(lo)} ${pts} ${X(v.length - 1)},${Y(lo)}`}));
-  svg.appendChild(mk('polyline', {points: pts, fill: 'none', stroke: '#6D5BD0',
-    'stroke-width': 1.7, 'stroke-linejoin': 'round'}));
-  for (const q of [hi, lo]) {
+    points: `${X(v0[0].ts)},${Y(lo)} ${pts(v0)} ${X(v0.at(-1).ts)},${Y(lo)}`}));
+  for (const l of [...L].reverse())
+    svg.appendChild(mk('polyline', {points: pts(l.v), fill: 'none', stroke: l.col,
+      'stroke-width': l.dash ? 1.4 : 1.7, 'stroke-linejoin': 'round', ...(l.dash ? {'stroke-dasharray': l.dash} : {})}));
+  for (const q of [hi - pad, lo + pad]) {
     const t = mk('text', {x: w - R + 6, y: Y(q) + 3.5, fill: '#6F6986', 'font-size': 9.5});
     t.textContent = usd(q); svg.appendChild(t);
   }
-  for (const [i, anc] of [[0, 'start'], [v.length - 1, 'end']]) {
-    const t = mk('text', {x: X(i), y: h - 3, fill: '#857FA0', 'font-size': 9.5,
+  for (const [tt, anc] of [[t0, 'start'], [t1, 'end']]) {
+    const t = mk('text', {x: X(tt), y: h - 3, fill: '#857FA0', 'font-size': 9.5,
       'text-anchor': anc});
-    t.textContent = day(eq[i].ts); svg.appendChild(t);
+    t.textContent = day(tt); svg.appendChild(t);
   }
   /* diem cuoi: neo mat vao gia tri dang chay */
-  svg.appendChild(mk('circle', {cx: X(v.length - 1), cy: Y(v.at(-1)), r: 3,
-    fill: '#6D5BD0', stroke: '#fff', 'stroke-width': 1.5}));
+  for (const l of L)
+    svg.appendChild(mk('circle', {cx: X(l.v.at(-1).ts), cy: Y(l.v.at(-1).value), r: 3,
+      fill: l.col, stroke: '#fff', 'stroke-width': 1.5}));
 
   const cl = mk('line', {y1: P, y2: h - B, stroke: '#6D5BD0', 'stroke-width': 1,
     opacity: 0});
-  const cd = mk('circle', {r: 3.5, fill: '#6D5BD0', opacity: 0});
-  svg.appendChild(cl); svg.appendChild(cd);
+  svg.appendChild(cl);
+  const cds = L.map(l => { const c = mk('circle', {r: 3.5, fill: l.col, opacity: 0}); svg.appendChild(c); return c; });
   const hit = mk('rect', {x: 0, y: 0, width: w, height: h, fill: 'transparent',
     class: 'hit'});
   svg.appendChild(hit);
-  CH = {eq, X, Y, cl, cd, w, P, R};
+  CH = {L, t0, t1, X, Y, cl, cds, w, P, R};
 }
+
+/* moc cuoi cung truoc hoac dung thoi diem t (duong bac thang) */
+const atT = (v, t) => { let i = 0; while (i + 1 < v.length && v[i + 1].ts <= t) i++; return v[i]; };
 
 function cross(ev) {
   if (!CH) return;
   const b = $('cv').getBoundingClientRect();
   const x = (ev.clientX - b.left) / b.width * CH.w;
-  const n = CH.eq.length;
-  let i = Math.round((x - CH.P) / (CH.w - CH.P - CH.R) * (n - 1));
-  i = Math.max(0, Math.min(n - 1, i));
-  const e = CH.eq[i];
-  CH.cl.setAttribute('x1', CH.X(i)); CH.cl.setAttribute('x2', CH.X(i));
+  const f = Math.max(0, Math.min(1, (x - CH.P) / (CH.w - CH.P - CH.R)));
+  const t = CH.t0 + f * (CH.t1 - CH.t0);
+  CH.cl.setAttribute('x1', CH.X(t)); CH.cl.setAttribute('x2', CH.X(t));
   CH.cl.setAttribute('opacity', .75);
-  CH.cd.setAttribute('cx', CH.X(i)); CH.cd.setAttribute('cy', CH.Y(e.value));
-  CH.cd.setAttribute('opacity', 1);
-  $('cvread').innerHTML = `${day(e.ts)} · <b style="color:var(--ink);font-weight:650">`
-    + `${usd(e.value)} USD</b>`;
+  const parts = CH.L.map((l, j) => {
+    const e = l.v[0].ts > t ? null : atT(l.v, t);
+    CH.cds[j].setAttribute('opacity', e ? 1 : 0);
+    if (!e) return '';
+    CH.cds[j].setAttribute('cx', CH.X(t)); CH.cds[j].setAttribute('cy', CH.Y(e.value));
+    return ` · ${l.name} <b style="color:var(--ink);font-weight:650">${usd(e.value)}</b>`;
+  });
+  $('cvread').innerHTML = when(t) + parts.join('') + ' USD';
 }
 function uncross() {
   if (!CH) return;
-  CH.cl.setAttribute('opacity', 0); CH.cd.setAttribute('opacity', 0);
+  CH.cl.setAttribute('opacity', 0); CH.cds.forEach(c => c.setAttribute('opacity', 0));
   $('cvread').textContent = '';
 }
 $('cv').addEventListener('pointermove', cross);
@@ -3191,7 +3231,7 @@ for (const b of document.querySelectorAll('nav.tabs button')) {
     }
     if (b.dataset.tab === 'bt') { if (!BT) initBt().catch(e => msg(e.message, false));
       else btCharts(); }
-    if (b.dataset.tab === 'dash' && S) chart(S.equity);
+    if (b.dataset.tab === 'dash' && S) chart();
     if (b.dataset.tab === 'ov') { if (!OV) initOv().catch(e => msg(e.message, false));
       else ovRender(); }
   };
@@ -3268,12 +3308,14 @@ $('btnDisarm').onclick = async () => {
 setInterval(() => { $('clock').textContent = new Date().toISOString().slice(0, 19)
   .replace('T', ' '); }, 1000);
 let rz; addEventListener('resize', () => { clearTimeout(rz);
-  rz = setTimeout(() => { S && chart(S.equity); btCharts(); if (OV) ovRender(); }, 140); });
+  rz = setTimeout(() => { S && chart(); btCharts(); if (OV) ovRender(); }, 140); });
 renderTodo(null);
 refresh().catch(e => msg(e.message, false));
 setInterval(() => refresh().catch(() => {}), 30000);
 loadAcct();
 setInterval(loadAcct, 15000);
+loadEq();
+setInterval(loadEq, 60000);
 /* Socket mo nhung im lang thi khong co onclose — tu cat sau 15 giay khong tick
    de vong noi lai lam viec; dong thoi ve lai cham trang thai. */
 setInterval(() => { paintPnl();

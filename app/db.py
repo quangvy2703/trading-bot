@@ -87,6 +87,10 @@ CREATE INDEX IF NOT EXISTS ix_ord_run ON orders(run_id);
 CREATE TABLE IF NOT EXISTS equity(
   ts INTEGER, mode TEXT, value REAL, PRIMARY KEY(ts, mode)) WITHOUT ROWID;
 
+-- von tren san chup moi 15 phut (app/acct.py)
+CREATE TABLE IF NOT EXISTS acct_snap(
+  ts INTEGER PRIMARY KEY, wallet REAL, upnl REAL);
+
 CREATE TABLE IF NOT EXISTS events(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts INTEGER, level TEXT, msg TEXT);

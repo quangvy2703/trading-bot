@@ -211,6 +211,12 @@ class Trader:
         return self._call("GET", "/fapi/v1/userTrades", symbol=symbol,
                           startTime=int(start_ms), limit=1000)
 
+    def income(self, start_ms: int, end_ms: int) -> list:
+        """Lich su thu nhap (lai/lo chot, phi, funding, nap/rut) trong [start, end].
+        San chi giu 3 thang; toi da 1000 dong moi lan goi."""
+        return self._call("GET", "/fapi/v1/income", startTime=int(start_ms),
+                          endTime=int(end_ms), limit=1000)
+
     def cancel_algo(self, algo_id) -> dict:
         return self._call("DELETE", "/fapi/v1/algoOrder", algoId=algo_id)
 

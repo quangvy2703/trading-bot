@@ -15,7 +15,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import backtest, c13, crash, data, db, delist, executor, news, pp1tp, pp1wf, runner, settings, swingtp, vsa, vsbt as VB
+from . import acct, backtest, c13, crash, data, db, delist, executor, news, pp1tp, pp1wf, runner, settings, swingtp, vsa, vsbt as VB
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -119,6 +119,10 @@ def _start() -> None:
     sched.add_job(_wf_job, CronTrigger(minute="1,16,31,46"),
                   id="pp1wf15m", replace_existing=True,
                   misfire_grace_time=300, coalesce=True)
+    # Von tren san moi 15 phut cho duong «vốn thực» (app/acct.py), ca khi chay giay.
+    sched.add_job(acct.snap, CronTrigger(minute="*/15"), id="acct15m",
+                  replace_existing=True, misfire_grace_time=300, coalesce=True)
+    threading.Thread(target=acct.snap, daemon=True, name="acct").start()
     sched.start()
     db.log("info", f"khởi động · lịch chạy {CFG.run_at_utc} UTC · "
                    f"chạy thật ở tầng mã: {'MỞ' if CFG.live_enabled_env else 'KHOÁ'}")
@@ -531,6 +535,12 @@ def account():
                 t.close()
         _ACCT.update(at=time.time(), v=v)
         return v
+
+
+@app.get("/api/equity")
+def equity_lines():
+    """Hai duong cho bieu do «Đường vốn»: von thuc tren san + so du da chot."""
+    return acct.series()
 
 
 @app.post("/api/preview")
