@@ -7,7 +7,11 @@
   DSRM  "Stochastic + RSI + MACD (Proven 100x)" (Data Trader): Stoch(14,3,3) K
         va D < 20 trong 3 nen truoc (chua cham 80 tu do) → RSI(14) > 50 va MACD
         > duong tin hieu (canh len). Stop = day 10 nen; chot 1,5R. Ban doi xung.
-Ca hai: tin hieu o nen 1D DA DONG, vao luc luot chay 00:05 UTC (= open nen ke
+  IMD   "Impulse MACD" (TradingLab, LazyBear) CHI BAN (docs/impulse-macd-ban.md):
+        duong tin hieu SMA9 cat LEN tren Impulse MACD khi ca hai (nen truoc) > m ×
+        TB 200 nen |md| (m 2) → ban. Stop = dinh 5 nen; chot 10R. Nghien cuu:
+        scripts/yt_imd.py, yt_imd_short_grid.py (o m2/10R/dinh 5).
+Ca ba: tin hieu o nen 1D DA DONG, vao luc luot chay 00:05 UTC (= open nen ke
 tiep), top 50 thanh khoan, mot lenh mot ma moi chien luoc, giu toi da 200 ngay.
 Nghien cuu: scripts/yt_strats2.py, yt_deep2.py (kiem do ben 6/6), yt_deep2_R.py.
 
@@ -27,7 +31,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from .config import DSRM as LOCK_DSRM, TSVW as LOCK_TSVW
+from .config import DSRM as LOCK_DSRM, IMD as LOCK_IMD, TSVW as LOCK_TSVW
 
 DAY = 86_400_000
 WARM = 210                      # nen khoi dong chi bao (nhu nghien cuu)
@@ -103,6 +107,23 @@ def stoch(h, l, c, k, d=3, smooth=3):
         raw = 100 * (c - lo) / (hi - lo)
     K = nz_sma(raw, smooth)
     return K, nz_sma(K, d)
+
+
+def zlema(x, n):
+    e1 = ema(x, n)
+    return e1 + (e1 - ema(e1, n))
+
+
+def shift(x, k=1):
+    out = np.full(len(x), np.nan)
+    out[k:] = x[:-k]
+    return out
+
+
+def cross_up(a, b):
+    out = np.zeros(len(a), bool)
+    out[1:] = (a[1:] > b[1:]) & (a[:-1] <= b[:-1])
+    return out
 
 
 def bars_since(mask):
@@ -196,9 +217,33 @@ def dsrm_signals(b: dict, P: dict | None = None) -> list:
             + [(int(j), -1, float(sH[j])) for j in np.flatnonzero(cS)])
 
 
-SIGNALS = {"tsvw": tsvw_signals, "dsrm": dsrm_signals}
-PARAMS = {"tsvw": LOCK_TSVW, "dsrm": LOCK_DSRM}
-NAME = {"tsvw": "TSVW (đáy V + AVWAP)", "dsrm": "DSRM (Stoch+RSI+MACD)"}
+IMD_WARM = 250                  # nghien cuu bo 250 nen dau (SMA 200 cua |md| + do tre)
+
+
+def imd(b: dict):
+    """Impulse MACD (LazyBear) — chep scripts/yt_imd.py imd(): md, duong tin hieu, muc 'cao'."""
+    h, l, c = b["h"], b["l"], b["c"]
+    hlc3 = (h + l + c) / 3
+    hi, lo, mi = rma(h, 34), rma(l, 34), zlema(hlc3, 34)
+    md = np.where(mi > hi, mi - hi, np.where(mi < lo, mi - lo, 0.0))
+    return md, sma(md, 9), shift(sma(np.abs(md), 200), 1)
+
+
+def imd_signals(b: dict, P: dict | None = None) -> list:
+    """Moi tin hieu IMD chi ban: (chi so nen tin hieu, -1, stop = dinh `sw` nen)."""
+    P = P or LOCK_IMD
+    m, sw = float(P["m"]), int(P["sw"])
+    md, sb, lev = imd(b)
+    with np.errstate(invalid="ignore"):
+        S = cross_up(sb, md) & (shift(md, 1) > m * lev) & (shift(sb, 1) > m * lev)
+    S[:IMD_WARM] = False
+    sH = rollmax(b["h"], sw)
+    return [(int(j), -1, float(sH[j])) for j in np.flatnonzero(S)]
+
+
+SIGNALS = {"tsvw": tsvw_signals, "dsrm": dsrm_signals, "imd": imd_signals}
+PARAMS = {"tsvw": LOCK_TSVW, "dsrm": LOCK_DSRM, "imd": LOCK_IMD}
+NAME = {"tsvw": "TSVW (đáy V + AVWAP)", "dsrm": "DSRM (Stoch+RSI+MACD)", "imd": "Impulse MACD bán"}
 
 
 def signals_today(strategy: str, P: dict, rank: dict, day: int, held: set,

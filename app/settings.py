@@ -25,6 +25,7 @@ SPEC = {
     "alloc_xsmom":     ("alloc", float, 0.0, 50.0, "hệ số 1R cho động lượng — 0 là tắt"),
     "alloc_tsvw":      ("alloc", float, 0.0, 50.0, "hệ số 1R cho TSVW (đáy V + AVWAP) — 0 là tắt"),
     "alloc_dsrm":      ("alloc", float, 0.0, 50.0, "hệ số 1R cho DSRM (Stoch+RSI+MACD) — 0 là tắt"),
+    "alloc_imd":       ("alloc", float, 0.0, 50.0, "hệ số 1R cho Impulse MACD bán (khung ngày) — 0 là tắt"),
     "alloc_c13":       ("alloc", float, 0.0, 50.0, "hệ số 1R cho C13 (limit sâu 2 ATR) — 0 là tắt"),
     "alloc_vsa":       ("alloc", float, 0.0, 50.0, "hệ số 1R cho VSA 4H (1R = giá đi 10%) — 0 là tắt"),
     # --- RSI(2) ---
@@ -73,7 +74,7 @@ SPEC = {
 def locked() -> dict:
     """Bo DA CHOT theo docs — moc so sanh, khong bao gio doi tu UI."""
     d = {"alloc_rsi2": CFG.alloc_rsi2, "alloc_xsmom": CFG.alloc_xsmom,
-         "alloc_tsvw": CFG.alloc_tsvw, "alloc_dsrm": CFG.alloc_dsrm, "alloc_c13": CFG.alloc_c13,
+         "alloc_tsvw": CFG.alloc_tsvw, "alloc_dsrm": CFG.alloc_dsrm, "alloc_imd": CFG.alloc_imd, "alloc_c13": CFG.alloc_c13,
          "alloc_vsa": CFG.alloc_vsa,
          "max_gross_usd": CFG.max_gross_usd, "max_gross_x": CFG.max_gross_x,
          "max_order_usd": CFG.max_order_usd,
@@ -134,7 +135,7 @@ def pp1x() -> dict:
 def alloc() -> dict:
     e = effective()
     return {"rsi2": e["alloc_rsi2"], "xsmom": e["alloc_xsmom"],
-            "tsvw": e["alloc_tsvw"], "dsrm": e["alloc_dsrm"], "c13": e["alloc_c13"],
+            "tsvw": e["alloc_tsvw"], "dsrm": e["alloc_dsrm"], "imd": e["alloc_imd"], "c13": e["alloc_c13"],
             "vsa": e["alloc_vsa"]}
 
 
@@ -154,7 +155,7 @@ def validate(patch: dict) -> dict:
             raise ValueError(f"«{desc}» phải nằm trong [{lo}, {hi}], nhận {v}")
         out[k] = v
     merged = {**effective(), **out}
-    if all(merged[k] <= 0 for k in ("alloc_rsi2", "alloc_xsmom", "alloc_tsvw", "alloc_dsrm", "alloc_c13",
+    if all(merged[k] <= 0 for k in ("alloc_rsi2", "alloc_xsmom", "alloc_tsvw", "alloc_dsrm", "alloc_imd", "alloc_c13",
                                       "alloc_vsa")):
         raise ValueError("tắt tất cả chiến lược thì không còn gì để chạy — "
                          "để ít nhất một hệ số 1R lớn hơn 0")

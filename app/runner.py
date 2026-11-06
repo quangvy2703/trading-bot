@@ -288,8 +288,8 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
             "sổ khác giữ nguyên": len(cur_x) - sum(
                 1 for p in cur_x if p["sleeve"] == sl)}
 
-    # ---- TSVW / DSRM (app/swing.py): stop + chot co dinh, giu toi da 200 ngay ----
-    for sname in ("tsvw", "dsrm"):
+    # ---- TSVW / DSRM / IMD (app/swing.py): stop + chot co dinh, giu toi da 200 ngay ----
+    for sname in ("tsvw", "dsrm", "imd"):
         r_s = K["r_usd"] * float(A.get(sname, 0.0))
         cur_s = [p for p in cur if p["strategy"] == sname]
         if r_s <= 0:
@@ -554,10 +554,13 @@ RUN_LOCK = threading.Lock()
 
 
 def _book_open(cx, a: dict, m: str) -> None:
-    # TSVW / DSRM: muc chot tinh tu GIA KHOP (nghien cuu: e + k·(e − stop)).
+    # TSVW / DSRM / IMD: muc chot tinh tu GIA KHOP (nghien cuu: e + k·(e − stop)).
+    # Lenh BAN co stop xa (IMD 10R, stop > 10%) cho muc chot <= 0: khong bao gio cham → bo.
     tp = a.get("tp")
     if a.get("tp_r") and a.get("stop") and a.get("px"):
         tp = a["px"] + a["side"] * float(a["tp_r"]) * abs(a["px"] - a["stop"])
+        if tp <= 0:
+            tp = None
     cx.execute(
         "INSERT INTO positions(strategy,sleeve,symbol,side,qty,"
         "weight,notional,r_usd,entry_px,entry_ts,stop,tp,mode,open)"

@@ -72,7 +72,7 @@ services:
       # cong 30 cho TSVW + DSRM (03/11/2026: backtest mo dong thoi TB 12,7,
       # p95 27, dinh 43 — o 30 thi ~5% so ngay co lenh moi bi chan).
       # Tran nay DUNG CHUNG: de 28 thi dong luong day so la RSI(2) het cho.
-      RISK_MAX_OPEN: "${RISK_MAX_OPEN:-63}"
+      RISK_MAX_OPEN: "${RISK_MAX_OPEN:-115}"
       # ---- bat/tat tung chien luoc: he so nhan cho 1R, 0 = TAT ----
       # Tat thi vi the dang mo cua chien luoc do bi DONG o luot ke tiep.
       # RSI(2) = 8: o cung 1R, RSI(2) gan nhu vang mat khoi danh muc. Do bang
@@ -89,6 +89,12 @@ services:
       # moi lenh. Bang chung: 6/6 luat do ben nhung chon sau 709 o YouTube.
       ALLOC_TSVW: "${ALLOC_TSVW:-5.0}"
       ALLOC_DSRM: "${ALLOC_DSRM:-5.0}"
+      # Impulse MACD 1D CHI BAN (app/swing.py imd_signals, docs/impulse-macd-ban.md): m 2,
+      # stop dinh 5 nen, chot 10R, giu <= 200 ngay, top 50. Chien luoc chinh tu 06/11/2026
+      # theo yeu cau. Giu TB 85 ngay, TB 19 lenh mo cung luc (toi da 50) → RISK_MAX_OPEN 115.
+      # He so 2 (khong phai 5): tren bot hien tai he so 2 giu Sharpe 2,56 va them ~1.000 USD;
+      # he so 5 them 2.500 USD nhung Sharpe 2,56→2,41, sut 898→1.097 (docs/impulse-macd-ban.md).
+      ALLOC_IMD: "${ALLOC_IMD:-2.0}"
       # C13 (app/c13.py, docs/c13-limit-sau.md): moi luot treo lenh MUA limit GTD o
       # close − C13_K×ATR14 cho top C13_TOPN, het han sau 1 ngay; khop thi luot sau
       # ban o gia thi truong (~ close ngay khop). Dua vao bot 04/11/2026 theo yeu cau.

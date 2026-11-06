@@ -48,7 +48,7 @@ class Config:
     # 1R = so USD mat khi cham diem cat lo. Co lenh = r_usd / rfrac, nen no
     # KHONG phu thuoc von: von chi quyet dinh mo duoc bao nhieu lenh cung luc.
     risk_r_usd: float = _f("RISK_R_USD", 2)
-    risk_max_open: int = _i("RISK_MAX_OPEN", 63)       # 28 dong luong + 5 RSI(2) + 30 TSVW/DSRM
+    risk_max_open: int = _i("RISK_MAX_OPEN", 115)      # 28 dong luong + 5 RSI(2) + 30 TSVW/DSRM + 52 IMD (toi da lich su 51)
     # Ma co thong bao huy niem yet trong N ngay gan nhat: khong mo lenh MUA
     # nao (RSI(2) va chan mua dong luong). 0 = tat. Xem app/delist.py.
     delist_ban_days: int = _i("DELIST_BAN_DAYS", 90)
@@ -121,6 +121,8 @@ class Config:
     # chung: qua 6/6 luat do ben nhung chon SAU 709 o — xem docs.
     alloc_tsvw: float = _f("ALLOC_TSVW", 5.0)
     alloc_dsrm: float = _f("ALLOC_DSRM", 5.0)
+    # Impulse MACD 1D chi ban (app/swing.py, docs/impulse-macd-ban.md). 1 = 1R moi lenh. 0 = tat.
+    alloc_imd: float = _f("ALLOC_IMD", 2.0)
     # C13 (app/c13.py): mua limit sau close − K×ATR14, ban o close ngay khop. 0 = tat.
     alloc_c13: float = _f("ALLOC_C13", 5.0)
     c13_max_orders: int = _i("C13_MAX_ORDERS", 50)
@@ -227,4 +229,8 @@ XSMOM = {
 # da dung de kiem do ben, chon lai o khac la tham so hoa lan hai.
 TSVW = {"topn": 50, "N": 50, "K": 10, "B": 10, "W": 20, "tp_r": 2.0, "hold": 200}
 DSRM = {"topn": 50, "W": 3, "lv": 20.0, "sw": 10, "tp_r": 1.5, "hold": 200}
+# Impulse MACD 1D CHI BAN (app/swing.py imd_signals, docs/impulse-macd-ban.md) — tham so
+# CHOT theo scripts/yt_imd_short_grid.py (o m2 · chot 10R · stop dinh 5 nen, qua 6/6 luat
+# so giay nhung chon sau 152 o). Dua thanh chien luoc chinh 06/11/2026 theo yeu cau.
+IMD = {"topn": 50, "m": 2.0, "sw": 5, "tp_r": 10.0, "hold": 200}
 FEE_BPS = 10.0

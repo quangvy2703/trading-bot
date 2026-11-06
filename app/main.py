@@ -304,7 +304,7 @@ def _ov_bt() -> dict | None:
     return _OV["v"]
 
 
-VSBT_K = ("xsmom", "rsi2", "tsvw", "dsrm", "c13", "vsa")
+VSBT_K = ("xsmom", "rsi2", "tsvw", "dsrm", "imd", "c13", "vsa")
 
 
 @app.get("/api/vsbt")

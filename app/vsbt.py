@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import numpy as np
 
-K = ("xsmom", "rsi2", "tsvw", "dsrm", "c13", "vsa")
+K = ("xsmom", "rsi2", "tsvw", "dsrm", "imd", "c13", "vsa")
 _CACHE: dict = {}
 
 

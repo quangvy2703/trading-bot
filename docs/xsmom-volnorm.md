@@ -941,6 +941,15 @@ Tổng lên **1.275 ô**.
 
 Tổng lên **1.431 ô**.
 
+| Luật thoát theo tick so với nến đóng: Kase close 4H / 1H / tick, C4 chỉ 1D / lệnh chờ tick, windfall tick, cả ba tick (`cat-lenh-tick.md`) | 7 | **giữ nến đóng** — Kase tick −2.485 USD, cả ba tick −2.890 USD / Sharpe −0,337; C4 tick ngang |
+
+Tổng lên **1.438 ô**.
+
+Lưới lại 06/11/2026 (`luoi-lai-tham-so.md`): vào lệnh 81, Kase 10, dừng an toàn 4, C4 18,
+windfall 21 → **+134 ô**, giữ nguyên tham số. Tổng lên **1.572 ô**.
+
+Carry funding cắt ngang đợt 2 06/11/2026 (`carry-cat-ngang.md`): **+288 ô**, loại. Tổng **1.860 ô**.
+
 ## Điều này CHƯA chứng minh
 
 1. **Chưa có kiểm định ngoài mẫu sạch.** Bộ tham số được chọn trên toàn mẫu;

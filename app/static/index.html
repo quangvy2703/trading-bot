@@ -222,6 +222,7 @@ tr:hover td:first-child{background:#F3F0FB}
 .c-xsmom{background:var(--infosoft);color:#215876}
 .c-tsvw{background:#E3F2E8;color:#1E6B3A}
 .c-dsrm{background:#FBEFD9;color:#7A4A06}
+.c-imd{background:#ECE9FB;color:#4A3AA7}
 .c-c13{background:#F1EEDA;color:#5A4E00}
 .c-vsa{background:#FBE6EE;color:#8A2D55}
 .ovcap{margin:10px 2px 0;font-size:12.5px;color:var(--ink2);line-height:1.55}
@@ -1038,7 +1039,7 @@ function table(el, cols, rows, fmt) {
 const symA = s => s ? {html: `<a class="sym" href="https://www.binance.com/en/futures/`
   + `${encodeURIComponent(s)}" target="_blank" rel="noopener" `
   + `title="mở chart ${esc(s)} trên Binance">${esc(s)}</a>`} : '—';
-const SLABEL = {rsi2: 'RSI(2)', xsmom: 'ĐỘNG LƯỢNG', tsvw: 'TSVW', dsrm: 'DSRM', c13: 'C13', vsa: 'VSA 4H'};
+const SLABEL = {rsi2: 'RSI(2)', xsmom: 'ĐỘNG LƯỢNG', tsvw: 'TSVW', dsrm: 'DSRM', imd: 'IMD BÁN', c13: 'C13', vsa: 'VSA 4H'};
 const sChip = s => ({html: `<span class="chip c-${s}">${SLABEL[s] || s}</span>`});
 const aChip = a => ({html: `<span class="chip c-${a === 'OPEN' ? 'open' : 'close'}">${a === 'OPEN' ? 'MỞ' : 'ĐÓNG'}</span>`});
 const sideTxt = d => d > 0 ? {html: '<span class="pos">MUA</span>'}
@@ -1093,7 +1094,7 @@ function render() {
   const byS = {};
   for (const p of S.positions) byS[p.strategy] = (byS[p.strategy] || 0) + 1;
   $('npsub').textContent = (Object.entries(byS)
-    .map(([k, v]) => `${({rsi2: 'RSI(2)', xsmom: 'động lượng', tsvw: 'TSVW', dsrm: 'DSRM', c13: 'C13', vsa: 'VSA 4H'})[k] || k} ${v}`).join(' · ') || '—')
+    .map(([k, v]) => `${({rsi2: 'RSI(2)', xsmom: 'động lượng', tsvw: 'TSVW', dsrm: 'DSRM', imd: 'IMD bán', c13: 'C13', vsa: 'VSA 4H'})[k] || k} ${v}`).join(' · ') || '—')
     + ` · phơi nhiễm ${usd(gross)} USD`;
 
   const lr = S.last_run;
@@ -1146,6 +1147,7 @@ function render() {
     ['rsi2', 'PP2 RSI(2)', '#eb6834', `top ${P_.rsi2.topn} · ${P_.rsi2.slots} chỗ · vào RSI(2) < ${P_.rsi2.rsi_in}, thoát > ${P_.rsi2.rsi_out} · cắt lỗ ${P_.rsi2.atr_k}×ATR (trần ${P_.rsi2.cap * 100}%)`],
     ['tsvw', 'PP3 TSVW', '#1baf7a', 'top 50 · đáy/đỉnh V + VWAP neo · stop dưới AVWAP · chốt 2R · giữ ≤ 200 ngày'],
     ['dsrm', 'PP4 DSRM', '#eda100', 'top 50 · Stoch < 20 → RSI > 50 + MACD cắt lên (bán đối xứng) · stop đáy/đỉnh 10 nến · chốt 1,5R · giữ ≤ 200 ngày'],
+    ['imd', 'PP7 IMD bán', '#6250d6', 'top 50 · chỉ BÁN · đường tín hiệu SMA9 cắt lên trên Impulse MACD khi cả hai > 2 × TB 200 nến |md| · stop đỉnh 5 nến · chốt 10R · giữ ≤ 200 ngày'],
     ['c13', 'PP5 C13', '#7a6a00', 'top 50 · treo mua limit ở close − 2×ATR14 (hết hạn 1 ngày) · khớp thì bán ở close ngày khớp'],
     ['vsa', 'PP6 VSA 4H', '#e87ba4', 'top 50 · mỗi nến 4H: đẩy qua vùng cung rồi nến giảm KL thấp → mua ở open nến sau, bán ở close nến thứ 3 (12 giờ) · không stop (dừng an toàn −30%)']];
   $('alloc').innerHTML = ST_.map(([k, nm, c, d]) => {
@@ -1483,8 +1485,8 @@ async function loadCfg() {
    tu chuoi backtest trong methods_bt.json (cung nguon tab «Tổng quan»). Lai/lo khi ap
    tran: ngay vuot tran thi nhan theo ti le tran ÷ phoi nhiem. */
 let CFGOV = null;
-const CE_K = ['xsmom', 'rsi2', 'tsvw', 'dsrm', 'c13', 'vsa'];
-const CE_TAG = {xsmom: 'PP1', rsi2: 'PP2', tsvw: 'PP3', dsrm: 'PP4', c13: 'PP5', vsa: 'PP6'};
+const CE_K = ['xsmom', 'rsi2', 'tsvw', 'dsrm', 'imd', 'c13', 'vsa'];
+const CE_TAG = {xsmom: 'PP1', rsi2: 'PP2', tsvw: 'PP3', dsrm: 'PP4', imd: 'PP7', c13: 'PP5', vsa: 'PP6'};
 function cfgEst() {
   const b = CFGOV && CFGOV.bt;
   if (!b || !b.gross) { for (const k of CE_K) { const e = $('ce-' + k); if (e) e.textContent = '—'; } return; }
@@ -1502,7 +1504,7 @@ function cfgEst() {
   for (const k of CE_K) {
     const a = v('alloc_' + k), f = ru * a, G = b.gross[k], P = b.npos[k], S_ = ser(k), el = $('ce-' + k);
     if (a > 0) for (let i = 0; i < n; i++) { g[i] += f * G[i]; np[i] += P[i]; d[i] += f * S_[i]; }
-    if (a > 0 && b.gopen && ['xsmom', 'rsi2', 'tsvw', 'dsrm'].includes(k))
+    if (a > 0 && b.gopen && ['xsmom', 'rsi2', 'tsvw', 'dsrm', 'imd'].includes(k))
       for (let i = 0; i < n; i++) { go[i] += f * b.gopen[k][i]; no[i] += b.nopen[k][i]; }
     if (a > 0 && (b.order_p95_r || {})[k] * f > ordMax) { ordMax = b.order_p95_r[k] * f; ordWho = CE_TAG[k]; }
     if (!el) continue;
@@ -2268,8 +2270,8 @@ const OVM = [
   {k: 'crash', tag: 'PP1 + BTC sập', kind: 'rule', unit: 'R', c: '#2a78d6', name: 'BTC sập → cắt chân mua',
    ev: '+237 USD, 6/6 năm nhưng KTC chứa 0, phép giả Sharpe p 0,095, đổi dấu ở 4% → ứng viên',
    desc: 'BTC đóng cửa ngày giảm ≥ 5%: đóng mọi lệnh mua động lượng, không mua lại trong 7 lượt.'},
-  {k: 'imd', tag: 'IMD', kind: 'extra', unit: 'R', c: '#6250d6', name: 'Impulse MACD 1D · chỉ bán',
-   ev: 'qua 6 luật sổ giấy sau tối ưu 152 ô → chờ quyết định',
+  {k: 'imd', tag: 'PP7', kind: 'core', unit: 'R', c: '#6250d6', name: 'Impulse MACD 1D · chỉ bán',
+   ev: 'qua 6 luật sổ giấy sau tối ưu 152 ô (vượt null z 2,92, 6/6 mốc cắt ngày) · vào bot 06/11 theo yêu cầu · trên bot hiện tại: hệ số 2 Sharpe ≈ không đổi, hệ số 5 Sharpe 2,56→2,41',
    desc: 'Impulse MACD cắt xuống ở vùng cao (m 2); cắt lỗ đỉnh 5 nến, chốt 10R. Top 50, chỉ chiều bán.'}];
 const OVK = Object.fromEntries(OVM.map(m => [m.k, m]));
 const ovLbl = m => m.kind === 'rule' ? `PP1 · ${m.name}` : `${m.tag} ${m.name}`;
@@ -2296,7 +2298,6 @@ function ovBaseline() {
   for (const m of OVM) {
     let x = 1;
     if (m.kind === 'core') x = c.alloc[m.k] > 0 ? c.alloc[m.k] : 1;
-    else if (m.k === 'imd') x = c.alloc.tsvw > 0 ? c.alloc.tsvw : 1;   // ngang PP3
     o[m.k] = {on: ovStatus(m)[0] === 'run', x};
   }
   return o;
@@ -2788,10 +2789,10 @@ function ovYear() {
 }
 
 function ovActual() {
-  const A = OV.actual || {}, keys = ['xsmom', 'rsi2', 'tsvw', 'dsrm', 'c13', 'vsa'];
+  const A = OV.actual || {}, keys = ['xsmom', 'rsi2', 'tsvw', 'dsrm', 'imd', 'c13', 'vsa'];
   const months = Object.keys(A).sort().reverse();
   $('ovActSub').textContent = `vị thế đã đóng · ${OV.mode === 'live' ? 'chạy thật' : 'sổ giấy'} `;
-  table($('ovAct'), ['tháng', 'PP1', 'PP2', 'PP3', 'PP4', 'PP5', 'PP6', 'tổng'], months, mo => {
+  table($('ovAct'), ['tháng', 'PP1', 'PP2', 'PP3', 'PP4', 'PP7', 'PP5', 'PP6', 'tổng'], months, mo => {
     const r = A[mo]; let t = 0;
     const cells = keys.map(k => { const x = r[k]; if (!x) return '—';
       t += x[0];
@@ -2862,7 +2863,7 @@ async function refresh() {
 
 /* Thuc te so voi backtest (bang dieu khien) — /api/vsbt */
 const VSBT_NM = {xsmom: ['PP1', 'Động lượng', '#2a78d6'], rsi2: ['PP2', 'RSI(2)', '#eb6834'], tsvw: ['PP3', 'TSVW', '#1baf7a'],
-  dsrm: ['PP4', 'DSRM', '#eda100'], c13: ['PP5', 'C13', '#7a6a00'], vsa: ['PP6', 'VSA 4H', '#e87ba4']};
+  dsrm: ['PP4', 'DSRM', '#eda100'], imd: ['PP7', 'IMD bán', '#6250d6'], c13: ['PP5', 'C13', '#7a6a00'], vsa: ['PP6', 'VSA 4H', '#e87ba4']};
 let VSBT = null;
 function renderVsbt(V) {
   VSBT = V;
