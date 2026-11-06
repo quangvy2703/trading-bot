@@ -234,9 +234,13 @@ def exits(cur: list) -> dict:
 
 
 def place(m: str, P: dict, day: int, rank: dict, eq: float, nobuy: dict, filt: dict) -> dict:
-    """Cuoi luot: dat lenh limit mua cho nen ke tiep. Bo ma dang co vi the (san
-    mot chieu: lenh mua khop se bu tru vi the ban), ma bi chan mua vi huy niem
-    yet. Tran: so lenh, tong gia tri treo, va tran tong phoi nhiem cua bot."""
+    """Cuoi luot: dat lenh limit mua cho nen ke tiep. Bo ma dang giu chieu BAN
+    (san mot chieu: lenh mua khop se bu tru vi the ban) hoac C13 da giu, ma bi
+    chan mua vi huy niem yet. Ma dang giu chieu MUA (so khac) van dat: san gop
+    khoi luong cung chieu, reduceOnly co ghi khoi luong nen luot sau dong dung
+    phan C13 (giong VSA). Truoc 06/11/2026 bo ca ma dang giu mua — mat ~27% lenh
+    C13 so voi backtest (sx/f01.py: 162 lenh, ~+400 USD / 67 thang o ALLOC 5).
+    Tran: so lenh, tong gia tri treo, va tran tong phoi nhiem cua bot."""
     init()
     st = {"placed": 0, "skip": 0, "budget": 0.0}
     r = r_usd()
@@ -245,7 +249,8 @@ def place(m: str, P: dict, day: int, rank: dict, eq: float, nobuy: dict, filt: d
     K = settings.risk()
     cx = db.connect()
     try:
-        held = {x["symbol"] for x in cx.execute("SELECT symbol FROM positions WHERE open=1 AND mode=?", (m,))}
+        held = {x["symbol"] for x in cx.execute(
+            "SELECT symbol FROM positions WHERE open=1 AND mode=? AND (side < 0 OR strategy=?)", (m, NAME))}
         gross = float(cx.execute("SELECT COALESCE(SUM(notional),0) FROM positions WHERE open=1 AND mode=?",
                                  (m,)).fetchone()[0])
     finally:

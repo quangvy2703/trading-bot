@@ -17,7 +17,8 @@ Bot chạy nó ở khung ngày. Nghiên cứu ngày 04/11/2026 (scratch `qs2/t2_
 **Cuối lượt** (`c13.place`):
 - Treo lệnh MUA LIMIT GTD cho nến kế tiếp ở mức `close − 2 × ATR14`, cỡ lệnh = 1R / (2 × ATR).
 - Thứ tự đặt: theo hạng thanh khoản.
-- **Bỏ qua** mã bot đang giữ vị thế (sàn chạy một chiều, lệnh mua khớp sẽ bù trừ vị thế bán) và mã bị chặn mua vì huỷ niêm yết.
+- **Bỏ qua** mã bot đang giữ **chiều bán** (sàn chạy một chiều, lệnh mua khớp sẽ bù trừ vị thế bán), mã C13 đang giữ, và mã bị chặn mua vì huỷ niêm yết.
+  Mã đang giữ **chiều mua** (Động lượng, RSI(2), TSVW, DSRM, VSA) vẫn đặt lệnh: sàn gộp khối lượng cùng chiều, lệnh đóng reduceOnly có ghi khối lượng nên chỉ đóng phần C13. Trước 06/11/2026 bot bỏ cả các mã này, mất khoảng 27% số lệnh C13 so với backtest (162 lệnh, khoảng +400 USD trong 67 tháng ở ALLOC 5; đo bằng `sx/f01.py`).
 
 **Trần:**
 - tối đa `C13_MAX_ORDERS` lệnh (mặc định 50);
