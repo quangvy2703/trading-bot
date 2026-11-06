@@ -448,9 +448,64 @@ def reconcile(prices: dict, eq: float) -> float:
                            (px, ts, why, bps, p["id"]))
             db.log("warn", f"{p['symbol']}: {why} · chốt sổ ở {px:g} · "
                            f"{usd:+.2f} USD")
+        realised += _reconcile_qty(t, ex, eq)
         return realised
     finally:
         t.close()
+
+
+def _reconcile_qty(t: Trader, ex: dict, eq: float) -> float:
+    """So CUNG CHIEU nhung nhieu hon san (vd. lenh DONG da khop ma luot chay
+    bao loi vi doc trang thai hong): chot so vi the co lenh DONG loi khop dung
+    phan thieu, theo gia khop tren san. Khong ghep duoc thi chi bao loi — de
+    nguyen thi luot sau gui reduceOnly cat nham vi the that cua so khac."""
+    import re
+    realised = 0.0
+    book = open_positions("live")
+    for sym in {p["symbol"] for p in book}:
+        mine = [p for p in book if p["symbol"] == sym]
+        held = sum(p["side"] * p["qty"] for p in mine)
+        amt = ex.get(sym, 0.0)
+        gap = abs(held) - abs(amt)
+        if amt == 0 or (amt > 0) != (held > 0) or gap <= 1e-9 + 1e-6 * abs(held):
+            continue
+        for p in mine:
+            if gap <= 1e-9 + 1e-6 * abs(held):
+                break
+            if abs(p["qty"] - gap) > 1e-9 + 1e-3 * p["qty"] and p["qty"] > gap:
+                continue
+            o = db.connect().execute(
+                "SELECT ts, resp FROM orders WHERE mode='live' AND action='CLOSE'"
+                " AND status IN ('lỗi','không khớp') AND symbol=? AND strategy=?"
+                " AND sleeve IS ? AND ts>=? ORDER BY ts DESC LIMIT 1",
+                (sym, p["strategy"], p["sleeve"], p["entry_ts"])).fetchone()
+            m_ = re.search(r"lệnh (\d+)", (o["resp"] or "")) if o else None
+            if not m_:
+                continue
+            try:
+                tr = [x for x in t.user_trades(sym, int(o["ts"]) - 3600_000)
+                      if str(x.get("orderId")) == m_.group(1)]
+            except Exception:
+                tr = []
+            q = sum(float(x["qty"]) for x in tr)
+            if abs(q - p["qty"]) > 1e-9 + 1e-3 * p["qty"]:
+                continue
+            px = sum(float(x["price"]) * float(x["qty"]) for x in tr) / q
+            ts = max(int(x["time"]) for x in tr)
+            usd, bps = _pnl_usd(p, px, eq)
+            realised += usd
+            gap -= p["qty"]
+            with db.tx() as cx:
+                cx.execute("UPDATE positions SET open=0, exit_px=?, exit_ts=?,"
+                           " exit_why=?, pnl_bps=? WHERE id=?",
+                           (px, ts, "lệnh đóng đã khớp (lượt chạy báo lỗi)",
+                            bps, p["id"]))
+            db.log("warn", f"{sym}: lệnh đóng {m_.group(1)} thực ra đã khớp · "
+                           f"chốt sổ ở {px:g} · {usd:+.2f} USD")
+        if gap > 1e-9 + 1e-6 * abs(held):
+            db.log("error", f"{sym}: sổ {abs(held):g} nhiều hơn sàn {abs(amt):g} "
+                            "— KIỂM TAY, lượt sau có thể đóng nhầm vị thế sổ khác")
+    return realised
 
 
 def reconcile_now() -> int:
@@ -633,8 +688,8 @@ def _run_once(force: bool = False) -> dict:
             eq += reconcile(prices, eq)
         db.kv_set("realised_pending", 0.0)
         db.kv_set(f"vsa_realised:{m}", 0.0)
-        # PP1 chot loi lenh BAN moi gio (app/pp1tp.py) — cong vao von o day
-        eq += float(db.kv_get(f"tp_realised:{m}", 0) or 0)
+        # chot giua cac luot (pp1tp / pp1wf / swingtp) da nam trong realised_base
+        # (lenh da dong trong so) — cong them `tp_realised` nua la dem hai lan
         db.kv_set(f"tp_realised:{m}", 0.0)
         # C13: lenh limit dat o luot truoc — khop thi ghi so (luot nay dong lai)
         try:

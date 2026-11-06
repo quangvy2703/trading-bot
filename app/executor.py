@@ -252,33 +252,61 @@ def _fill_limit(trader: Trader, jobs: list) -> None:
         for j in live:
             if j["oid"] is None:
                 continue
-            try:
-                st = trader.order_status(j["sym"], j["oid"])
-                if st.get("status") in ("NEW", "PARTIALLY_FILLED"):
-                    try:
-                        trader.cancel_order(j["sym"], j["oid"])
-                    except Exception:
-                        pass                    # vua khop het giua hai lan doc
+            st, err = None, None
+            # loi doc (-1021 khi may ngu, mat ket noi) thuong chi thoang qua:
+            # doc lai vai lan truoc khi ket luan lenh khong khop
+            for k in range(4):
+                try:
                     st = trader.order_status(j["sym"], j["oid"])
                     if st.get("status") in ("NEW", "PARTIALLY_FILLED"):
-                        raise RuntimeError("huỷ không được, lệnh vẫn treo")
-                ex = float(st.get("executedQty") or 0)
-                if ex > 0:
-                    j["filled"] += ex
-                    j["cost"] += ex * float(st.get("avgPrice") or 0)
-                    j["maker"] += ex
-                j["rem"] = round_qty(j["qty"] - j["filled"], j["f"])
-            except Exception as e:
+                        try:
+                            trader.cancel_order(j["sym"], j["oid"])
+                        except Exception:
+                            pass                # vua khop het giua hai lan doc
+                        st = trader.order_status(j["sym"], j["oid"])
+                        if st.get("status") in ("NEW", "PARTIALLY_FILLED"):
+                            raise RuntimeError("huỷ không được, lệnh vẫn treo")
+                    err = None
+                    break
+                except Exception as e:
+                    st, err = None, e
+                    time.sleep(2 + 3 * k)
+            if st is None:
+                # van khong doc duoc lenh: lay phan da khop tu lich su khop,
+                # de so khong giu mot vi the da dong tren san
+                ex, cost = _trades_of(trader, j["sym"], j["oid"])
+                st = {"executedQty": ex, "avgPrice": cost / ex if ex else 0}
+            ex = float(st.get("executedQty") or 0)
+            if ex > 0:
+                j["filled"] += ex
+                j["cost"] += ex * float(st.get("avgPrice") or 0)
+                j["maker"] += ex
+            j["rem"] = round_qty(j["qty"] - j["filled"], j["f"])
+            if err is not None:
                 j["err"] = True
-                j["note"] = f"lệnh {j['oid']}: {str(e)[:200]}"
-                db.log("error", f"{j['sym']} {j['side']} limit {j['oid']}: {e} — "
-                                "KIỂM TAY trên Binance, lệnh có thể còn treo")
+                j["note"] = f"lệnh {j['oid']}: {str(err)[:200]}"
+                db.log("error", f"{j['sym']} {j['side']} limit {j['oid']}: {err} — "
+                                f"theo lịch sử khớp đã khớp {ex:g}/{j['qty']:g}"
+                                " · KIỂM TAY trên Binance, lệnh có thể còn treo")
         jobs_left = [j for j in jobs if j["rem"] > 0 and not j["err"]]
         for j in jobs_left:
             # phan du qua nho de MO them thi thoi; DONG thi van phai dong het
             if not j["close"] and (j["rem"] < j["f"].get("minq", 0)
                                    or j["rem"] * j["ref"] < j["f"].get("minn", 5)):
                 j["rem"] = 0.0
+
+
+def _trades_of(trader: Trader, sym: str, oid) -> tuple[float, float]:
+    """(khoi luong, tong tien) da khop cua mot lenh, theo lich su khop."""
+    for k in range(3):
+        try:
+            tr = [x for x in trader.user_trades(sym, int(time.time() * 1000) - 6 * 3600_000)
+                  if str(x.get("orderId")) == str(oid)]
+            return (sum(float(x["qty"]) for x in tr),
+                    sum(float(x["qty"]) * float(x["price"]) for x in tr))
+        except Exception:
+            time.sleep(3 + 3 * k)
+    return 0.0, 0.0
 
 
 def _fill_market(trader: Trader, j: dict) -> None:

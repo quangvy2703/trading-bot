@@ -15,7 +15,7 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import backtest, c13, crash, data, db, delist, executor, news, pp1tp, pp1wf, runner, settings, vsa, vsbt as VB
+from . import backtest, c13, crash, data, db, delist, executor, news, pp1tp, pp1wf, runner, settings, swingtp, vsa, vsbt as VB
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -172,11 +172,16 @@ def _tp_job() -> None:
 
 
 def _wf_job() -> None:
-    """PP1: windfall moi nen 15m (app/pp1wf.py, cong tac xsmom_wf)."""
+    """PP1: windfall moi nen 15m (app/pp1wf.py, cong tac xsmom_wf);
+    TSVW / DSRM: chot loi theo nen 15m (app/swingtp.py)."""
     try:
         pp1wf.run_once()
     except Exception:
         db.log("error", "lịch windfall PP1 15m hỏng:\n" + traceback.format_exc()[-800:])
+    try:
+        swingtp.run_once()
+    except Exception:
+        db.log("error", "lịch chốt lời TSVW/DSRM 15m hỏng:\n" + traceback.format_exc()[-800:])
 
 
 @app.get("/healthz")
