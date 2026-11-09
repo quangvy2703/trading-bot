@@ -466,6 +466,13 @@ khi có bài mới. Bên dưới là mục **Sổ giấy theo tin**.
 **Bảng điều khiển** — vốn, sụt, vị thế, lượt chạy, ba đèn khoá, việc cần làm,
 đường vốn, bảng vị thế.
 
+**Ứng cử viên** (trong Bảng điều khiển, `app/cands.py`) — mã mà lượt ngày tới sẽ chọn cho
+PP1 / PP2 / PP3 / PP4 / PP7 nếu nến ngày đóng ở giá hiện tại. Mỗi giờ (phút 3) bot chính
+lấy nến ngày đang chạy của top thanh khoản rồi chạy đúng hàm tín hiệu của lượt ngày; không
+đặt lệnh, không ghi nến vào kho. Chưa trừ chỗ trống / trần rủi ro, chưa áp luật phụ PP1
+(funding, BSADF, Kase), stop RSI(2) theo 6×ATR. Bot của user đọc lại bảng của bot chính và
+tự đánh dấu mã họ đang giữ.
+
 **Phương pháp** — đọc thẳng các tài liệu đã chốt trong trang:
 `docs/rsi2-connors.md`, `docs/xsmom-volnorm.md`, `docs/money-management-r.md`, `docs/stop-dinh-day.md` và `docs/huy-niem-yet.md`. Thư mục `docs/` được gắn
 vào container ở `/docs` **chỉ đọc**, nên sửa tài liệu là trang thấy ngay, không
@@ -509,6 +516,44 @@ lượt kế tiếp**, không bị bỏ rơi (chúng sẽ không bao giờ tới
 nữa). Ghi chú của lượt chạy hiện «sổ quá hạn bị đóng».
 
 **Nhật ký** — lệnh gần đây, sự kiện, các lượt chạy.
+
+**Lãi đã chốt lấy từ sàn** (`app/repnl.py`) — lúc đóng lệnh, sổ ghi lãi/lỗ ước lượng (giá
+lượt chạy đọc được, phí phẳng `FEE_BPS`, bỏ funding). Sau mỗi lượt ngày, và khi bấm «Tính lại
+lãi đã chốt» (tab Điều khiển), bot đọc `userTrades` + funding của Binance rồi ghi lại từng vị
+thế đã đóng: giá vào / ra = giá khớp TB của đúng lệnh, phí thật, funding chia theo khối lượng
+cho các vị thế đang mở lúc trả. Vẫn tính **theo từng lô** — tổng có thể khác «Realized PnL»
+của Binance (sàn dùng giá vốn bình quân cả vị thế) khi mã còn lô đang mở.
+
+## Nhiều tài khoản (tab «Người dùng»)
+
+Người ngoài đưa khoá API Binance của họ, hệ thống chạy **đúng bot này** trên tài khoản đó.
+Tắt mặc định — bật bằng hai biến trong `.env`:
+
+```
+ADMIN_PASSWORD=...   # mọi trang phải đăng nhập; admin đăng nhập bằng tên «admin»
+APP_SECRET=...       # openssl rand -hex 32 — mã hoá khoá API của user; KHÔNG đổi sau khi có user
+```
+
+- **MFA** (TOTP — Google Authenticator, Authy, 1Password…) bắt buộc với mọi tài khoản, kể cả
+  admin: lần đăng nhập đầu sau mật khẩu sẽ hiện mã QR để gắn, các lần sau hỏi mã 6 số. User
+  mất điện thoại: admin bấm «Đặt lại MFA» ở tab «Người dùng». Admin mất: đặt
+  `ADMIN_MFA_RESET=1`, khởi động lại, gắn lại rồi bỏ biến. `MFA=0` để tắt hẳn.
+- **Đăng ký** ở `/login`: tên, mật khẩu, API key/secret. Khoá được kiểm ngay (đọc được tài
+  khoản, có quyền Futures, chế độ One-way, không trùng khoá bot chính) rồi chờ duyệt.
+- **Duyệt** (tab «Người dùng»): số dư ví lúc đó thành vốn ban đầu, khởi động bot và bật chạy
+  thật. Có thêm Bật/Tắt chạy thật, Khoá (dừng bot — vị thế vẫn nằm trên sàn kèm dừng an toàn),
+  Mở lại, Xoá (sổ giữ lại thành tệp `.deleted-…`), và **Xem** — mở Điều khiển / Tổng quan /
+  Nhật ký của user đó.
+- **User** chỉ thấy Điều khiển (không nút điều hành, chỉ «Dừng khẩn»), Tổng quan và Nhật ký
+  của **chính họ**. Máy chủ chặn theo danh sách cho phép; ẩn tab chỉ là cho gọn.
+- **Cách chạy**: mỗi user là một tiến trình con chạy chính `app.main` với kho riêng
+  `/data/users/u<id>.db`, khoá riêng, cổng nội bộ `8100+id` (chỉ 127.0.0.1, đòi token). Không
+  có trạng thái nào dùng chung giữa hai tài khoản. Cấu hình đọc từ tab «Cấu hình» của bot
+  chính; nến / funding / thông báo chép từ kho bot chính (không tải lại từ Binance); lượt
+  ngày chạy **sau bot chính 3 phút**. Sổ giấy (tin, VSA, BTC sập, C13) chỉ chạy ở bot chính.
+- **Lưu ý**: 1R là USD tuyệt đối dùng chung — tài khoản nhỏ sẽ bị trần phơi nhiễm
+  (`MAX_GROSS_X` × vốn của họ) chặn nhiều lệnh. Mỗi bot user tốn thêm RAM (nạp cả kho nến)
+  và vài lời gọi API mỗi giờ. Nếu trang đứng sau Cloudflare Access, policy phải cho user vào.
 
 ## Trang có gì
 

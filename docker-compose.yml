@@ -200,6 +200,19 @@ services:
       START_EQUITY_USD: "${START_EQUITY_USD:-500}"
       # chay hang ngay luc 00:05 UTC, ngay sau khi nen 1D dong
       RUN_AT_UTC: "${RUN_AT_UTC:-00:05}"
+      # ---- nhieu tai khoan (app/users.py) ----
+      # ADMIN_PASSWORD rong = nhu cu: khong dang nhap, mot tai khoan. Dat mat khau
+      # la MOI trang phai dang nhap (admin: ten «admin»). Them APP_SECRET (chuoi
+      # ngau nhien dai, vd. `openssl rand -hex 32`) moi mo dang ky user; no ma hoa
+      # khoa API cua user trong kho — MAT hay DOI no la khong giai ma duoc khoa cu.
+      # Moi user da duyet chay mot bot rieng trong container nay (/data/users/u<id>.db,
+      # cong noi bo 8100+id, khong mo ra ngoai), luot ngay sau bot chinh 3 phut.
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
+      APP_SECRET: "${APP_SECRET:-}"
+      # MFA (TOTP, Google Authenticator...) bat buoc moi tai khoan; MFA=0 de tat.
+      # Admin mat may xac thuc: ADMIN_MFA_RESET=1, khoi dong lai, gan lai, roi bo bien.
+      MFA: "${MFA:-1}"
+      ADMIN_MFA_RESET: "${ADMIN_MFA_RESET:-}"
       #
       # ============ THAM SO RIENG TUNG CHIEN LUOC ============
       # KHONG dat qua bien moi truong. Chung duoc chot trong app/config.py

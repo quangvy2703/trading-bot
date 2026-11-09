@@ -75,27 +75,49 @@ class Trader:
     Giu nguyen tac mot cho kiem duy nhat de khong co duong vong.
     """
 
-    def __init__(self) -> None:
-        if not CFG.has_keys():
+    def __init__(self, key: str | None = None, secret: str | None = None) -> None:
+        # Khoa truyen vao chi de kiem khoa cua user luc dang ky / duyet (app/users.py);
+        # bot cua user chay trong tien trinh rieng voi khoa cua ho trong CFG.
+        self._key, self._secret = (key, secret) if key else (CFG.api_key, CFG.api_secret)
+        if not (self._key and self._secret):
             raise RuntimeError("thiếu BINANCE_API_KEY / BINANCE_API_SECRET")
         self._c = httpx.Client(base_url=CFG.rest, timeout=20.0,
-                               headers={"X-MBX-APIKEY": CFG.api_key,
+                               headers={"X-MBX-APIKEY": self._key,
                                         "User-Agent": "crypto-live/1"})
 
     def close(self) -> None:
         self._c.close()
 
+    # Lech dong ho voi san (ms), dung chung moi Trader. Mac ngu / Power Nap lam
+    # dong ho may ao Docker tre hang giay → -1021 recvWindow (lot 08/11 hong).
+    _OFF = {"ms": 0}
+
+    def _sync(self) -> None:
+        t0 = time.time()
+        s = int(self._c.get("/fapi/v1/time").json()["serverTime"])
+        t1 = time.time()
+        Trader._OFF["ms"] = s - int((t0 + t1) / 2 * 1000)
+
     def _sign(self, params: dict) -> str:
-        params["timestamp"] = int(time.time() * 1000)
+        params["timestamp"] = int(time.time() * 1000) + Trader._OFF["ms"]
         params["recvWindow"] = 5000
         q = urllib.parse.urlencode(params, doseq=True)
-        sig = hmac.new(CFG.api_secret.encode(), q.encode(),
+        sig = hmac.new(self._secret.encode(), q.encode(),
                        hashlib.sha256).hexdigest()
         return f"{q}&signature={sig}"
 
     def _call(self, method: str, path: str, **params):
-        q = self._sign(dict(params))
-        r = self._c.request(method, f"{path}?{q}")
+        for k in range(3):
+            q = self._sign(dict(params))
+            r = self._c.request(method, f"{path}?{q}")
+            # -1021: san TU CHOI truoc khi xu ly (ca lenh dat) → dong bo gio, ky lai
+            if r.status_code == 400 and '"code":-1021' in r.text and k < 2:
+                try:
+                    self._sync()
+                except Exception:
+                    time.sleep(2)
+                continue
+            break
         if r.status_code >= 400:
             raise RuntimeError(f"{r.status_code} {r.text[:400]}")
         return r.json()

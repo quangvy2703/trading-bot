@@ -422,11 +422,65 @@ def _run(p: dict) -> dict:
                         new.append({"strategy": "xsmom", "sleeve": sl, "si": int(si),
                                     "side": side, "stop": None, "r_usd": r_x * mx,
                                     "notional": r_x * mx / rf, "sig": float(vol[si])})
+                # ---- ma ke tiep — chi nghien cuu (p["xnext"] = so ma them toi da moi phia) ----
+                # Moi ma dang giu o so den luot VAN con trong muc tieu thi mo them
+                # ma hang ke tiep cung phia (qua cung loc MA30 / chan mua, chua co
+                # trong so), co × p["xnext_k"]. Toi da xnext ma them moi phia.
+                xn = int(p.get("xnext", p.get("xsmom_next")) or 0)
+                if xn > 0:
+                    kn = float(p.get("xnext_k", p.get("xsmom_next_k")) or 1.0)
+                    held_sl = {(q["si"], q["side"]) for q in old}
+                    taken = held_sl | {(a["si"], a["side"]) for a in new}
+                    for side, seq in ((1, order[k:]), (-1, order[:-k][::-1])):
+                        kept = sum(1 for a in new if a["side"] == side and (a["si"], a["side"]) in held_sl)
+                        need = min(kept, xn)
+                        for si in seq:
+                            if need <= 0:
+                                break
+                            si = int(si)
+                            if (si, side) in taken or (si, -side) in taken:
+                                continue
+                            if side > 0 and NOT and nobuy(si, j):
+                                continue
+                            if XMA is not None:
+                                mv = XMA[si, j]
+                                if not np.isfinite(mv) or (side > 0 and not C[si, j] > mv) \
+                                        or (side < 0 and not C[si, j] < mv):
+                                    continue
+                            rf = float(vol[si]) * np.sqrt(hold)
+                            if not (rf > 0 and mx > 0):
+                                continue
+                            new.append({"strategy": "xsmom", "sleeve": sl, "si": si, "side": side,
+                                        "stop": None, "r_usd": r_x * mx * kn,
+                                        "notional": r_x * mx * kn / rf, "sig": float(vol[si]), "next": 1})
+                            taken.add((si, side))
+                            need -= 1
         keep = {(q["si"], q["side"]) for q in old}
         want = {(a["si"], a["side"]) for a in new}
         closes += [(q, "tái cân bằng" if r_x > 0 else "chiến lược tắt") for q in old
                    if (q["si"], q["side"]) not in want and id(q) not in cset]
         opens += [a for a in new if (a["si"], a["side"]) not in keep]
+
+        # ---- cuon them lop — chi nghien cuu (p["xroll"] = so lop them toi da) ----
+        # Den luot so ma ma dang giu VAN con trong muc tieu: ngoai viec giu vi
+        # the cu, mo them mot lop cung so, cung ma, cung chieu, co theo bien
+        # dong hom nay × p["xroll_k"], gia vao hom nay. Toi da xroll lop them
+        # moi ma; ma roi khoi muc tieu thi dong tat ca cac lop (cung khoa).
+        xr = int(p.get("xroll") or 0)
+        if xr > 0 and r_x > 0:
+            going = {id(q) for q, _ in closes}
+            nw = {(a["si"], a["side"]): a for a in new}
+            cnt: dict = {}
+            for q in old:
+                if id(q) not in going:
+                    k_ = (q["si"], q["side"])
+                    cnt[k_] = cnt.get(k_, 0) + 1
+            kx = float(p.get("xroll_k") or 1.0)
+            for k_, c_ in cnt.items():
+                if k_ in nw and c_ - 1 < xr:
+                    a = nw[k_]
+                    opens.append({**a, "r_usd": a["r_usd"] * kx,
+                                  "notional": a["notional"] * kx, "roll": c_})
 
         # ---- nhoi lenh dong luong — chi nghien cuu (scripts/xsmom_add.py) ----
         # p["xadd"] = {"mode": "thuan"|"nguoc", "d": so σ ngay, "size": he so

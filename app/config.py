@@ -93,6 +93,11 @@ class Config:
     #                   (z = log-return / sd XSMOM_WF_W nen truoc) → dong; XSMOM_WF_RE 1 = mo lai o luot ngay ke tiep
     #                   neu so khong den luot. XSMOM_WF_SIDE both / long / short
     xsmom_wf: int = _i("XSMOM_WF", 1)
+    #   XSMOM_NEXT      ma ke tiep: moi ma so den luot GIU LAI (van trong muc tieu) thi mo them ma hang
+    #                   ke tiep cung phia, toi da XSMOM_NEXT ma moi phia, co × XSMOM_NEXT_K (0 = tat).
+    #                   Kiem 08/11/2026: ngoai mau 2020-07..2023-04 dung huong, chua y nghia thong ke.
+    xsmom_next: int = _i("XSMOM_NEXT", 0)
+    xsmom_next_k: float = _f("XSMOM_NEXT_K", 0.5)
     xsmom_wf_k: float = _f("XSMOM_WF_K", 25.0)
     xsmom_wf_tf: str = os.environ.get("XSMOM_WF_TF", "15m")
     xsmom_wf_w: int = _i("XSMOM_WF_W", 288)
@@ -167,6 +172,24 @@ class Config:
     # cat lo; dong luong (khong co cat lo trong nghien cuu) dat xa SAFETY_R
     # lan R de khong cham vao hanh vi da backtest.
     safety_r: float = _f("SAFETY_R", 3.0)
+
+    # --- nhieu tai khoan (app/users.py) ---
+    # ADMIN_PASSWORD rong = che do cu: mot tai khoan, khong dang nhap (chi nghe
+    # loopback / Cloudflare Access). Dat mat khau la bat dang nhap cho MOI trang;
+    # them APP_SECRET (chuoi ngau nhien dai) moi mo dang ky user — no ma hoa khoa
+    # API cua user trong kho, nen ban sao kho khong lo khoa.
+    admin_password: str = os.environ.get("ADMIN_PASSWORD", "")
+    app_secret: str = os.environ.get("APP_SECRET", "")
+    users_dir: str = os.environ.get("USERS_DIR") or os.path.join(
+        os.path.dirname(os.environ.get("DB_PATH", "/data/live.db")), "users")
+    worker_port0: int = _i("WORKER_PORT0", 8100)
+    # Ba bien duoi chi co o tien trinh bot CUA MOT USER (app/users.py tu dat):
+    #   WORKER_TOKEN  moi yeu cau phai mang token nay (chi tien trinh chinh biet)
+    #   MARKET_DB     kho nen / funding / thong bao cua admin — chep sang, khong tai lai
+    #   SETTINGS_DB   cau hinh (tab «Cấu hình») doc tu kho admin
+    worker_token: str = os.environ.get("WORKER_TOKEN", "")
+    market_db: str = os.environ.get("MARKET_DB", "")
+    settings_db: str = os.environ.get("SETTINGS_DB", "")
 
     @property
     def rest(self) -> str:

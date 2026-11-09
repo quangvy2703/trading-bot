@@ -192,6 +192,56 @@ def refresh(api: PublicApi, symbols: list[str], log_every: int = 50) -> int:
     return n
 
 
+def sync_market() -> int:
+    """Bot cua user (CFG.market_db): chep nen / funding / thong bao MOI tu kho
+    cua admin thay vi tai lai tu Binance — N bot cung tai mot luc la vuot tran
+    2.400 trong so/phut cua IP. Lan dau la chep ca kho. Tra so nen ngay da chep."""
+    with db._LOCK:
+        cx = db.connect()
+        try:
+            cx.execute("ATTACH DATABASE ? AS m", (CFG.market_db,))
+            n = 0
+            for t, cols in (("bars", "symbol,ts,o,h,l,c,v"), ("bars1h", "symbol,ts,h,l,c,v"),
+                            ("funding", "symbol,ts,rate")):
+                # chi phan moi hon moc cuoi cua tung ma (khoa chinh (symbol, ts))
+                cur = cx.execute(
+                    f"INSERT OR IGNORE INTO main.{t}({cols}) SELECT {', '.join('x.' + c for c in cols.split(','))}"
+                    f" FROM m.{t} x LEFT JOIN (SELECT symbol, MAX(ts) AS t FROM main.{t} GROUP BY symbol) y"
+                    f" USING(symbol) WHERE y.t IS NULL OR x.ts > y.t")
+                if t == "bars":
+                    n = cur.rowcount
+            cx.execute("INSERT OR REPLACE INTO main.delist(symbol,kind,ts,title,code)"
+                       " SELECT symbol,kind,ts,title,code FROM m.delist")
+            cx.execute("INSERT OR IGNORE INTO main.monitor(symbol,ts,action,title,code)"
+                       " SELECT symbol,ts,action,title,code FROM m.monitor")
+            cx.commit()
+            return n
+        finally:
+            cx.close()
+
+
+def refresh_from_market(api: PublicApi, symbols: list[str], wait_s: float = 600) -> int:
+    """Luot ngay cua bot user: lay nen vua dong tu kho admin (admin chay som hon
+    vai phut). Doi toi khi >= 95% ma da co nen do; het `wait_s` (admin loi /
+    tre) thi tai tu Binance phan con thieu, de luot chay khong bao gio ket."""
+    want = int(time.time() * 1000) // DAY * DAY - DAY       # nen ngay vua dong
+    t_end = time.time() + wait_s
+    while True:
+        sync_market()
+        cx = db.connect()
+        try:
+            last = dict(cx.execute("SELECT symbol, MAX(ts) FROM bars GROUP BY symbol"))
+        finally:
+            cx.close()
+        miss = [s for s in symbols if (last.get(s) or 0) < want]
+        if len(miss) <= 0.05 * len(symbols) or time.time() > t_end:
+            break
+        time.sleep(20)
+    if miss:
+        db.log("info", f"kho admin thiếu nến {len(miss)} mã — tải từ Binance")
+    return refresh(api, miss, log_every=0) if miss else 0
+
+
 def load_all(min_bars: int) -> dict:
     """Doc toan bo kho nen ra mang numpy, mot lan moi luot chay."""
     cx = db.connect()

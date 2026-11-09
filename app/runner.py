@@ -12,7 +12,7 @@ import time
 
 import numpy as np
 
-from . import c13 as C13, db, data, delist as DL, executor, pp1x as PX, settings, strategies as ST, swing as SW, volprofile as VP
+from . import acct, c13 as C13, db, data, delist as DL, executor, pp1x as PX, settings, strategies as ST, swing as SW, volprofile as VP
 from .binance import DAY, PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -22,13 +22,13 @@ def equity_now() -> float:
     try:
         r = cx.execute("SELECT value FROM equity WHERE mode=? "
                        "ORDER BY ts DESC LIMIT 1", (mode(),)).fetchone()
-        return float(r["value"]) if r else CFG.start_equity
+        return float(r["value"]) if r else acct.capital(mode())
     finally:
         cx.close()
 
 
 def realised_base(m: str) -> float:
-    """Von DA CHOT: von dau + lai/lo moi lenh da dong trong so (moi chien luoc,
+    """Von DA CHOT: von (dau + nap/rut, acct.capital) + lai/lo moi lenh da dong trong so (moi chien luoc,
     ke ca lenh chot giua cac luot). KHONG noi chuoi tu moc von truoc: moc do da
     gom lai/lo chua chot, cong them mark_to_market nua la dem hai lan."""
     cx = db.connect()
@@ -36,7 +36,7 @@ def realised_base(m: str) -> float:
         r = cx.execute("SELECT COALESCE(SUM(notional * pnl_bps / 1e4), 0) AS s FROM positions "
                        "WHERE mode=? AND open=0 AND pnl_bps IS NOT NULL AND notional IS NOT NULL",
                        (m,)).fetchone()
-        return float(CFG.start_equity) + float(r["s"] or 0.0)
+        return acct.capital(m) + float(r["s"] or 0.0)
     finally:
         cx.close()
 
@@ -224,7 +224,9 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
                            "symbol": p["symbol"], "side": p["side"],
                            "stop": None, **keep_of(p)})
     if r_xsmom > 0:
-        new = ST.xsmom_target(P, rank, day, nobuy)
+        held_sl = {(p["symbol"], p["side"]) for p in cur_x
+                   if p["sleeve"] == sl and id(p) not in kase_x}
+        new = ST.xsmom_target(P, rank, day, nobuy, held_sl, F.get("next", 0), F.get("next_k", 1.0))
     fv = None
     if new and F["fund_veto"]:
         try:
@@ -258,11 +260,13 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
             rf = float(x["vol"]) * math.sqrt(X["hold"])
             if not (rf > 0):
                 continue
+            kx = float(x.get("k", 1.0))
             target.append({"strategy": "xsmom", "sleeve": sl,
                            "symbol": x["symbol"], "side": x["side"],
-                           "stop": None, "r_usd": r_xsmom,
-                           "notional": r_xsmom / rf,
-                           "why": f"điểm {x['score']:+.2f} · R {rf*100:.1f}%"})
+                           "stop": None, "r_usd": r_xsmom * kx,
+                           "notional": r_xsmom * kx / rf,
+                           "why": f"điểm {x['score']:+.2f} · R {rf*100:.1f}%"
+                                  + (f" · mã kế tiếp ×{kx:g}" if x.get("next") else "")})
     # ---- windfall (app/pp1wf.py): mo lai lenh bi dong giua ngay o so KHONG den luot ----
     wf_re: list = []
     if r_xsmom > 0 and F.get("wf") and F.get("wf_re"):
@@ -280,6 +284,9 @@ def build_target(P: dict, rank: dict, day: int, cur: list) -> tuple[list, dict]:
                 1 for p in cur_x if p["sleeve"] is not None
                 and p["sleeve"] >= X["sleeves"]),
             "vị thế mới": len(new or []),
+            "mã kế tiếp": (sorted(f"{x['symbol']} ({'MUA' if x['side'] > 0 else 'BÁN'})"
+                                  for x in (new or []) if x.get("next"))
+                           if F.get("next") else "tắt"),
             "Kase đóng": sorted(p["symbol"] for p in cur_x if id(p) in kase_x) if F["kase"] else "tắt",
             "funding chặn bán": (bool(fv and fv.get("active")) if fv is not None else
                                  ("tắt" if not F["fund_veto"] else "không cần tính")),
@@ -661,7 +668,10 @@ def _run_once(force: bool = False) -> dict:
         # Chi cap nhat ma DANG niem yet. Ma da huy thi lich su dung yen —
         # goi API cho chung chi ton tran trong so va luon tra ve rong.
         syms = data.live_symbols(api)
-        data.refresh(api, syms)
+        if CFG.market_db:            # bot cua user: nen + 1H + thong bao chep tu kho admin
+            data.refresh_from_market(api, syms)
+        else:
+            data.refresh(api, syms)
         bars = data.load_all(settings.strat()[0]["min_bars"])
         bars = {s: b for s, b in bars.items() if data.is_crypto(b)}
         P = ST.prep(bars)
@@ -671,17 +681,18 @@ def _run_once(force: bool = False) -> dict:
         rank = ST.ranks_on(P, day)
         # Nen 1H cho top 20 — kho cho tab «Tinh lich su» mo phong stop HVN.
         # Lenh that van tai 1H truc tiep luc dung profile (volprofile.hvn_below).
-        try:
-            data.refresh_1h(api, [s_ for s_, r_ in rank.items() if r_ <= 20])
-        except Exception as e:
-            db.log("warn", f"cập nhật nến 1H lỗi: {e}")
-        # Thong bao huy niem yet moi — hai trang moi nhat la du cho mot ngay.
-        # Loi mang khong chan luot chay: danh sach cu van con trong kho.
-        try:
-            DL.refresh(2)
-            DL.refresh_monitor(2)
-        except Exception as e:
-            db.log("warn", f"cập nhật thông báo huỷ niêm yết / thẻ Monitoring lỗi: {e}")
+        if not CFG.market_db:
+            try:
+                data.refresh_1h(api, [s_ for s_, r_ in rank.items() if r_ <= 20])
+            except Exception as e:
+                db.log("warn", f"cập nhật nến 1H lỗi: {e}")
+            # Thong bao huy niem yet moi — hai trang moi nhat la du cho mot ngay.
+            # Loi mang khong chan luot chay: danh sach cu van con trong kho.
+            try:
+                DL.refresh(2)
+                DL.refresh_monitor(2)
+            except Exception as e:
+                db.log("warn", f"cập nhật thông báo huỷ niêm yết / thẻ Monitoring lỗi: {e}")
 
         prices = api.prices()
         # eq = von DA CHOT theo so. Lenh chot giua cac luot (doi chieu 5 phut,

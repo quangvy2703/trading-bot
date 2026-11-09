@@ -108,6 +108,9 @@ def _migrate(cx) -> None:
                           ("positions", "r_usd", "REAL"),
                           # muc chot loi tuyet doi (TSVW / DSRM, app/swing.py)
                           ("positions", "tp", "REAL"),
+                          # phi / funding that tu san (app/repnl.py)
+                          ("positions", "fee_usd", "REAL"),
+                          ("positions", "fund_usd", "REAL"),
                           ("runs", "n_open", "INTEGER"),
                           ("runs", "gross", "REAL"),
                           ("delist", "code", "TEXT")):
@@ -158,6 +161,16 @@ def kv_set(k: str, v) -> None:
         cx.execute("INSERT INTO kv(k,v) VALUES(?,?) "
                    "ON CONFLICT(k) DO UPDATE SET v=excluded.v",
                    (k, json.dumps(v)))
+
+
+def kv_get_at(path: str, k: str, default=None):
+    """Doc kv cua MOT KHO KHAC, chi doc — bot cua user doc cau hinh cua admin."""
+    cx = sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True, timeout=15)
+    try:
+        r = cx.execute("SELECT v FROM kv WHERE k=?", (k,)).fetchone()
+        return json.loads(r[0]) if r else default
+    finally:
+        cx.close()
 
 
 def log(level: str, msg: str) -> None:

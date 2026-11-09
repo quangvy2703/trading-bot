@@ -128,8 +128,14 @@ def xsmom_sleeve_of(day: int, epoch: int) -> int:
     return int(((day - epoch) // DAY) % X["sleeves"])
 
 
-def xsmom_target(P: dict, rank: dict, day: int, nobuy: dict | None = None) -> list | None:
-    """Bon vi the moi cho so dang den luot: 2 mua diem cao nhat, 2 ban thap nhat."""
+def xsmom_target(P: dict, rank: dict, day: int, nobuy: dict | None = None,
+                 held: set | None = None, nxt: int = 0, nxt_k: float = 1.0) -> list | None:
+    """Bon vi the moi cho so dang den luot: 2 mua diem cao nhat, 2 ban thap nhat.
+
+    `held` = {(ma, chieu)} so den luot dang giu. `nxt` > 0: moi ma trong muc
+    tieu ma so DANG GIU (se duoc giu lai) thi them ma hang ke tiep cung phia
+    (qua cung loc, chua co trong so), toi da `nxt` ma moi phia, co × `nxt_k`
+    — dong `next` = 1, `k` = he so. Trung backtest `xnext`."""
     _, X = settings.strat()
     L = X["lookback"]
     sc = []
@@ -172,7 +178,22 @@ def xsmom_target(P: dict, rank: dict, day: int, nobuy: dict | None = None) -> li
     # giu). Day la mau so R cua chien luoc nay (khong co stop).
     # Ung vien khong qua loc thi BO HAN, khong thay bang ma ke tiep: thay the
     # la mot luat khac han, va ban do chua duoc kiem chung.
-    return ([{"symbol": s, "side": 1, "score": v, "vol": g}
-             for v, s, g, j in sc[:k] if ok(s, j, 1)]
-            + [{"symbol": s, "side": -1, "score": v, "vol": g}
-               for v, s, g, j in sc[-k:] if ok(s, j, -1)])
+    out = ([{"symbol": s, "side": 1, "score": v, "vol": g}
+            for v, s, g, j in sc[:k] if ok(s, j, 1)]
+           + [{"symbol": s, "side": -1, "score": v, "vol": g}
+              for v, s, g, j in sc[-k:] if ok(s, j, -1)])
+    if nxt > 0 and held:
+        taken = set(held) | {(x["symbol"], x["side"]) for x in out}
+        for side, seq in ((1, sc[k:]), (-1, sc[:-k][::-1])):
+            need = min(nxt, sum(1 for x in out if x["side"] == side
+                                and (x["symbol"], side) in held))
+            for v, s, g, j in seq:
+                if need <= 0:
+                    break
+                if (s, side) in taken or (s, -side) in taken or not ok(s, j, side):
+                    continue
+                out.append({"symbol": s, "side": side, "score": v, "vol": g,
+                            "next": 1, "k": float(nxt_k)})
+                taken.add((s, side))
+                need -= 1
+    return out

@@ -47,6 +47,63 @@ def snap() -> None:
             t.close()
 
 
+# ---------------------------------------------------------------- von nap
+# Tien khong den tu lenh (nap / rut, incomeType TRANSFER) la VON, khong phai lai.
+# Luu vao kv (san chi giu 3 thang) — von luc t = START_EQUITY_USD (so du vi
+# truoc lan chay that dau tien) + nap/rut SAU moc do toi t.
+KEY_TR = "transfers"
+_TR: dict = {"at": 0.0}
+
+
+def _t_start() -> int:
+    r = db.connect().execute("SELECT MIN(ts) AS t FROM runs WHERE mode='live'").fetchone()
+    return int(r["t"]) if r and r["t"] else int(time.time() * 1000)
+
+
+def transfers(max_age: float = 300) -> list:
+    """[{ts, usd, id}] nap (+) / rut (−) stablecoin sau lan chay that dau tien."""
+    cur = db.kv_get(KEY_TR, None)
+    if cur is not None and time.time() - _TR["at"] < max_age or not CFG.has_keys():
+        return cur or []
+    cur, t0 = list(cur or []), _t_start()
+    seen = {x["id"] for x in cur}
+    s = max([t0] + [int(x["ts"]) - 60_000 for x in cur])
+    now = int(time.time() * 1000)
+    t = None
+    try:
+        t = Trader()
+        s = max(s, now - 89 * 86_400_000)
+        while s < now:
+            e = min(s + 7 * 86_400_000, now)
+            for x in t._call("GET", "/fapi/v1/income", incomeType="TRANSFER",
+                             startTime=int(s), endTime=int(e), limit=1000):
+                k = str(x.get("tranId"))
+                if x.get("asset") in _STABLE and int(x["time"]) > t0 and k not in seen:
+                    seen.add(k)
+                    cur.append({"ts": int(x["time"]), "usd": float(x["income"]), "id": k})
+            s = e + 1
+        cur.sort(key=lambda x: x["ts"])
+        db.kv_set(KEY_TR, cur)
+        _TR["at"] = time.time()
+    except Exception as e:
+        db.log("warn", f"đọc nạp/rút trên sàn lỗi: {e}")
+    finally:
+        if t is not None:
+            t.close()
+    return cur
+
+
+def capital_at(ts: int, tr: list | None = None) -> float:
+    """Von (khong phai lai) tai thoi diem ts."""
+    tr = transfers() if tr is None else tr
+    return float(CFG.start_equity) + sum(x["usd"] for x in tr if x["ts"] <= ts)
+
+
+def capital(m: str = "live") -> float:
+    """Von hien tai: so giay chi co START_EQUITY_USD."""
+    return capital_at(int(time.time() * 1000)) if m == "live" else float(CFG.start_equity)
+
+
 _INC: dict = {"from": None, "upto": 0, "rows": {}}
 WIN = 2 * 86_400_000
 
@@ -71,6 +128,18 @@ def _income(t: Trader, start: int, now: int) -> list:
     _INC["upto"] = now
     _INC["rows"] = {k: x for k, x in _INC["rows"].items() if int(x["time"]) >= start}
     return [x for x in _INC["rows"].values() if int(x["time"]) >= start]
+
+
+def _minus(a: list, b: list) -> list:
+    """a − b tai tung moc cua a; b la duong bac thang (moc cuoi <= ts)."""
+    import bisect
+    bt = [p["ts"] for p in b]
+    out = []
+    for p in a:
+        j = bisect.bisect_right(bt, p["ts"]) - 1
+        if j >= 0:
+            out.append({"ts": p["ts"], "value": p["value"] - b[j]["value"]})
+    return out
 
 
 def series() -> dict:
@@ -133,6 +202,28 @@ def series() -> dict:
                 + [{"ts": now, "value": w_now + u_now}])
         tr = [{"ts": int(x["time"]), "value": float(x["income"])}
               for x in inc if x.get("incomeType") == "TRANSFER"]
-        v = {"ok": True, "real": real, "booked": booked, "transfers": tr, "ts": now}
+        TR = transfers()
+        # nap/rut roi vao giua hai moc chup (vd. moc luot ngay → anh chup dau tien):
+        # chen bac thang dung luc nap, de duong von khong doc dan qua nhieu gio
+        for v_ in (real, booked):
+            for x in TR:
+                i = next((j for j, p in enumerate(v_) if p["ts"] >= x["ts"]), None)
+                if not i or v_[i]["ts"] - v_[i - 1]["ts"] <= 60_000:
+                    continue
+                if v_[i]["ts"] == x["ts"]:      # so du vi: moc nap da la gia tri SAU khi nap
+                    v_[i:i] = [{"ts": x["ts"] - 1, "value": v_[i]["value"] - x["usd"]}]
+                else:
+                    pv = v_[i - 1]["value"]
+                    v_[i:i] = [{"ts": x["ts"] - 1, "value": pv}, {"ts": x["ts"], "value": pv + x["usd"]}]
+        cap = lambda v_: [{"ts": p["ts"], "value": p["value"] - capital_at(p["ts"], TR)} for p in v_]
+        # lai = von − tien nap/rut: duong lai khong nhay khi nap / rut
+        v = {"ok": True, "real": real, "booked": booked, "transfers": tr, "ts": now,
+             "real_pnl": cap(real), "booked_pnl": cap(booked),
+             # Unrealized = tai san − so du vi cung luc (so du vi: moc cuoi truoc hoac dung ts)
+             "upnl": _minus(real, booked),
+             "capital": capital_at(now, TR), "start_equity": float(CFG.start_equity),
+             # duong von goc (bac thang): von dau, moi lan nap/rut nhay mot bac
+             "capital_line": [{"ts": t_, "value": capital_at(t_, TR)} for t_ in
+                              sorted({real[0]["ts"], now} | {x["ts"] for x in TR if x["ts"] > real[0]["ts"]})]}
         _C.update(at=time.time(), v=v)
         return v

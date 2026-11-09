@@ -12,10 +12,10 @@ from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from . import acct, backtest, c13, crash, data, db, delist, executor, news, pp1tp, pp1wf, runner, settings, swingtp, vsa, vsbt as VB
+from . import acct, backtest, c13, cands, repnl, crash, data, db, delist, executor, exitview, news, pp1tp, pp1wf, runner, settings, swingtp, users, vsa, vsbt as VB
 from .binance import PublicApi, Trader
 from .config import CFG, FEE_BPS
 
@@ -41,12 +41,34 @@ CONFIRM = "TÔI ĐỒNG Ý CHẠY THẬT"
 
 app = FastAPI(title="Quản lý chạy thật", docs_url=None, redoc_url=None)
 sched = BackgroundScheduler(timezone="UTC")
+# Dang nhap + chan quyen + chuyen tiep sang bot cua tung user (app/users.py).
+# Khong dat ADMIN_PASSWORD thi lop nay de nguyen moi yeu cau (che do cu).
+app.middleware("http")(users.gate)
+app.include_router(users.router)
 
 
 @app.on_event("startup")
 def _start() -> None:
     db.init()
-    if not db.kv_get("seeded"):
+    users.init()
+    if CFG.market_db:
+        # Bot cua user (app/users.py): nen / funding / thong bao chep tu kho admin
+        # — khong gieo tu npz, khong doc API thong bao (N bot = N lan 429).
+        def _seed_market():
+            try:
+                if db.kv_get("xsmom_epoch") is None:
+                    # cung moc lich 7 so voi bot chinh: cung so den luot cung ngay
+                    e = db.kv_get_at(CFG.market_db, "xsmom_epoch")
+                    if e is not None:
+                        db.kv_set("xsmom_epoch", e)
+                n = data.sync_market()
+                if not db.kv_get("seeded"):
+                    db.kv_set("seeded", {"from": "admin", "bars": n, "ts": int(time.time() * 1000)})
+                    db.log("info", f"chép {n:,} nến ngày từ kho bot chính")
+            except Exception as e:
+                db.log("warn", f"chép kho nến từ bot chính lỗi: {e}")
+        threading.Thread(target=_seed_market, daemon=True, name="seed").start()
+    if not CFG.market_db and not db.kv_get("seeded"):
         # Gieo mam 1.500 tep mat vai phut; chan startup thi healthcheck fail
         # va Docker khoi dong lai vong vo tan. Day sang luong nen.
         def _seed():
@@ -56,7 +78,7 @@ def _start() -> None:
             except Exception as e:
                 db.log("warn", f"gieo mầm lỗi: {e}")
         threading.Thread(target=_seed, daemon=True, name="seed").start()
-    if not db.kv_get("seeded1h"):
+    if not CFG.market_db and not db.kv_get("seeded1h"):
         def _seed1h():
             try:
                 n = data.seed_1h_from_npz()
@@ -79,7 +101,8 @@ def _start() -> None:
             db.log("info", f"cập nhật thông báo: {n} dòng huỷ niêm yết, {m} dòng thẻ Monitoring")
         except Exception as e:
             db.log("warn", f"nạp thông báo huỷ niêm yết / thẻ Monitoring lỗi: {e}")
-    threading.Thread(target=_ann, daemon=True, name="ann").start()
+    if not CFG.market_db:
+        threading.Thread(target=_ann, daemon=True, name="ann").start()
     if CFG.news_paper:
         threading.Thread(target=news.run, daemon=True, name="news").start()
     if executor.live_ready()[0]:
@@ -119,11 +142,18 @@ def _start() -> None:
     sched.add_job(_wf_job, CronTrigger(minute="1,16,31,46"),
                   id="pp1wf15m", replace_existing=True,
                   misfire_grace_time=300, coalesce=True)
+    # Ung cu vien (app/cands.py): moi gio phut 3, chi bot chinh — bot user doc lai.
+    if not CFG.market_db:
+        sched.add_job(cands.run_once, CronTrigger(minute=3), id="cands1h",
+                      replace_existing=True, misfire_grace_time=900, coalesce=True)
+        if db.kv_get("seeded") and not db.kv_get(cands.KEY):
+            threading.Thread(target=cands.run_once, daemon=True, name="cands").start()
     # Von tren san moi 15 phut cho duong «vốn thực» (app/acct.py), ca khi chay giay.
     sched.add_job(acct.snap, CronTrigger(minute="*/15"), id="acct15m",
                   replace_existing=True, misfire_grace_time=300, coalesce=True)
     threading.Thread(target=acct.snap, daemon=True, name="acct").start()
     sched.start()
+    users.start_all()
     db.log("info", f"khởi động · lịch chạy {CFG.run_at_utc} UTC · "
                    f"chạy thật ở tầng mã: {'MỞ' if CFG.live_enabled_env else 'KHOÁ'}")
 
@@ -131,6 +161,7 @@ def _start() -> None:
 @app.on_event("shutdown")
 def _stop() -> None:
     sched.shutdown(wait=False)
+    users.stop_all()
 
 
 def _sync() -> None:
@@ -148,6 +179,18 @@ def _job() -> None:
     except Exception:
         db.log("error", "lượt chạy theo lịch hỏng:\n" + traceback.format_exc()[-800:])
     _crash_job()
+    _repnl()
+
+
+def _repnl() -> None:
+    """Lai/lo da chot lay lai tu san (gia khop, phi, funding that) — app/repnl.py.
+    Luot chay va cac lich giua ngay ghi so theo uoc luong; day sua lai moi ngay."""
+    if not CFG.api_key:
+        return
+    try:
+        repnl.recompute()
+    except Exception as e:
+        db.log("error", f"tính lại lãi đã chốt từ sàn lỗi: {e}")
 
 
 def _crash_job() -> None:
@@ -194,8 +237,17 @@ def healthz():
 
 
 @app.get("/", response_class=HTMLResponse)
-def index():
-    return PAGE.read_text(encoding="utf-8")
+def index(request: Request):
+    # Ai dang xem (admin / user, tai khoan dang mo) nhung thang vao trang: trang
+    # an tab / nut theo vai TRUOC lan tai dau, khong cho them mot vong hoi.
+    me = json.dumps(users.me(request), ensure_ascii=False).replace("</", "<\\/")
+    return PAGE.read_text(encoding="utf-8").replace("/*ME*/null", me, 1)
+
+
+@app.get("/api/summary")
+def summary():
+    """Tom tat mot dong cho bang «Người dùng» cua admin (goi vao bot cua user)."""
+    return users.worker_summary()
 
 
 def _rows(sql: str, *a) -> list:
@@ -291,8 +343,8 @@ def overview():
                    "AND pnl_bps IS NOT NULL", m):
         add(ym(p["exit_ts"]), p["strategy"], (p["notional"] or 0.0) * p["pnl_bps"] / 1e4)
     return {"bt": _OV["v"], "mode": m,
-            "cfg": {"r_usd": settings.risk()["r_usd"], "equity": CFG.start_equity,
-                    "equity_now": runner.equity_now(),
+            "cfg": {"r_usd": settings.risk()["r_usd"], "equity": acct.capital(m),
+                    "equity_now": (runner.exchange_equity() if m == "live" else None) or runner.equity_now(),
                     "alloc": settings.alloc(), "pp1x": settings.pp1x(),
                     "vsa_paper": CFG.vsa_paper, "vsa_usd": CFG.vsa_paper_usd, "vsa_r_frac": CFG.vsa_r_frac,
                     "crash_paper": CFG.crash_paper, "c13_paper": CFG.c13_paper, "caps": settings.risk()},
@@ -367,7 +419,7 @@ def actual_vs_backtest():
         out[k] = {"alloc": float(al.get(k, 0.0)), "act": act, "bt": b}
     agg = None
     if bt and bt.get("gross"):
-        n = bt["n"]; caps = settings.risk(); cap = float(caps["gross_x"]) * float(CFG.start_equity)
+        n = bt["n"]; caps = settings.risk(); cap0 = acct.capital(m); cap = float(caps["gross_x"]) * cap0
         d = [0.0] * n; g = [0.0] * n; npos = [0] * n
         for k in VSBT_K:
             a = float(al.get(k, 0.0))
@@ -399,22 +451,25 @@ def actual_vs_backtest():
         tpd = sum((r["bt"] or {}).get("trades_per_day", 0) for k, r in out.items() if r["alloc"] > 0)
         agg = {"cap": st(dc), "raw": st(d), "npos_mean": sum(npos) / n, "npos_p95": q(npos, .95),
                "gross_p95": q(g, .95), "trades_per_day": tpd, "cap_usd": cap,
-               "over": sum(gi > cap for gi in g) / n, "start_equity": CFG.start_equity}
+               "over": sum(gi > cap for gi in g) / n, "start_equity": cap0}
     eqr = _rows("SELECT ts, value FROM equity WHERE mode=? ORDER BY ts", m)
     cmpx = None
     if bt and bt.get("r_stats"):
-        vals = [float(r["value"]) for r in eqr]
-        dx = [v - p for v, p in zip(vals, [float(CFG.start_equity)] + vals[:-1])]
+        # lai ngay = chenh von tru nap/rut (moc bang equity = mo nen ngay, do luc ~00:05 hom sau)
+        TR = acct.transfers() if m == "live" else []
+        pn = [float(r["value"]) - acct.capital_at(int(r["ts"]) + 86_400_000 + 1_800_000, TR) for r in eqr]
+        dx = [v - p for v, p in zip(pn, [0.0] + pn[:-1])]
         rr = _rows("SELECT gross, n_open FROM runs WHERE mode=? AND status='xong' ORDER BY ts", m)
         L = len(dx) if dx else max(1, int(round(days)))
         caps_ = settings.risk()
-        key = (tuple(sorted(al.items())), ru, ckc, CFG.vsa_r_frac, float(caps_["gross_x"]) * float(CFG.start_equity), _OV["mtime"])
+        key = (tuple(sorted(al.items())), ru, ckc, CFG.vsa_r_frac, float(caps_["gross_x"]) * acct.capital(m), _OV["mtime"])
         cmpx = VB.compare(bt, key, al, ru, ckc, CFG.vsa_r_frac, key[4],
                           {"d": dx, "g": [float(r["gross"] or 0) for r in rr], "npos": [int(r["n_open"] or 0) for r in rr]},
                           L, {k: out[k]["act"] for k in out})
-    e_now = runner.equity_now()
+    # von hien tai tren san (gom nap/rut moi) — moc bang equity chi cap nhat moi luot ngay
+    e_now = (runner.exchange_equity() if m == "live" else None) or runner.equity_now()
     total = {"closed_usd": float(sum(r["act"]["usd"] for r in out.values())),
-             "mtm_usd": float(e_now - CFG.start_equity), "equity": e_now, "n_eq": len(eqr)}
+             "mtm_usd": float(e_now - acct.capital(m)), "equity": e_now, "n_eq": len(eqr)}
     return {"mode": m, "since": t0, "days": days, "r_usd": ru, "rows": out, "agg": agg, "total": total, "cmp": cmpx,
             "bt_range": [bt["start"], bt["start"] + (bt["n"] - 1) * 86_400_000] if bt else None}
 
@@ -535,6 +590,36 @@ def account():
                 t.close()
         _ACCT.update(at=time.time(), v=v)
         return v
+
+
+@app.get("/api/exits")
+def exits():
+    """Chi so dong lenh cua tung vi the dang mo (app/exitview.py) — chi doc."""
+    return exitview.get(runner.mode())
+
+
+@app.get("/api/candidates")
+def candidates():
+    """Ung cu vien cua luot ngay toi (app/cands.py) — chi doc."""
+    return cands.get(runner.open_positions())
+
+
+@app.post("/api/candidates")
+def candidates_refresh():
+    if CFG.market_db:
+        raise HTTPException(400, "bot của user đọc ứng cử viên từ bot chính")
+    cands.run_once()
+    return cands.get(runner.open_positions())
+
+
+@app.post("/api/repnl")
+def repnl_run():
+    """Tinh lai lai/lo moi vi the that da dong tu so lieu san (chi doc san)."""
+    try:
+        r = repnl.recompute()
+    except Exception as e:
+        raise HTTPException(400, f"không đọc được lịch sử khớp trên sàn: {e}")
+    return {k: v for k, v in r.items() if k != "rows"}
 
 
 @app.get("/api/equity")
@@ -789,15 +874,23 @@ def flatten(body: dict = Body(default={})):
             rid = cx.execute(
                 "INSERT INTO runs(ts,bar_ts,mode,status,detail) VALUES(?,?,?,?,?)",
                 (int(time.time() * 1000), 0, m, "dừng khẩn", "")).lastrowid
-        done = executor.execute(rid, acts, runner.equity_now(), prices, filt, m)
+        eq = runner.equity_now()
+        done = executor.execute(rid, acts, eq, prices, filt, m)
+        # Chi chot so lenh DA KHOP (nhu luot chay); lenh loi de nguyen — doi
+        # chieu 5 phut / bam lai «Dừng khẩn» se xu ly. Truoc day ghi ca lenh
+        # loi va khong ghi pnl_bps → lenh bien mat khoi «lãi đã chốt».
+        ok = [a for a in done if a.get("status") not in ("lỗi", "bỏ qua", "không khớp")]
         with db.tx() as cx:
-            for a in done:
+            for a in ok:
+                _, bps = runner._pnl_usd(a, a["px"], eq)
                 cx.execute("UPDATE positions SET open=0, exit_px=?, exit_ts=?,"
-                           " exit_why=? WHERE id=?",
-                           (a["px"], int(time.time() * 1000), "dừng khẩn",
+                           " exit_why=?, pnl_bps=? WHERE id=?",
+                           (a["px"], int(time.time() * 1000), "dừng khẩn", bps,
                             a["id"]))
-        db.log("warn", f"dừng khẩn: đóng {len(done)} vị thế")
-        return {"closed": len(done), "armed": False}
+        db.log("warn", f"dừng khẩn: đóng {len(ok)}/{len(done)} vị thế")
+        if m == "live" and ok:
+            threading.Thread(target=_repnl, daemon=True, name="repnl").start()
+        return {"closed": len(ok), "failed": len(done) - len(ok), "armed": False}
     finally:
         api.close()
 

@@ -68,6 +68,12 @@ body[data-mode=live] .rail::before{background:var(--dn)}
   body[data-mode=live] .rail::before{animation:pulse 2.2s ease-in-out infinite}
 }
 @keyframes pulse{50%{opacity:.4}}
+/* tai lai trang: cac khoi hien lan luot tu tren xuong (chi luc mo trang) */
+@media (prefers-reduced-motion:no-preference){
+  html.boot .ld{animation:ldin .52s cubic-bezier(.2,.75,.25,1) backwards;
+    animation-delay:calc(var(--ld,0) * 55ms)}
+}
+@keyframes ldin{from{opacity:0;transform:translateY(12px) scale(.985);filter:blur(3px)}}
 .mark{display:flex;align-items:center;gap:9px;min-width:0}
 .mark svg{display:block;width:26px;height:26px;flex:0 0 26px}
 .mark b{font-size:14px;font-weight:650;letter-spacing:-.2px;white-space:nowrap}
@@ -565,6 +571,34 @@ section>.grp:first-child{margin-top:0}
   .panel:hover,.grp:hover{transform:translateY(-2px);box-shadow:0 14px 32px -14px rgba(42,35,64,.24)}
   .mcard.chg:hover{box-shadow:0 0 0 2px rgba(109,91,208,.5),0 10px 24px -10px rgba(42,35,64,.28)}
 }
+.xg{display:grid;gap:3px;min-width:330px;text-align:left}
+td:has(>.xg){text-align:left}
+.xr .xl{text-align:left}
+.xr{display:grid;grid-template-columns:76px 104px auto;align-items:center;gap:7px;font-size:11px;line-height:1.25;white-space:nowrap}
+.xr .xl{color:var(--dim)}
+.xr .xv{font-variant-numeric:tabular-nums;color:var(--ink)}
+.xr .xb{display:block}.xr .xbw{display:block;line-height:0}
+#tipbox{white-space:pre-line}
+.xr.hit .xl,.xr.hit .xv{font-weight:650}
+/* ============ nhieu tai khoan (app/users.py) ============ */
+/* Xem MOT tai khoan (user dang nhap, hoac admin mo ?u=<id>): chi Dieu khien
+   (khong nut dieu hanh) / Tong quan / Nhat ky. Phia may chu cung chan cac
+   duong con lai — an o day chi de giao dien gon. */
+.acctview [data-admin]{display:none!important}
+html:not(.isadmin) [data-onlyadmin]{display:none!important}
+.who{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.who b{font-weight:650}
+.who button{padding:3px 10px;font-size:11.5px}
+.viewbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px;
+  padding:10px 14px;border-radius:14px;background:var(--warnsoft);color:var(--warn);
+  border:1px solid rgba(138,93,14,.18)}
+.viewbar a{color:inherit;font-weight:650}
+.ust{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.ust.pending{background:var(--warnsoft);color:var(--warn)}
+.ust.active{background:var(--upsoft);color:var(--upink)}
+.ust.disabled{background:var(--edge);color:var(--dim)}
+.uact{display:flex;gap:5px;flex-wrap:wrap}
+.uact button{padding:3px 9px;font-size:11px}
 </style>
 
 <div class="app">
@@ -583,6 +617,7 @@ section>.grp:first-child{margin-top:0}
     <span><span class="k">nến mới nhất</span> <span class="v" id="mbar">—</span></span>
     <span><span class="k">lượt kế tiếp</span> <span class="v" id="mnext">—</span></span>
     <span><span class="k">utc</span> <span class="v" id="clock">—</span></span>
+    <span class="who" id="who" style="display:none"></span>
   </span>
 </div>
 
@@ -590,18 +625,20 @@ section>.grp:first-child{margin-top:0}
   <nav class="tabs">
     <button data-tab="dash" class="on" title="Bảng điều khiển: vốn, vị thế, lượt chạy, công tắc chạy thật"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1.6"/><rect x="11" y="3" width="6" height="4" rx="1.4"/><rect x="11" y="9" width="6" height="8" rx="1.6"/><rect x="3" y="11" width="6" height="6" rx="1.6"/></svg><span class="tl">Điều khiển</span></button>
     <button data-tab="ov" title="Tổng quan phương pháp: lãi/lỗ backtest theo tháng, bật/tắt từng phương pháp"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 17h14"/><path d="M5.5 14V9"/><path d="M10 14V5"/><path d="M14.5 14v-3"/></svg><span class="tl">Tổng quan</span></button>
-    <button data-tab="cfg" title="Cấu hình chạy thật: hệ số 1R, tham số, trần rủi ro"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h7M15 6h1M4 14h1M9 14h7"/><circle cx="13" cy="6" r="2"/><circle cx="7" cy="14" r="2"/></svg><span class="tl">Cấu hình</span><span class="pill" id="driftPill" style="display:none"></span></button>
-    <button data-tab="flag" title="Mã gắn cờ: thông báo huỷ niêm yết và thẻ Monitoring của Binance"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 17V3.5"/><path d="M5 4h9l-2 3.5 2 3.5H5"/></svg><span class="tl">Gắn cờ</span><span class="pill" id="flagPill" style="display:none"></span></button>
-    <button data-tab="news" title="Đánh theo tin (sổ giấy): tin gỡ spot, thẻ Monitoring"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 8.5v3a1 1 0 0 0 1 1h2l5 3.5v-12L7 7.5H5a1 1 0 0 0-1 1Z"/><path d="M15 7.5a3.5 3.5 0 0 1 0 5"/></svg><span class="tl">Tin</span></button>
-    <button data-tab="vsa" title="PP6 · VSA 4H đẩy qua vùng cung — chạy trong bot + sổ giấy đối chiếu"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16V9M8 16V5M12 16v-6M16 16V7"/></svg><span class="tl">VSA 4H</span></button>
-    <button data-tab="crash" title="BTC sập → cắt chân mua PP1 (sổ giấy)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5l5 5 3-3 6 7"/><path d="M17 10v4h-4"/></svg><span class="tl">BTC sập</span></button>
-    <button data-tab="c13" title="PP5 · C13 limit sâu 2 ATR (sổ giấy đối chiếu)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9"/><path d="M6.5 8.5 10 12l3.5-3.5"/><path d="M4 16h12"/></svg><span class="tl">Limit sâu</span></button>
-    <button data-tab="bt" title="Tính lịch sử: backtest theo cách bot chạy"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/><path d="M10 6.5V10l2.5 1.5"/></svg><span class="tl">Lịch sử</span></button>
-    <button data-tab="doc" title="Tài liệu phương pháp (docs/)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16v12H5.5A1.5 1.5 0 0 0 4 16.5Z"/><path d="M4 16.5A1.5 1.5 0 0 0 5.5 18H16"/></svg><span class="tl">Tài liệu</span></button>
+    <button data-tab="cfg" data-admin title="Cấu hình chạy thật: hệ số 1R, tham số, trần rủi ro"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h7M15 6h1M4 14h1M9 14h7"/><circle cx="13" cy="6" r="2"/><circle cx="7" cy="14" r="2"/></svg><span class="tl">Cấu hình</span><span class="pill" id="driftPill" style="display:none"></span></button>
+    <button data-tab="flag" data-admin title="Mã gắn cờ: thông báo huỷ niêm yết và thẻ Monitoring của Binance"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 17V3.5"/><path d="M5 4h9l-2 3.5 2 3.5H5"/></svg><span class="tl">Gắn cờ</span><span class="pill" id="flagPill" style="display:none"></span></button>
+    <button data-tab="news" data-admin title="Đánh theo tin (sổ giấy): tin gỡ spot, thẻ Monitoring"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 8.5v3a1 1 0 0 0 1 1h2l5 3.5v-12L7 7.5H5a1 1 0 0 0-1 1Z"/><path d="M15 7.5a3.5 3.5 0 0 1 0 5"/></svg><span class="tl">Tin</span></button>
+    <button data-tab="vsa" data-admin title="PP6 · VSA 4H đẩy qua vùng cung — chạy trong bot + sổ giấy đối chiếu"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 16V9M8 16V5M12 16v-6M16 16V7"/></svg><span class="tl">VSA 4H</span></button>
+    <button data-tab="crash" data-admin title="BTC sập → cắt chân mua PP1 (sổ giấy)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5l5 5 3-3 6 7"/><path d="M17 10v4h-4"/></svg><span class="tl">BTC sập</span></button>
+    <button data-tab="c13" data-admin title="PP5 · C13 limit sâu 2 ATR (sổ giấy đối chiếu)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9"/><path d="M6.5 8.5 10 12l3.5-3.5"/><path d="M4 16h12"/></svg><span class="tl">Limit sâu</span></button>
+    <button data-tab="bt" data-admin title="Tính lịch sử: backtest theo cách bot chạy"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/><path d="M10 6.5V10l2.5 1.5"/></svg><span class="tl">Lịch sử</span></button>
+    <button data-tab="doc" data-admin title="Tài liệu phương pháp (docs/)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16v12H5.5A1.5 1.5 0 0 0 4 16.5Z"/><path d="M4 16.5A1.5 1.5 0 0 0 5.5 18H16"/></svg><span class="tl">Tài liệu</span></button>
+    <button data-tab="users" data-admin data-onlyadmin title="Người dùng: tài khoản đăng ký, duyệt, bật/tắt bot của từng người"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8" cy="7" r="3"/><path d="M2.5 16.5c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5"/><path d="M13.5 4.2a3 3 0 0 1 0 5.6"/><path d="M15.5 12.4c1.2.7 1.9 2 2.1 4.1"/></svg><span class="tl">Người dùng</span><span class="pill" id="usersPill" style="display:none"></span></button>
     <button data-tab="log" title="Nhật ký: giao dịch đã đóng, lệnh, sự kiện, lượt chạy"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5h9M7 10h9M7 15h9"/><circle cx="4" cy="5" r=".8"/><circle cx="4" cy="10" r=".8"/><circle cx="4" cy="15" r=".8"/></svg><span class="tl">Nhật ký</span></button>
   </nav>
 
   <section id="t-dash" class="on">
+    <div class="viewbar" id="viewbar" style="display:none"></div>
     <div class="grp"><div class="gh"><span class="schip"><i style="background:var(--acc)"></i>Tài khoản</span></div>
     <div class="hero">
       <div class="tile">
@@ -644,6 +681,14 @@ section>.grp:first-child{margin-top:0}
     </div>
 
     <div class="panel" style="margin-top:12px">
+      <div class="ph"><h3>Ứng cử viên</h3><button class="info" type="button" data-tip-html="1" data-tip="Mã mà &lt;b&gt;lượt ngày tới&lt;/b&gt; sẽ chọn nếu nến ngày đóng ở giá hiện tại — chạy đúng hàm tín hiệu của lượt ngày trên nến đang chạy. Cập nhật mỗi giờ (phút 3). &lt;br&gt;&lt;br&gt;Khác lượt thật: chưa trừ chỗ trống / trần rủi ro, chưa áp luật phụ PP1 (funding, BSADF, Kase), stop RSI(2) tính theo 6×ATR. Nến còn chạy thì danh sách còn đổi — sát giờ chạy mới sát thật." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
+        <span class="sub" id="candSub"></span>
+        <button type="button" id="btnCand" data-admin style="margin-left:auto" title="tính lại ngay (vài chục lời gọi Binance)">Tính lại</button></div>
+      <div class="pb sub" id="candNote" style="padding-bottom:0"></div>
+      <div class="tw"><table id="tcand"></table></div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
       <div class="ph"><h3>Thực tế so với backtest</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Ô chỉ số&lt;/b&gt;: thực tế (số to, chấm đen) so với &lt;b&gt;mọi cửa sổ cùng số ngày&lt;/b&gt; trong backtest 2021–26 ở hệ số đang chạy — dải tím là 95% các cửa sổ, vạch là trung vị. Ngoài dải thì gắn nhãn lệch. Có trần / không trần theo nút ở tab Tổng quan. Sharpe hiện khi đã chạy ≥ 7 ngày.&lt;br&gt;&lt;b&gt;Bảng&lt;/b&gt;: thực tế / backtest từng chiến lược. ≈ trong vùng 95%, ↑ ↓ lệch: số lệnh theo cửa sổ cùng số ngày; tỉ lệ thắng và R/lệnh theo khoảng tin cậy với đúng số lệnh thực tế.&lt;br&gt;Thực tế: vị thế đã đóng + đường vốn của chế độ đang chạy (giấy hoặc thật), từ lượt chạy đầu tiên. Backtest không có phí trượt giá thật và không bị chặn lệnh." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
         <span class="sub" id="vsbtSub"></span></div>
       <div class="scards scards--all"><div class="scard" style="--c:var(--acc)">
@@ -654,7 +699,7 @@ section>.grp:first-child{margin-top:0}
 
     <div class="cols">
       <div class="colA">
-        <div class="panel">
+        <div class="panel" data-admin>
           <div class="ph"><h3>Việc cần làm</h3><button class="info" type="button" data-tip-html="1" data-tip="«Xem trước» tính sổ mục tiêu cho nến vừa đóng. &lt;b&gt;Không đặt lệnh&lt;/b&gt; nào cho tới khi bấm «Chạy ngay»." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
             <span class="sub" id="todoWhen"></span></div>
           <div class="tw"><table id="todo"></table></div>
@@ -663,7 +708,7 @@ section>.grp:first-child{margin-top:0}
         </div>
 
         <!-- An khi luot gan nhat khong chan lenh nao. -->
-        <div class="panel" id="blkPanel" style="margin-top:12px;display:none">
+        <div class="panel" id="blkPanel" data-admin style="margin-top:12px;display:none">
           <div class="ph"><h3>Lệnh bị chặn</h3><button class="info" type="button" data-tip-html="1" data-tip="«Ép vào» đặt đúng lệnh đó ngay, &lt;b&gt;bỏ qua mọi trần rủi ro&lt;/b&gt;, cỡ lệnh theo USD đã tính lúc chặn.&lt;br&gt;Không ép được lệnh ngược chiều lệnh vừa mở cùng lượt (sàn một chiều) hay vị thế đã có. Lệnh ngược chiều vị thế đang giữ thì không bị chặn: bot đóng chiều cũ rồi mở.&lt;br&gt;Lượt chạy kế tiếp thay danh sách này." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
             <span class="sub" id="blkWhen"></span></div>
           <div class="tw"><table id="tblk"></table></div>
@@ -671,7 +716,7 @@ section>.grp:first-child{margin-top:0}
       </div>
 
       <div class="colB">
-        <div class="panel panel--arm">
+        <div class="panel panel--arm" data-admin>
           <div class="ph"><h3>Công tắc chạy thật</h3>
             <span class="sub" title="lớp 1: biến môi trường LIVE_ENABLED + khoá API · lớp 2: câu xác nhận trong UI">2 lớp khoá</span></div>
           <div class="pb">
@@ -696,9 +741,10 @@ section>.grp:first-child{margin-top:0}
           <div class="ph"><h3>Thao tác</h3></div>
           <div class="pb">
             <div class="row">
-              <button id="btnFetch" title="tải nến mới từ Binance">Tải dữ liệu</button>
-              <button id="btnPrev" title="chỉ tính sổ mục tiêu, không đặt lệnh">Xem trước</button>
-              <button class="warn" id="btnRun" title="chạy lượt ngay: tính sổ và đặt lệnh (chế độ hiện hành)">Chạy ngay</button>
+              <button id="btnFetch" data-admin title="tải nến mới từ Binance">Tải dữ liệu</button>
+              <button id="btnPrev" data-admin title="chỉ tính sổ mục tiêu, không đặt lệnh">Xem trước</button>
+              <button class="warn" id="btnRun" data-admin title="chạy lượt ngay: tính sổ và đặt lệnh (chế độ hiện hành)">Chạy ngay</button>
+              <button id="btnRepnl" data-admin title="lấy lại giá khớp, phí và funding thật từ Binance cho mọi vị thế đã đóng, rồi ghi lại lãi/lỗ đã chốt">Tính lại lãi đã chốt</button>
               <button class="danger" id="btnFlat" title="tắt công tắc chạy thật rồi đóng sạch vị thế">Dừng khẩn</button>
             </div>
             <div class="chips" style="margin-top:11px" id="caps"></div>
@@ -780,7 +826,7 @@ section>.grp:first-child{margin-top:0}
 
     <div class="cols">
       <div class="colA">
-        <div class="panel"><div class="ph"><h3>Từng phương pháp</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Tính trên trang này&lt;/b&gt; (chuỗi lãi/lỗ NGÀY của backtest, nhân 1R × hệ số trên thẻ; bảng này không áp trần — số tổng phía trên áp trần khi bật «Có trần»):&lt;br&gt; · &lt;b&gt;lãi USD / USD/năm&lt;/b&gt;: tổng lãi trong khoảng đang xem, và chia cho số năm.&lt;br&gt; · &lt;b&gt;Sharpe&lt;/b&gt; = trung bình lãi ngày ÷ độ lệch chuẩn lãi ngày × √365.&lt;br&gt; · &lt;b&gt;Sortino&lt;/b&gt;: như Sharpe nhưng mẫu số chỉ tính những ngày lỗ — không phạt biến động phía lãi.&lt;br&gt; · &lt;b&gt;sụt lớn nhất&lt;/b&gt;: khoảng tụt lớn nhất của đường vốn (vốn khởi điểm + lãi cộng dồn) tính từ đỉnh trước đó.&lt;br&gt; · &lt;b&gt;lãi/năm ÷ sụt&lt;/b&gt; (kiểu Calmar): mỗi đồng sụt vốn đổi được bao nhiêu lãi một năm.&lt;br&gt; · &lt;b&gt;tháng tệ nhất / tháng lãi / năm lãi&lt;/b&gt;: theo tháng và năm dương lịch.&lt;br&gt; · &lt;b&gt;Δ Sharpe bot&lt;/b&gt;: Sharpe của cả tổ hợp đang chọn trừ Sharpe khi bỏ phương pháp này ra (đang tắt thì là khi thêm vào).&lt;br&gt; · &lt;b&gt;tương quan&lt;/b&gt;: tương quan lãi THÁNG với phần còn lại của tổ hợp.&lt;br&gt; · &lt;b&gt;lệnh/tháng, thắng&lt;/b&gt;: số lệnh đóng mỗi tháng và tỷ lệ lệnh lãi (luật phụ không có lệnh riêng).&lt;br&gt; · Luật phụ PP1 là &lt;b&gt;phần chênh&lt;/b&gt; so với PP1 gốc nên không có Sharpe / sụt riêng; Kase, funding và BSADF chặn trùng nhau nên tổ hợp lấy đúng chuỗi của tổ hợp đang bật, không cộng rời.&lt;br&gt; &lt;b&gt;Dùng khi chọn phương pháp&lt;/b&gt; (cột «kiểm định nghiên cứu»):&lt;br&gt; · &lt;b&gt;KTC&lt;/b&gt;: khoảng tin cậy 95% của phần Sharpe tăng thêm, bootstrap theo khối 30 ngày ghép cặp; &lt;b&gt;Šidák&lt;/b&gt; = KTC đã nới cho số ô thử trong lưới (thử N ô thì mỗi ô phải chặt hơn).&lt;br&gt; · &lt;b&gt;phép giả (null)&lt;/b&gt;: cùng số lần / cùng cấu trúc nhưng đặt ngẫu nhiên (vào lệnh ngẫu nhiên, bỏ lệnh ngẫu nhiên, dịch vòng chuỗi chế độ); p = tỷ lệ lần giả tốt bằng hoặc hơn bản thật.&lt;br&gt; · &lt;b&gt;z&lt;/b&gt;: phần vượt phép giả chia sai số chuẩn theo khối; &lt;b&gt;ô lân cận&lt;/b&gt;: tham số kề bên cũng phải dương; &lt;b&gt;năm&lt;/b&gt;: ≥ 4/6 năm dương; &lt;b&gt;mốc cắt nến&lt;/b&gt;: kết quả giữ khi nến ngày cắt ở 0/4/8/12/16/20h UTC.&lt;br&gt; · Luật đạt chuẩn để chạy thật: đủ cả 5 (KTC Šidák &amp;gt; 0, sụt và tháng tệ không xấu hơn, năm, lân cận, phép giả)." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
+        <div class="panel"><div class="ph"><h3>Từng phương pháp</h3><button class="info" type="button" data-tip-html="1" data-tip="&lt;b&gt;Tính trên trang này&lt;/b&gt; (chuỗi lãi/lỗ NGÀY của backtest, nhân 1R × hệ số trên thẻ; bảng này không áp trần — số tổng phía trên áp trần khi bật «Có trần»):&lt;br&gt; · &lt;b&gt;lãi USD / USD/năm&lt;/b&gt;: tổng lãi trong khoảng đang xem, và chia cho số năm.&lt;br&gt; · &lt;b&gt;Sharpe&lt;/b&gt; = trung bình lãi ngày ÷ độ lệch chuẩn lãi ngày × √365.&lt;br&gt; · &lt;b&gt;Sortino&lt;/b&gt;: như Sharpe nhưng mẫu số chỉ tính những ngày lỗ — không phạt biến động phía lãi.&lt;br&gt; · &lt;b&gt;sụt lớn nhất&lt;/b&gt;: khoảng tụt lớn nhất của đường vốn (vốn khởi điểm + lãi cộng dồn) tính từ đỉnh trước đó.&lt;br&gt; · &lt;b&gt;lãi/năm ÷ sụt&lt;/b&gt; (kiểu Calmar): mỗi đồng sụt vốn đổi được bao nhiêu lãi một năm.&lt;br&gt; · &lt;b&gt;tháng tệ nhất / tháng lãi / năm lãi&lt;/b&gt;: theo tháng và năm dương lịch.&lt;br&gt; · &lt;b&gt;Δ Sharpe bot&lt;/b&gt;: Sharpe của cả tổ hợp đang chọn trừ Sharpe khi bỏ phương pháp này ra (đang tắt thì là khi thêm vào).&lt;br&gt; · &lt;b&gt;tương quan&lt;/b&gt;: tương quan lãi THÁNG với phần còn lại của tổ hợp.&lt;br&gt; · &lt;b&gt;lệnh/tháng, lệnh TB/ngày, thắng&lt;/b&gt;: số lệnh đóng mỗi tháng, trung bình mỗi ngày lịch trong khoảng đang xem, và tỷ lệ lệnh lãi (luật phụ không có lệnh riêng).&lt;br&gt; · Luật phụ PP1 là &lt;b&gt;phần chênh&lt;/b&gt; so với PP1 gốc nên không có Sharpe / sụt riêng; Kase, funding và BSADF chặn trùng nhau nên tổ hợp lấy đúng chuỗi của tổ hợp đang bật, không cộng rời.&lt;br&gt; &lt;b&gt;Dùng khi chọn phương pháp&lt;/b&gt; (cột «kiểm định nghiên cứu»):&lt;br&gt; · &lt;b&gt;KTC&lt;/b&gt;: khoảng tin cậy 95% của phần Sharpe tăng thêm, bootstrap theo khối 30 ngày ghép cặp; &lt;b&gt;Šidák&lt;/b&gt; = KTC đã nới cho số ô thử trong lưới (thử N ô thì mỗi ô phải chặt hơn).&lt;br&gt; · &lt;b&gt;phép giả (null)&lt;/b&gt;: cùng số lần / cùng cấu trúc nhưng đặt ngẫu nhiên (vào lệnh ngẫu nhiên, bỏ lệnh ngẫu nhiên, dịch vòng chuỗi chế độ); p = tỷ lệ lần giả tốt bằng hoặc hơn bản thật.&lt;br&gt; · &lt;b&gt;z&lt;/b&gt;: phần vượt phép giả chia sai số chuẩn theo khối; &lt;b&gt;ô lân cận&lt;/b&gt;: tham số kề bên cũng phải dương; &lt;b&gt;năm&lt;/b&gt;: ≥ 4/6 năm dương; &lt;b&gt;mốc cắt nến&lt;/b&gt;: kết quả giữ khi nến ngày cắt ở 0/4/8/12/16/20h UTC.&lt;br&gt; · Luật đạt chuẩn để chạy thật: đủ cả 5 (KTC Šidák &amp;gt; 0, sụt và tháng tệ không xấu hơn, năm, lân cận, phép giả)." aria-label="giải thích"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg></button>
           <span class="sub">khoảng đang xem</span></div>
           <div class="tw" style="max-height:none"><table id="ovPer"></table></div>
 </div>
@@ -939,6 +985,14 @@ section>.grp:first-child{margin-top:0}
     </div>
   </section>
 
+  <section id="t-users">
+    <div class="panel">
+      <div class="ph"><h3>Người dùng</h3><span class="sub" id="usersSub"></span></div>
+      <div class="pb sub" id="usersNote"></div>
+      <div class="tw" style="max-height:none"><table id="tusers"></table></div>
+    </div>
+  </section>
+
   <section id="t-log">
     <div class="panel" style="margin-bottom:12px">
       <div class="ph"><h3>Giao dịch đã đóng</h3><span class="sub" id="trsum"></span></div>
@@ -964,6 +1018,22 @@ section>.grp:first-child{margin-top:0}
 
 <script>
 const $ = i => document.getElementById(i);
+/* Ai dang xem — may chu nhung vao luc phuc vu trang (app/users.py me()).
+   null = che do cu: mot tai khoan, khong dang nhap. */
+const ME = /*ME*/null;
+const VIEW_U = ME && ME.role === 'admin' && ME.viewing ? ME.viewing.id : null;
+const ACCT_VIEW = !!(ME && ME.role === 'user') || VIEW_U != null;
+const ACCT_TABS = ['dash', 'ov', 'log'];
+const IS_ADMIN = !!(ME && ME.role === 'admin' && ME.users) && VIEW_U == null;
+if (ACCT_VIEW) document.documentElement.classList.add('acctview');
+if (IS_ADMIN) document.documentElement.classList.add('isadmin');
+/* Admin xem tai khoan #id: moi /api/... cua trang di qua /u/<id>/api/... toi
+   bot cua user do (tru dang nhap / danh sach user — hai cai do o bot chinh). */
+if (VIEW_U != null) {
+  const f0 = window.fetch.bind(window);
+  window.fetch = (p, o) => f0(typeof p === 'string' && p.startsWith('/api/')
+    && !/^\/api\/(auth|users)\b/.test(p) ? `/u/${VIEW_U}` + p : p, o);
+}
 /* Tooltip chung: phan tu co data-tip (hoac title — doi sang data-tip khi re chuot lan dau de
    tat tooltip mac dinh). data-tip-html="1" → noi dung la HTML do chinh trang dung (da esc). */
 const INFO_SVG = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7.4"/><path d="M10 9.1v4.6" stroke-linecap="round"/><circle cx="10" cy="6.4" r=".95" fill="currentColor" stroke="none"/></svg>';
@@ -1079,7 +1149,7 @@ function render() {
   }
 
   /* sut tren duong von thuc (neu doc duoc san), bo phan nap/rut: rut tien khong phai sut */
-  const ev = eqLines()[0].v, trf = EQ2 && EQ2.ok ? EQ2.transfers : [];
+  const ev = EQ2 && EQ2.ok && EQ2.real.length > 1 ? EQ2.real : S.equity, trf = EQ2 && EQ2.ok ? EQ2.transfers : [];
   let pk = 0, dd = 0;
   for (const e of ev) {
     const x = e.value - trf.reduce((a, q) => a + (q.ts <= e.ts && q.ts > ev[0].ts ? q.value : 0), 0);
@@ -1266,8 +1336,8 @@ function drawPos() {
   let i = 0;
   const live = k => ({html: `<span data-k="${k}" data-i="${i}">—</span>`});
   table($('tpos'), ['mã', 'chiến lược', 'sổ', 'chiều', 'cỡ USD', '1R', 'giá vào',
-    'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'dừng sàn', 'mở từ',
-    'chốt dự kiến'],
+    'giá hiện tại', 'lời/lỗ USD', '%', 'R', 'cắt lỗ', 'dừng sàn',
+    'điều kiện đóng'],
     rows, r => [symA(r.symbol),
       r.book.length
         ? {html: [...new Set(r.book.map(p => p.strategy))]
@@ -1283,8 +1353,7 @@ function drawPos() {
       live('px'), live('usd'), live('pc'), live('r'),
       r.stop ? r.stop.toPrecision(6) : '—',
       stopCell(r, A, SF),
-      r.entry_ts ? when(r.entry_ts) : '—',
-      (i++, exitCell(r))]);
+      {html: `<div class="xg" data-x="${i++}"></div>`}]);
   paintPnl();
 }
 
@@ -1317,21 +1386,113 @@ function stopCell(r, A, SF) {
         + 'an toàn cho mã này">chưa có</span>'} : '—');
 }
 
-/* Gio chot du kien theo tung so (may chu tinh, `exit_plan`): luot chay ma
-   so do den luot tai can bang. Van duoc chon cung chieu thi giu tiep. RSI(2)
-   khong co moc gio. */
-function exitCell(r) {
-  const ln = r.book.map(p => {
-    if (p.strategy === 'rsi2')
-      return `<span class="mut" title="thoát khi RSI(2) > ${S.params?.rsi2?.rsi_out ?? 70} hoặc chạm cắt lỗ">RSI&gt;${S.params?.rsi2?.rsi_out ?? 70} / stop</span>`;
-    if (!p.exit_plan) return '—';
-    const left = (p.exit_plan - Date.now()) / 864e5;
-    return (r.book.length > 1 ? `<span class="mut">sổ ${p.sleeve}:</span> ` : '')
-      + `<span title="lượt tái cân bằng sổ ${p.sleeve} — nếu mã vẫn được chọn cùng chiều thì giữ tiếp">`
-      + `${when(p.exit_plan)}</span> <span class="mut">(${left < 1
-        ? pct(Math.max(0, left * 24), 0) + ' giờ' : pct(left, 1) + ' ngày'})</span>`;
-  });
-  return ln.length ? {html: ln.join('<br>')} : '—';
+/* ============ điều kiện đóng (biểu đồ, trực tiếp) ============
+   /api/exits tra cac luat se dong tung vi the trong so (theo chien luoc) kem
+   phan tinh san; moi tick gia danh dau tinh lai tien do toi diem kich hoat.
+   Moi luat mot thanh 0 → 1 (1 = kich hoat). Ma co nhieu so (dong luong): thanh
+   to theo so GAN kich hoat nhat, vach mo la cac so con lai. Do = luat cat lo,
+   xanh = luat chot loi, tim = het ky. */
+let EXITS = null;
+async function loadExits() {
+  try { EXITS = await (await fetch('/api/exits')).json(); } catch (e) { EXITS = null; }
+  paintPnl();
+}
+const XKIND = {safety: 'bad', stop: 'bad', kase: 'bad', tp: 'good', f08: 'good', p16: 'good',
+  wf: 'good', rsi: 'good', reb: 'time', hold: 'time', time: 'time'};
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const pxs = v => +(+v).toPrecision(6);
+
+/* tien do 0..1 cua mot luat cho mot so, va chu ngan kem theo */
+function xProg(x, p, px, now) {
+  const side = p.side;
+  switch (x.type) {
+    case 'level': {
+      const d = x.dir === 'le' ? (px - x.level) / px : (x.level - px) / px;
+      const d0 = Math.abs(p.entry_px - x.level) / p.entry_px || 1;
+      return {f: clamp01(1 - d / d0), txt: `${x.dir === 'le' ? '≤' : '≥'} ${pxs(x.level)} · còn ${pct(Math.max(0, d) * 100, 1)}%`,
+        v: `sổ ${p.sleeve ?? '—'}: mức ${pxs(x.level)}, cách ${pct(d * 100, 2)}%`};
+    }
+    case 'u': {
+      if (!p.rf) return null;
+      const u = side * (px / p.entry_px - 1) / p.rf;
+      const on = x.t0 == null || (now > x.t0 && now <= x.t1);
+      const qok = x.q == null ? null : x.q <= x.qmax;
+      let txt = `${signed(u, v => pct(v, 2))} / ${pct(x.thr, 1)}R`;
+      if (x.k === 'f08') txt += x.q == null ? ' · q —' : ` · q ${pct(x.q, 2)} ${qok ? '≤' : '>'} ${pct(x.qmax, 1)}`;
+      if (!on) txt += ` · từ ${when(x.t0).slice(5, 16)}`;
+      const f = clamp01(u / x.thr) * (on && qok !== false ? 1 : .999);
+      return {f, txt, dim: !on || qok === false,
+        v: `sổ ${p.sleeve ?? '—'}: lãi ${pct(u, 2)}R`};
+    }
+    case 'z': {
+      const z = side * Math.log(px / x.c_prev) / x.sd;
+      return {f: clamp01(z / x.thr), txt: `z ${signed(z, v => pct(v, 1))} / ${pct(x.thr, 0)}`,
+        v: `z nến 15m đang chạy ${pct(z, 2)}`};
+    }
+    case 'time': {
+      const left = (x.t1 - now) / 864e5;
+      return {f: clamp01((now - x.t0) / (x.t1 - x.t0)),
+        txt: left < 1 ? `còn ${pct(Math.max(0, left * 24), 1)} giờ` : `còn ${pct(left, 1)} ngày`,
+        v: `sổ ${p.sleeve ?? '—'}: ${when(x.t1)}`};
+    }
+    case 'rsi': {
+      const d = px - x.c_last, n = x.n;
+      const au = (x.au * (n - 1) + Math.max(d, 0)) / n, ad = (x.ad * (n - 1) + Math.max(-d, 0)) / n;
+      const r = ad === 0 ? 100 : 100 - 100 / (1 + au / Math.max(ad, 1e-12));
+      return {f: clamp01(r / x.thr), txt: `${pct(r, 0)} / ${pct(x.thr, 0)}`, v: `RSI(2) ${pct(r, 1)}`};
+    }
+  }
+  return null;
+}
+
+const XTF = {'sàn': 'lệnh dừng treo trên sàn — khớp ngay khi giá chạm', '15m': 'xét mỗi nến 15m',
+  '1H': 'xét giá đóng nến 1H', '1D': 'xét giá đóng nến ngày, lượt 00:05'};
+function xBar(f, ticks, kind, dim) {
+  const W = 104, H = 10, col = kind === 'bad' ? 'var(--dn)' : kind === 'good' ? 'var(--up)' : '#6D5BD0';
+  const op = dim ? .35 : .35 + .65 * f;
+  return `<svg class="xb" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">`
+    + `<rect x="0" y="2" width="${W}" height="${H - 4}" rx="3" fill="rgba(42,35,64,.08)"/>`
+    + `<rect x="0" y="2" width="${(W * f).toFixed(1)}" height="${H - 4}" rx="3" fill="${col}" opacity="${op.toFixed(2)}"/>`
+    + ticks.map(t => `<rect x="${(W * t - .5).toFixed(1)}" y="1" width="1" height="${H - 2}" fill="${col}" opacity=".55"/>`).join('')
+    + `<rect x="${W - 1.5}" y="0" width="1.5" height="${H}" fill="${col}"/></svg>`;
+}
+
+function paintExits(tb) {
+  const now = Date.now(), X = EXITS && EXITS.ok ? EXITS.pos : null;
+  for (const el of tb.querySelectorAll('.xg')) {
+    const r = POS[el.dataset.x];
+    if (!r) continue;
+    const px = MARK[r.symbol] || (EXITS && EXITS.px && EXITS.px[r.symbol]);
+    if (!X || !px) { el.innerHTML = '<span class="mut">—</span>'; el.dataset.sig = ''; continue; }
+    const G = new Map();
+    for (const p of r.book) {
+      const e = X[p.id];
+      if (!e) continue;
+      for (const x of e.rules) {
+        const q = xProg(x, e, px, now);
+        if (!q) continue;
+        if (!G.has(x.k)) G.set(x.k, {x, L: []});
+        G.get(x.k).L.push(q);
+      }
+    }
+    if (!G.size) { el.innerHTML = '<span class="mut">—</span>'; el.dataset.sig = ''; continue; }
+    /* dung khung mot lan, moi tick chi sua thanh / chu — re chuot khong bi mat chu giai */
+    const sig = [...G.keys()].join(',');
+    if (el.dataset.sig !== sig) {
+      el.dataset.sig = sig;
+      el.innerHTML = [...G.values()].map(({x}) => `<div class="xr"><span class="xl">${esc(x.name)}</span>`
+        + `<span class="xbw"></span><span class="xv"></span></div>`).join('');
+    }
+    [...G.values()].forEach(({x, L}, j) => {
+      L.sort((a, b) => (b.dim ? 0 : 1) - (a.dim ? 0 : 1) || b.f - a.f);
+      const top = L[0], row = el.children[j];
+      row.classList.toggle('hit', top.f >= 1 && !top.dim);
+      row.dataset.tip = `${x.name}${x.tf ? ' · ' + (XTF[x.tf] || x.tf) : ''}`
+        + (x.type !== 'z' ? '\n' + L.map(q => q.v).join('\n') : '');
+      row.children[1].innerHTML = xBar(top.f, L.slice(1).map(q => q.f), XKIND[x.k] || 'time', top.dim);
+      row.children[2].textContent = top.txt;
+    });
+  }
 }
 
 function pnlOf(p) {
@@ -1355,6 +1516,14 @@ async function loadAcct() {
   catch (e) { ACCT = {ok: false, why: e.message}; }
   if (S && !paintAcct()) render();
   else drawPos();
+  // San vua co vi the ma so (tai moi 30 giay) chua thay — thuong la lenh vua
+  // khop: tai lai so ngay thay vi hien «ngoài sổ» toi 30 giay. Toi da 10 giay/lan.
+  if (S && S.mode === 'live' && ACCT && ACCT.ok && Date.now() - (loadAcct._rf || 0) > 10000
+      && ACCT.positions.some(x => !S.positions.some(p => p.symbol === x.symbol
+                                                     && p.side === Math.sign(x.amt)))) {
+    loadAcct._rf = Date.now();
+    refresh().catch(() => {});
+  }
 }
 
 function paintAcct() {
@@ -1394,6 +1563,7 @@ function paintPnl() {
         el.className = q.r == null ? 'mut' : cls; break;
     }
   }
+  paintExits(tb);
   const ok = WS && Date.now() - TICK < 5000;
   const got = Q.filter(Boolean), tot = got.reduce((a, q) => a + q.usd, 0);
   $('posLive').innerHTML = (got.length
@@ -1572,20 +1742,24 @@ async function loadEq() {
   catch (e) { EQ2 = {ok: false, why: e.message}; }
   if (S) render();
 }
-const eqLines = () => EQ2 && EQ2.ok && EQ2.real.length > 1
-  ? [{k: 'real', name: 'vốn thực', col: '#6D5BD0', v: EQ2.real},
-     {k: 'booked', name: 'đã chốt', col: '#2E8FB8', v: EQ2.booked, dash: '4 3'}]
+/* Mot bieu do, ba duong: tien da nap (bac thang), Realized (lai/lo lenh da dong − phi ± funding,
+   = so du vi − tien da nap), Unrealized (lai/lo lenh dang mo). Lai = Realized + Unrealized;
+   tien nap/rut la von, khong phai lai. */
+const eqLines = () => EQ2 && EQ2.ok && EQ2.real.length > 1 && EQ2.upnl
+  ? [{k: 'cap', name: 'tiền đã nạp', col: '#C2701C', v: EQ2.capital_line, step: 1},
+     {k: 'rl', name: 'Realized', col: '#2E8FB8', v: EQ2.booked_pnl},
+     {k: 'ur', name: 'Unrealized', col: '#6D5BD0', v: EQ2.upnl, dash: '4 3'}]
   : [{k: 'book', name: 'sổ bot', col: '#6D5BD0', v: S.equity}];
-
 function chart() {
   const svg = $('cv');
   svg.textContent = '';
   CH = null;
   const L = eqLines(), ex = EQ2 && EQ2.ok;
   $('cvLeg').innerHTML = L.map(l => `<span><i style="background:${l.col}"></i>${l.name}</span>`).join('');
-  $('cvInfo').innerHTML = INFO(ex ? 'Vốn thực = số dư ví + lãi/lỗ chưa chốt trên Binance, chụp mỗi 15 phút (trước đó: mốc lượt chạy hằng ngày).'
-      + ' Đã chốt = số dư ví: vốn + lãi/lỗ đã đóng − phí ± funding ± nạp/rút, dựng từ lịch sử thu nhập của sàn (giữ 3 tháng).'
-      + ' Vạch đứng = nạp / rút.'
+  $('cvInfo').innerHTML = INFO(ex ? `Tiền đã nạp = ${usd(EQ2.start_equity || 0)} lúc bot bắt đầu + nạp/rút sau đó (bậc thang), hiện ${usd(EQ2.capital || 0)} USD.`
+      + ' Realized = lãi/lỗ các lệnh đã đóng − phí ± funding (số dư ví − tiền đã nạp), dựng từ lịch sử thu nhập của sàn.'
+      + ' Unrealized = lãi/lỗ của lệnh đang mở trên Binance, chụp mỗi 15 phút (trước đó: mốc lượt chạy hằng ngày).'
+      + ' Lãi = Realized + Unrealized; lãi vượt đường tiền đã nạp = đã gấp đôi vốn. Vạch đứng = nạp / rút. Rê chuột để xem từng lúc.'
       : 'Chưa đọc được tài khoản trên sàn' + (EQ2 && EQ2.why ? ` (${EQ2.why})` : '') + ' — đây là vốn theo sổ của bot (vốn đầu + lãi/lỗ), không phải tiền trên sàn.');
   const w = svg.clientWidth || 900, h = svg.clientHeight || 150;
   const P = 10, R = 58, B = 15;
@@ -1605,7 +1779,8 @@ function chart() {
   const pad = (hi - lo) * 0.06 || Math.abs(hi) * 0.01 || 1; lo -= pad; hi += pad;
   const X = t => P + (t - t0) / (t1 - t0 || 1) * (w - P - R);
   const Y = x => P + (hi - x) / (hi - lo) * (h - P - B);
-  const pts = v => v.map(e => `${X(e.ts).toFixed(1)},${Y(e.value).toFixed(1)}`).join(' ');
+  const pts = (v, st) => (st ? v.flatMap((e, i) => i ? [{ts: e.ts, value: v[i - 1].value}, e] : [e]) : v)
+    .map(e => `${X(e.ts).toFixed(1)},${Y(e.value).toFixed(1)}`).join(' ');
 
   const gd = mk('linearGradient', {id: 'gfill', x1: 0, y1: 0, x2: 0, y2: 1});
   gd.appendChild(mk('stop', {offset: 0, 'stop-color': '#6D5BD0', 'stop-opacity': .30}));
@@ -1618,10 +1793,13 @@ function chart() {
       stroke: x.value >= 0 ? 'rgba(46,143,184,.45)' : 'rgba(194,112,28,.5)', 'stroke-dasharray': '2 3'}));
   }
   const v0 = L[0].v;
-  svg.appendChild(mk('polygon', {fill: 'url(#gfill)',
-    points: `${X(v0[0].ts)},${Y(lo)} ${pts(v0)} ${X(v0.at(-1).ts)},${Y(lo)}`}));
+  if (L[0].k !== 'cap')
+    svg.appendChild(mk('polygon', {fill: 'url(#gfill)',
+      points: `${X(v0[0].ts)},${Y(lo)} ${pts(v0)} ${X(v0.at(-1).ts)},${Y(lo)}`}));
+  else if (lo < 0 && hi > 0)       /* moc 0 cho Realized / Unrealized */
+    svg.appendChild(mk('line', {x1: P, x2: w - R, y1: Y(0), y2: Y(0), stroke: 'rgba(42,35,64,.18)'}));
   for (const l of [...L].reverse())
-    svg.appendChild(mk('polyline', {points: pts(l.v), fill: 'none', stroke: l.col,
+    svg.appendChild(mk('polyline', {points: pts(l.v, l.step), fill: 'none', stroke: l.col,
       'stroke-width': l.dash ? 1.4 : 1.7, 'stroke-linejoin': 'round', ...(l.dash ? {'stroke-dasharray': l.dash} : {})}));
   for (const q of [hi - pad, lo + pad]) {
     const t = mk('text', {x: w - R + 6, y: Y(q) + 3.5, fill: '#6F6986', 'font-size': 9.5});
@@ -1665,7 +1843,10 @@ function cross(ev) {
     CH.cds[j].setAttribute('cx', CH.X(t)); CH.cds[j].setAttribute('cy', CH.Y(e.value));
     return ` · ${l.name} <b style="color:var(--ink);font-weight:650">${usd(e.value)}</b>`;
   });
-  $('cvread').innerHTML = when(t) + parts.join('') + ' USD';
+  const ok = CH.L[0].k === 'cap' && EQ2.real[0].ts <= t;
+  const lai = ok ? atT(EQ2.real, t).value - atT(EQ2.capital_line, t).value : null;
+  $('cvread').innerHTML = when(t) + parts.join('') + ' USD'
+    + (lai == null ? '' : ` · lãi (R+U) <b class="${lai >= 0 ? 'pos' : 'neg'}" style="font-weight:650">${lai >= 0 ? '+' : '−'}${usd(Math.abs(lai))}</b>`);
 }
 function uncross() {
   if (!CH) return;
@@ -2784,11 +2965,11 @@ function ovPer() {
     const flip = {...OVSEL, [m.k]: {...OVSEL[m.k], on: !OVSEL[m.k].on}};
     const sf = ovStats(ovDaily(flip));
     const dsh = (m.kind === 'rule' && !OVSEL.xsmom.on) ? null : (on ? tS.sh - sf.sh : sf.sh - tS.sh);
-    return {m, st, on, rho: ovCorr(st.ms, rest), n, w, so, ypos: yv.filter(v => v > 0).length, ny: yv.length, dsh};
+    return {m, st, on, rho: ovCorr(st.ms, rest), n, w, so, k, ypos: yv.filter(v => v > 0).length, ny: yv.length, dsh};
   });
   const rule = r => r.m.kind === 'rule';
   table($('ovPer'), ['phương pháp', 'trạng thái', 'lãi USD', 'USD/năm', 'Sharpe', 'Sortino', 'sụt lớn nhất',
-    'lãi/năm ÷ sụt', 'tháng tệ nhất', 'tháng lãi', 'năm lãi', 'Δ Sharpe bot', 'tương quan', 'lệnh/tháng', 'thắng',
+    'lãi/năm ÷ sụt', 'tháng tệ nhất', 'tháng lãi', 'năm lãi', 'Δ Sharpe bot', 'tương quan', 'lệnh/tháng', 'lệnh TB/ngày', 'thắng',
     'kiểm định'], rows, r => [
     {html: `<i class="mdot" style="display:inline-block;margin:0 7px 0 0;vertical-align:-1px;background:${r.m.c};opacity:${r.on ? 1 : .35}"></i>`
       + (rule(r) ? '<span style="color:var(--dim)">PP1 ·</span>' : esc(r.m.tag))
@@ -2806,6 +2987,7 @@ function ovPer() {
     r.dsh == null ? 'cần PP1' : {html: `<span class="${Math.abs(r.dsh) < .005 ? '' : cls(r.dsh)}">${sh2(r.dsh)}</span>`},
     r.rho == null ? '—' : sh2(r.rho),
     r.n == null ? '—' : pct(r.n / r.st.ms.length, 1),
+    r.n == null ? '—' : pct(r.n / Math.max(1, r.k), 2),
     r.n ? `${pct(r.w / r.n * 100, 0)}%` : '—',
     {html: r.m.ev ? INFO(r.m.ev) : '—'}]);
 }
@@ -2890,10 +3072,58 @@ async function call(path, body) {
   if (!r.ok) throw new Error(j.detail || j.error || r.statusText);
   return j;
 }
+const CAND_PP = {xsmom: 'PP1', rsi2: 'PP2', tsvw: 'PP3', dsrm: 'PP4', imd: 'PP7'};
+function renderCand(j) {
+  const R = j.rows || [], M = j.methods || {}, ord = j.order || Object.keys(CAND_PP);
+  $('candSub').textContent = !j.ts ? (j.err ? 'lỗi: ' + j.err : 'chưa tính')
+    : `cập nhật ${when(j.ts)} UTC · nến ngày ${new Date(j.day).toISOString().slice(0, 10)}`
+      + (j.provisional ? ' (đang chạy — tạm tính)' : ' (đã đóng)') + ` · lượt tới ${when(j.next_run)} UTC`
+      + (j.err ? ` · lần tính gần nhất lỗi: ${j.err}` : '');
+  $('candNote').innerHTML = ord.map(s => {
+    const m = M[s] || {}, on = (j.alloc || {})[s] > 0;
+    return `<b>${CAND_PP[s]}</b> ${({xsmom: 'Động lượng', rsi2: 'RSI(2)', tsvw: 'TSVW', dsrm: 'DSRM', imd: 'IMD bán'})[s]} · ` + (m.err ? `<span class="neg" title="${escA(m.err)}">lỗi</span>`
+      : `${m.n ?? '—'} mã`) + (on ? '' : ' <span class="mut">(đang tắt)</span>')
+      + (s === 'xsmom' && j.sleeve != null ? ` <span class="mut">· sổ ${j.sleeve}</span>` : '');
+  }).join(' &nbsp;·&nbsp; ');
+  const rows = [...R].sort((a, b) => ord.indexOf(a.strategy) - ord.indexOf(b.strategy)
+    || b.side - a.side || (a.rank || 1e9) - (b.rank || 1e9));
+  table($('tcand'), ['PP', 'mã', 'chiều', 'tín hiệu', 'hạng TK', 'giá', 'dừng', 'R', ''], rows, r => {
+    const on = (j.alloc || {})[r.strategy] > 0;
+    return [CAND_PP[r.strategy] || r.strategy, symA(r.symbol), sideTxt(r.side), r.why,
+      r.rank ? '#' + r.rank : '—', r.close ? +r.close.toPrecision(8) : '—',
+      r.stop ? +r.stop.toPrecision(6) : '—', r.rf ? pct(r.rf * 100, 1) + '%' : '—',
+      {html: r.held === true ? '<span class="pos">đang giữ</span>'
+        : r.held === 'other' ? '<span class="neg">giữ chiều ngược</span>'
+        : on ? 'mới' : '<span class="mut">PP tắt</span>'}];
+  });
+}
+async function loadCand() {
+  try { renderCand(await (await fetch('/api/candidates')).json()); } catch (e) {}
+}
+$('btnCand').onclick = async e => {
+  const b = e.currentTarget; b.disabled = true; b.textContent = 'Đang tính…';
+  try { renderCand(await call('/api/candidates')); } catch (x) { msg(x.message, false); }
+  finally { b.disabled = false; b.textContent = 'Tính lại'; }
+};
+$('btnRepnl').onclick = async e => {
+  const b = e.currentTarget; b.disabled = true; b.textContent = 'Đang đọc sàn…';
+  try {
+    const j = await call('/api/repnl');
+    msg(`Tính lại ${j.n}/${j.closed} vị thế đã đóng: ${j.old_usd >= 0 ? '+' : ''}${j.old_usd.toFixed(2)} → `
+      + `${j.new_usd >= 0 ? '+' : ''}${j.new_usd.toFixed(2)} USD (phí thật ${j.fee_usd.toFixed(2)}, funding `
+      + `${j.fund_usd >= 0 ? '+' : ''}${j.fund_usd.toFixed(2)})`
+      + (j.missing.length ? ` · ${j.missing.length} vị thế không ghép được lệnh trên sàn: #${j.missing.join(', #')}` : ''),
+      !j.missing.length);
+    refresh().catch(() => {});
+  } catch (x) { msg(x.message, false); }
+  finally { b.disabled = false; b.textContent = 'Tính lại lãi đã chốt'; }
+};
 async function refresh() {
   S = await (await fetch('/api/state')).json();
   render();
   try { renderVsbt(await (await fetch('/api/vsbt')).json()); } catch (e) {}
+  if (IS_ADMIN) loadUsers().catch(() => {});
+  if (ACCT_VIEW) return;          // so giay / tin / co chi o bot chinh
   try { renderNews(await (await fetch('/api/news')).json()); } catch (e) {}
   try { renderVsa(await (await fetch('/api/vsa')).json()); } catch (e) {}
   try { renderCrash(await (await fetch('/api/crash')).json()); } catch (e) {}
@@ -3192,11 +3422,98 @@ function renderC13(V) {
 function busy(b) { for (const id of ['btnFetch','btnPrev','btnRun','btnFlat'])
   $(id).disabled = b; }
 
+/* ---- nhieu tai khoan (app/users.py) ---- */
+const UST = {pending: 'chờ duyệt', active: 'đang chạy', disabled: 'đã khoá'};
+const ust = s => `<span class="ust ${esc(s)}">${UST[s] || esc(s)}</span>`;
+function renderWho() {
+  if (!ME) return;
+  const w = $('who');
+  w.style.display = '';
+  w.innerHTML = (VIEW_U != null
+      ? `<span class="k">admin · đang xem</span> <b>${esc(ME.viewing.name)}</b> <a href="/#/nguoi-dung">← bot chính</a>`
+      : `<span class="k">${ME.role === 'admin' ? 'admin' : 'tài khoản'}</span> <b>${esc(ME.name)}</b>`)
+    + ' <button type="button" id="btnLogout">Đăng xuất</button>';
+  $('btnLogout').onclick = async () => {
+    try { await call('/api/auth/logout'); } catch (e) {}
+    location.href = '/login'; };
+  if (VIEW_U != null) {
+    $('viewbar').style.display = '';
+    $('viewbar').innerHTML = `Đang xem tài khoản <b>${esc(ME.viewing.name)}</b> (#${VIEW_U}) ${ust(ME.viewing.status)}`
+      + ' — chỉ xem; duyệt, bật/tắt chạy thật và khoá ở tab <a href="/#/nguoi-dung">«Người dùng»</a>.';
+  } else if (ACCT_VIEW) {
+    $('viewbar').style.display = '';
+    $('viewbar').innerHTML = 'Bot chạy trên tài khoản Binance của bạn theo cấu hình của hệ thống. '
+      + '«Dừng khẩn» tắt chạy thật và đóng sạch vị thế — muốn chạy lại thì liên hệ admin.';
+  }
+}
+async function loadUsers() {
+  if (!IS_ADMIN) return;
+  const r = await fetch('/api/users'), j = await r.json();
+  if (!r.ok) throw new Error(j.detail || j.error || r.statusText);
+  const R = j.rows || [], np = R.filter(u => u.status === 'pending').length;
+  $('usersPill').style.display = np ? '' : 'none';
+  $('usersPill').textContent = np;
+  $('usersSub').textContent = `${R.length} tài khoản · ${np} chờ duyệt`;
+  $('usersNote').innerHTML = 'Mỗi tài khoản chạy một <b>bot riêng</b> (sổ riêng, khoá API riêng) theo cấu hình ở tab «Cấu hình» của bot chính, '
+    + `lượt ngày lúc <b>${esc(j.run_at)} UTC</b> — sau bot chính 3 phút để nến đã có sẵn. `
+    + '<b>Duyệt</b> = lấy số dư ví hiện tại làm vốn ban đầu, khởi động bot và bật chạy thật. '
+    + 'Vốn trên sàn là ảnh chụp 15 phút một lần.';
+  table($('tusers'), ['#', 'tên', 'trạng thái', 'chế độ', 'vốn trên sàn', 'vốn ban đầu', 'vị thế mở',
+                      'lượt gần nhất', 'khoá API', 'MFA', 'đăng ký', ''], R, u => {
+    const m = u.summary || {}, lr = m.last_run;
+    const mode = !u.running ? (u.status === 'active' ? {html: '<span class="neg">bot không chạy</span>'} : '—')
+      : m.err ? {html: `<span class="neg" title="${escA(m.err)}">không đọc được</span>`}
+      : {html: m.mode === 'live' ? '<span class="badge b-live">THẬT</span>'
+          : `<span class="badge b-paper" title="${escA(m.why || '')}">SỔ GIẤY</span>`};
+    const acts = [];
+    if (u.status === 'pending') acts.push(['approve', 'Duyệt & bật', 'warn']);
+    if (u.status === 'active' && u.running && m.mode)
+      acts.push(m.armed ? ['disarm', 'Tắt chạy thật', ''] : ['arm', 'Bật chạy thật', 'warn']);
+    if (u.status === 'active' && u.running) acts.push(['view', 'Xem', '']);
+    if (u.status === 'active') acts.push(['disable', 'Khoá', 'danger']);
+    if (u.status === 'disabled') acts.push(['enable', 'Mở lại', '']);
+    if (u.mfa) acts.push(['mfa-reset', 'Đặt lại MFA', '']);
+    if (u.status !== 'active') acts.push(['delete', 'Xoá', 'danger']);
+    return [u.id, u.name, {html: ust(u.status)}, mode,
+      m.equity == null ? '—' : usd(m.equity), usd(u.start_equity),
+      m.n_open == null ? '—' : `${m.n_open} · ${usd(m.gross)} USD`,
+      lr ? `${when(lr.ts)} · ${lr.orders} lệnh` + (lr.failed ? ` · ${lr.failed} không khớp` : '') : '—',
+      u.key_hint, {html: u.mfa ? '<span class="pos">đã gắn</span>' : '<span class="neg">chưa gắn</span>'},
+      when(u.created),
+      {html: '<div class="uact">' + acts.map(([a, t, c]) => `<button type="button" class="${c}" data-uact="${a}"`
+        + ` data-uid="${u.id}" data-uname="${escA(u.name)}">${t}</button>`).join('') + '</div>'}];
+  });
+}
+$('tusers').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-uact]');
+  if (!b) return;
+  const a = b.dataset.uact, id = b.dataset.uid, nm = b.dataset.uname;
+  if (a === 'view') { location.href = `/?u=${id}#/bang-dieu-khien`; return; }
+  const Q = {
+    approve: `Duyệt «${nm}»: lấy số dư hiện tại làm vốn ban đầu, khởi động bot và BẬT CHẠY THẬT — bot sẽ đặt lệnh bằng tiền thật trên tài khoản của họ. Tiếp tục?`,
+    arm: `BẬT CHẠY THẬT cho «${nm}» — bot sẽ đặt lệnh bằng tiền thật trên tài khoản của họ. Tiếp tục?`,
+    disarm: `Tắt chạy thật cho «${nm}»? Bot chuyển về sổ giấy; vị thế đang mở vẫn nằm trên sàn.`,
+    disable: `Khoá «${nm}»: tắt chạy thật và DỪNG bot. Vị thế đang mở VẪN NẰM TRÊN SÀN (kèm dừng an toàn) và không còn ai tái cân bằng — muốn đóng hết thì «Xem» → «Dừng khẩn» trước. Tiếp tục?`,
+    enable: `Mở lại «${nm}»: khởi động lại bot (công tắc chạy thật vẫn TẮT). Tiếp tục?`,
+    'mfa-reset': `Đặt lại MFA của «${nm}»? Lần đăng nhập tới, ai có mật khẩu của họ sẽ gắn được MFA mới — chỉ làm khi đã xác minh đúng người.`,
+    delete: `XOÁ «${nm}» khỏi danh sách? Sổ giao dịch được giữ lại thành tệp .deleted.`}[a];
+  if (!confirm(Q)) return;
+  b.disabled = true;
+  try {
+    const j = await call(`/api/users/${id}/${a === 'disarm' ? 'arm' : a}`,
+                         a === 'arm' || a === 'disarm' ? {on: a === 'arm'} : {});
+    if (a === 'approve') msg(j.armed ? `Đã duyệt «${nm}» — bot đang CHẠY THẬT.`
+                                     : `Đã duyệt «${nm}» nhưng bot đang ở SỔ GIẤY: ${j.why || ''}`, !!j.armed);
+    else msg('Xong.');
+  } catch (e) { msg(e.message, false); }
+  await loadUsers().catch(e => msg(e.message, false));
+});
+
 /* Alias tren URL cho tung tab: /#/tong-quan, /#/cau-hinh ... (va /#/phuong-phap/<tai-lieu>).
    Dung hash de khong phai them duong dan phia may chu; nut Lui / Toi cua trinh duyet di theo. */
 const TAB_ALIAS = {dash: 'bang-dieu-khien', ov: 'tong-quan', cfg: 'cau-hinh', flag: 'ma-gan-co',
   news: 'danh-theo-tin', vsa: 'vsa-4h', crash: 'btc-sap', c13: 'limit-sau', bt: 'tinh-lich-su',
-  doc: 'phuong-phap', log: 'nhat-ky'};
+  doc: 'phuong-phap', users: 'nguoi-dung', log: 'nhat-ky'};
 const ALIAS_TAB = Object.fromEntries(Object.entries(TAB_ALIAS).map(([k, v]) => [v, k]));
 function tabFromHash() {
   const p = decodeURIComponent(location.hash.replace(/^#\/?/, '')).split('/');
@@ -3208,6 +3525,8 @@ function setHash(tab, sub) {
   if (location.hash !== h) history.pushState(null, '', h);
 }
 function goTab(tab, sub, push = true) {
+  if (ACCT_VIEW && !ACCT_TABS.includes(tab)) tab = 'dash';
+  if (tab === 'users' && !IS_ADMIN) tab = 'dash';
   const b = document.querySelector(`nav.tabs button[data-tab="${tab}"]`);
   if (!b) return;
   b._sub = sub; b._push = push; b.click();
@@ -3232,6 +3551,7 @@ for (const b of document.querySelectorAll('nav.tabs button')) {
     if (b.dataset.tab === 'bt') { if (!BT) initBt().catch(e => msg(e.message, false));
       else btCharts(); }
     if (b.dataset.tab === 'dash' && S) chart();
+    if (b.dataset.tab === 'users') loadUsers().catch(e => msg(e.message, false));
     if (b.dataset.tab === 'ov') { if (!OV) initOv().catch(e => msg(e.message, false));
       else ovRender(); }
   };
@@ -3310,14 +3630,33 @@ setInterval(() => { $('clock').textContent = new Date().toISOString().slice(0, 1
 let rz; addEventListener('resize', () => { clearTimeout(rz);
   rz = setTimeout(() => { S && chart(); btCharts(); if (OV) ovRender(); }, 140); });
 renderTodo(null);
+renderWho();
 refresh().catch(e => msg(e.message, false));
 setInterval(() => refresh().catch(() => {}), 30000);
 loadAcct();
 setInterval(loadAcct, 15000);
+loadExits();
+setInterval(loadExits, 60000);
+loadCand();
+setInterval(loadCand, 300000);
 loadEq();
 setInterval(loadEq, 60000);
 /* Socket mo nhung im lang thi khong co onclose — tu cat sau 15 giay khong tick
    de vong noi lai lam viec; dong thoi ve lai cham trang thai. */
+/* Hieu ung tai trang: danh so cac khoi cua tab dang mo theo thu tu tren → duoi,
+   khoi long trong khoi khac khong danh so rieng. Go lop sau khi chay xong de
+   khong dung vao hover / doi tab. */
+(() => {
+  const sel = '.rail, nav.tabs, .gh, .tile, .panel';
+  const all = [...document.querySelectorAll('.rail, nav.tabs'),
+               ...document.querySelectorAll(`section.on :is(${sel})`)]
+    .filter(el => !el.parentElement.closest(sel));
+  all.forEach((el, i) => { el.classList.add('ld'); el.style.setProperty('--ld', Math.min(i, 24)); });
+  document.documentElement.classList.add('boot');
+  setTimeout(() => { document.documentElement.classList.remove('boot');
+    all.forEach(el => { el.classList.remove('ld'); el.style.removeProperty('--ld'); }); },
+    24 * 55 + 700);
+})();
 setInterval(() => { paintPnl();
   if (WS && WS.readyState === 1 && Date.now() - (TICK || 0) > 15000
       && Date.now() - (WS._at || 0) > 15000) WS.close(); }, 2000);

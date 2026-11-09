@@ -1,0 +1,225 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đăng nhập · Quản lý chạy thật</title>
+<style>
+:root{
+  --ink:#2A2340;--ink2:#5B5573;--dim:#6F6986;
+  --acc:#6D5BD0;--acc2:#A99BF2;--accsoft:#EDE9FC;
+  --up:#27805A;--upsoft:#DEF2E7;--upink:#1F6B4B;
+  --dn:#C2362F;--dnsoft:#FBE3E1;--dnink:#A82A24;
+  --warn:#8A5D0E;--warnsoft:#FAEFD8;
+  --glass2:rgba(255,255,255,.74);--rim:rgba(255,255,255,.72);--edge:rgba(42,35,64,.075);
+  --sh:0 1px 2px rgba(42,35,64,.04),0 6px 20px rgba(60,45,100,.055);
+  --ui:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI Variable Text","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);font:13px/1.55 var(--ui);
+  -webkit-font-smoothing:antialiased;background:#F2EEF7;
+  background-image:
+    radial-gradient(880px 620px at 4% 0%,  #FBDFC7 0%, transparent 60%),
+    radial-gradient(820px 700px at 96% 6%, #DFD4F8 0%, transparent 62%),
+    radial-gradient(900px 720px at 14% 100%,#F4D2E0 0%, transparent 60%),
+    radial-gradient(980px 800px at 90% 94%,#CFE9DD 0%, transparent 62%);
+  background-attachment:fixed;display:flex;align-items:flex-start;justify-content:center;padding:48px 16px}
+.card{width:100%;max-width:440px;border-radius:22px;padding:22px 22px 20px;
+  background:var(--glass2);border:1px solid var(--rim);box-shadow:var(--sh);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.mark{display:flex;align-items:center;gap:9px;margin-bottom:16px}
+.mark svg{width:26px;height:26px}
+.mark b{font-size:15px;font-weight:650;letter-spacing:-.2px}
+.seg{display:flex;gap:4px;padding:3px;border-radius:12px;background:rgba(42,35,64,.05);margin-bottom:16px}
+.seg button{flex:1;border:0;background:transparent;box-shadow:none;padding:7px 0;font-weight:600;color:var(--ink2)}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(60,45,100,.12)}
+label{display:block;font-size:11.5px;color:var(--ink2);font-weight:600;margin:10px 0 4px}
+input[type=text],input[type=password]{width:100%;padding:9px 11px;border-radius:10px;
+  border:1px solid rgba(42,35,64,.14);background:#fff;font:13px var(--ui);color:var(--ink)}
+input.mono{font-family:var(--mono);font-size:12px}
+input:focus{outline:2px solid var(--acc2);outline-offset:0;border-color:transparent}
+button{background:#fff;color:var(--ink);border:1px solid var(--rim);border-radius:10px;
+  padding:8px 14px;font:600 13px var(--ui);cursor:pointer;box-shadow:0 1px 3px rgba(60,45,100,.08)}
+button.warn{background:var(--acc);border-color:transparent;color:#fff;width:100%;margin-top:16px;padding:10px}
+button.warn:hover:not(:disabled){background:#5E4CC4}
+button:disabled{opacity:.5;cursor:not-allowed}
+.note{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--warnsoft);color:var(--warn);font-size:12px}
+.note ul{margin:4px 0 0;padding-left:18px}
+.chk{display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:12px;color:var(--ink2)}
+.chk input{margin-top:3px}
+.err{margin-top:12px;padding:9px 12px;border-radius:10px;background:var(--dnsoft);color:var(--dnink);font-size:12.5px;display:none}
+.ok{padding:12px 14px;border-radius:12px;background:var(--upsoft);color:var(--upink)}
+.sub{color:var(--dim);font-size:12px}
+form{display:none}form.on{display:block}
+#state{display:none}
+#mfa{display:none}
+#mfa .qr{display:flex;justify-content:center;margin:12px 0 4px}
+#mfa .qr svg{border-radius:12px;background:#fff;padding:4px}
+#mfa .key{font-family:var(--mono);font-size:12.5px;letter-spacing:.5px;word-break:break-all;
+  padding:8px 10px;border-radius:10px;background:rgba(42,35,64,.05);user-select:all}
+#mCode{font-family:var(--mono);font-size:20px;letter-spacing:6px;text-align:center}
+#state .row{display:flex;gap:8px;margin-top:14px}
+</style>
+
+<div class="card">
+  <div class="mark">
+    <svg viewBox="0 0 28 28" aria-hidden="true">
+      <rect width="28" height="28" rx="8" fill="#6D5BD0"/>
+      <path d="M7 19l4.6-5.6 3.8 3L21 9" stroke="#fff" stroke-width="2" fill="none"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <b>Quản lý chạy thật</b>
+  </div>
+
+  <div id="forms">
+    <div class="seg" id="seg">
+      <button type="button" data-f="fLogin" class="on">Đăng nhập</button>
+      <button type="button" data-f="fReg">Đăng ký</button>
+    </div>
+
+    <form id="fLogin" class="on" autocomplete="on">
+      <label for="lName">Tên đăng nhập</label>
+      <input type="text" id="lName" autocomplete="username" autocapitalize="none" required>
+      <label for="lPw">Mật khẩu</label>
+      <input type="password" id="lPw" autocomplete="current-password" required>
+      <button class="warn" type="submit">Đăng nhập</button>
+    </form>
+
+    <form id="fReg" autocomplete="off">
+      <label for="rName">Tên đăng nhập</label>
+      <input type="text" id="rName" autocomplete="username" autocapitalize="none" placeholder="3–32 ký tự: chữ thường, số, . _ -" required>
+      <label for="rPw">Mật khẩu</label>
+      <input type="password" id="rPw" autocomplete="new-password" placeholder="tối thiểu 8 ký tự" required>
+      <label for="rPw2">Nhập lại mật khẩu</label>
+      <input type="password" id="rPw2" autocomplete="new-password" required>
+      <label for="rKey">Binance API key</label>
+      <input type="text" id="rKey" class="mono" spellcheck="false" required>
+      <label for="rSec">Binance API secret</label>
+      <input type="password" id="rSec" class="mono" spellcheck="false" required>
+      <div class="note">
+        <b>Tạo khoá trên Binance</b> (API Management):
+        <ul>
+          <li>bật <b>Enable Reading</b> và <b>Enable Futures</b>; <b>không</b> bật rút tiền;</li>
+          <li>tài khoản Futures ở chế độ vị thế <b>One-way</b> (không phải Hedge);</li>
+          <li>nếu giới hạn IP, thêm IP máy chủ — hỏi admin.</li>
+        </ul>
+        Khoá được kiểm ngay khi đăng ký và lưu mã hoá. Bot chỉ chạy sau khi admin duyệt.
+      </div>
+      <label class="chk"><input type="checkbox" id="rAck" required>
+        <span>Tôi hiểu bot sẽ đặt lệnh futures bằng tiền thật trên tài khoản này theo cấu hình của hệ thống, và có thể thua lỗ.</span></label>
+      <button class="warn" type="submit">Đăng ký</button>
+    </form>
+  </div>
+
+  <form id="mfa" autocomplete="off">
+    <div id="mSetup">
+      <b>Gắn xác thực hai lớp (MFA)</b>
+      <div class="sub">Bắt buộc cho mọi tài khoản. Mở ứng dụng xác thực (Google Authenticator, Authy,
+        1Password, Microsoft Authenticator…), quét mã QR — hoặc gõ tay khoá bên dưới — rồi nhập mã 6 số.</div>
+      <div class="qr" id="mQr"></div>
+      <label>Khoá (gõ tay nếu không quét được)</label>
+      <div class="key" id="mKey"></div>
+    </div>
+    <div id="mAsk"><b>Xác thực hai lớp</b>
+      <div class="sub">Nhập mã 6 số trong ứng dụng xác thực.</div></div>
+    <label for="mCode">Mã xác thực</label>
+    <input type="text" id="mCode" inputmode="numeric" autocomplete="one-time-code"
+           maxlength="7" pattern="[0-9 ]{6,7}" required>
+    <button class="warn" type="submit">Xác nhận</button>
+    <div class="sub" style="margin-top:10px">Mất điện thoại? Liên hệ admin để đặt lại MFA.</div>
+  </form>
+
+  <div id="state">
+    <div class="ok" id="stateMsg"></div>
+    <div class="row"><button type="button" id="btnOut">Đăng xuất</button>
+      <button type="button" id="btnRe">Tải lại</button></div>
+  </div>
+
+  <div class="err" id="err"></div>
+</div>
+
+<script>
+const $ = i => document.getElementById(i);
+const err = t => { $('err').textContent = t || ''; $('err').style.display = t ? 'block' : 'none'; };
+async function post(path, body) {
+  const r = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'},
+                               body: JSON.stringify(body || {})});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || j.error || r.statusText);
+  return j;
+}
+function show(me) {
+  /* admin, hoac user da duyet → vao trang chinh; con lai hien trang thai */
+  if (!me) return;
+  if (me.role === 'admin' || me.status === 'active') { location.href = '/'; return; }
+  $('forms').style.display = 'none';
+  $('state').style.display = 'block';
+  $('stateMsg').innerHTML = me.status === 'pending'
+    ? `Đã nhận đăng ký của <b>${me.name}</b>. Tài khoản đang <b>chờ admin duyệt</b> — sau khi duyệt, bot bắt đầu chạy và trang này mở vào bảng điều khiển.`
+    : `Tài khoản <b>${me.name}</b> đang bị <b>khoá</b>. Liên hệ admin.`;
+}
+let SETUP = false;
+function mfa(j) {
+  /* sau mat khau: «code» = hoi ma, «setup» = gan lan dau; khong co = vao luon */
+  if (!j.mfa) return false;
+  SETUP = j.mfa === 'setup';
+  $('forms').style.display = 'none';
+  $('mfa').style.display = 'block';
+  $('mSetup').style.display = SETUP ? '' : 'none';
+  $('mAsk').style.display = SETUP ? 'none' : '';
+  if (SETUP) {
+    $('mQr').innerHTML = j.qr || '';
+    $('mQr').style.display = j.qr ? '' : 'none';
+    $('mKey').textContent = (j.secret || '').replace(/(.{4})/g, '$1 ').trim();
+  }
+  $('mCode').value = ''; $('mCode').focus();
+  return true;
+}
+async function signedIn(j) {
+  if (mfa(j)) return;
+  show((await (await fetch('/api/auth/me')).json()).me);
+}
+$('mfa').onsubmit = async e => {
+  e.preventDefault(); err('');
+  const b = e.submitter; b.disabled = true;
+  try {
+    await post('/api/auth/mfa', {code: $('mCode').value, setup: SETUP});
+    $('mfa').style.display = 'none';
+    show((await (await fetch('/api/auth/me')).json()).me);
+  } catch (x) {
+    err(x.message); $('mCode').select();
+    if (/đăng nhập lại/.test(x.message)) setTimeout(() => location.reload(), 1500);
+  } finally { b.disabled = false; }
+};
+for (const b of $('seg').children) b.onclick = () => {
+  for (const x of $('seg').children) x.classList.toggle('on', x === b);
+  for (const f of document.querySelectorAll('form')) f.classList.toggle('on', f.id === b.dataset.f);
+  err('');
+};
+$('fLogin').onsubmit = async e => {
+  e.preventDefault(); err('');
+  const b = e.submitter; b.disabled = true;
+  try {
+    await signedIn(await post('/api/auth/login', {name: $('lName').value, password: $('lPw').value}));
+  } catch (x) { err(x.message); } finally { b.disabled = false; }
+};
+$('fReg').onsubmit = async e => {
+  e.preventDefault(); err('');
+  if ($('rPw').value !== $('rPw2').value) { err('Hai lần nhập mật khẩu không khớp.'); return; }
+  const b = e.submitter; b.disabled = true; b.textContent = 'Đang kiểm khoá API…';
+  try {
+    await signedIn(await post('/api/auth/register', {name: $('rName').value, password: $('rPw').value,
+                                                     api_key: $('rKey').value, api_secret: $('rSec').value}));
+  } catch (x) { err(x.message); } finally { b.disabled = false; b.textContent = 'Đăng ký'; }
+};
+$('btnOut').onclick = async () => { try { await post('/api/auth/logout'); } catch (e) {} location.reload(); };
+$('btnRe').onclick = () => location.reload();
+(async () => {
+  try {
+    const j = await (await fetch('/api/auth/me')).json();
+    if (!j.auth) { $('forms').style.display = 'none'; err('Hệ thống chưa bật đăng nhập (ADMIN_PASSWORD). Vào thẳng trang chính.');
+      setTimeout(() => location.href = '/', 1500); return; }
+    if (!j.users) $('seg').children[1].style.display = 'none';
+    show(j.me);
+  } catch (e) {}
+})();
+</script>
